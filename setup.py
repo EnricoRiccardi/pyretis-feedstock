@@ -26,7 +26,7 @@ from codecs import open as openc
 import pathlib
 from setuptools import setup, find_namespace_packages
 
-FULL_VERSION = '3.0.1'  # Automatically set by setup_version.py
+FULL_VERSION = '3.0.1.dev0'  # Automatically set by setup_version.py
 
 
 def get_long_description():

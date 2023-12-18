@@ -3,6 +3,6 @@
     "minor": 0,
     "micro": 1,
     "dev": 0,
-    "release": true,
+    "release": false,
     "min_python": "3.9"
 }
