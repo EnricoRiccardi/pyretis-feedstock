@@ -923,13 +923,12 @@ class Langevin(MDEngine):
             `system`.
 
         """
-        system.force()  # update forces
+        system.potential_and_force()  # update forces
         particles = system.particles
         rands = self.rgen.normal(loc=0.0, scale=self.param_high['sigma'],
                                  size=particles.vel.shape)
         particles.pos += self.param_high['bddt'] * particles.force + rands
         particles.vel = rands
-        system.potential()
 
     def integration_step_inertia(self, system):
         """Langevin integration, one time step.
@@ -964,10 +963,9 @@ class Langevin(MDEngine):
         vel2 = (self.param_iner['c0'] * particles.vel +
                 self.param_iner['b1'] * particles.force + vel_rand)
 
-        system.force()  # Update forces.
+        system.potential_and_force()  # Update forces.
 
         particles.vel = vel2 + self.param_iner['b2'] * particles.force
-        system.potential()
 
     def restart_info(self):
         """Return restart info.
