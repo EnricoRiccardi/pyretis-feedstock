@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test of the pairpotential module."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.forcefield.potentials.pairpotentials.pairpotential import (
     mixing_parameters,
@@ -13,7 +13,7 @@ from pyretis.forcefield.potentials.pairpotentials.pairpotential import (
 logging.disable(logging.CRITICAL)
 
 
-class TestMixingParameters(unittest.TestCase):
+class TestMixingParameters:
     """Test that we can set up for mixing."""
 
     def test_mixing_geometric(self):
@@ -28,7 +28,7 @@ class TestMixingParameters(unittest.TestCase):
         for i, j in zip(mixed, ((epsilon_i * epsilon_j),
                                 (sigma_i * sigma_j),
                                 (rcut_i * rcut_j))):
-            self.assertEqual(i, np.sqrt(j))
+            assert i == np.sqrt(j)
 
     def test_mixing_arithmetic(self):
         """Test arithmetic mixing."""
@@ -43,7 +43,7 @@ class TestMixingParameters(unittest.TestCase):
                                   [rcut_i, rcut_j],
                                   mixing='arithmetic')
         for i, j in zip(mixed, correct):
-            self.assertEqual(i, j)
+            assert i == j
 
     def test_mixing_sixthpower(self):
         """Test 6th power mixing."""
@@ -63,21 +63,21 @@ class TestMixingParameters(unittest.TestCase):
                    avgs6**(1.0 / 6.0),
                    (0.5 * (rcut_i**6 + rcut_j**6))**(1.0 / 6.0))
         for i, j in zip(mixed, correct):
-            self.assertEqual(i, j)
+            assert i == j
 
-    def test_mixing_missing(self):
+    def test_mixing_missing(self, caplog):
         """Test mixing when we supply something not recognized."""
         logging.disable(logging.INFO)
         mod = 'pyretis.forcefield.potentials.pairpotentials.pairpotential'
-        with self.assertLogs(mod, level='WARNING'):
+        with caplog.at_level(logging.WARNING, logger=mod):
             mixed = mixing_parameters([11., 14], [12., 15], [13., 16.],
                                       mixing='Life On Mars?')
         logging.disable(logging.CRITICAL)
         for i in mixed:
-            self.assertEqual(i, 0.0)
+            assert i == 0.0
 
 
-class TestGeneratePairInteraction(unittest.TestCase):
+class TestGeneratePairInteraction:
     """Test generation of pair parameters."""
 
     def test_generate_full(self):
@@ -96,11 +96,11 @@ class TestGeneratePairInteraction(unittest.TestCase):
         }
         for key, val in correct_mix.items():
             for key2, val2 in val.items():
-                self.assertEqual(val2, mix[key][key2])
+                assert val2 == mix[key][key2]
         for key1, key2 in zip(((1, 0), (2, 0), (2, 1)),
                               ((0, 1), (0, 2), (1, 2))):
             for key, val in mix[key1].items():
-                self.assertEqual(val, mix[key2][key])
+                assert val == mix[key2][key]
 
     def test_generate_pair(self):
         """Testing generate where we specify some cross interactions."""
@@ -126,7 +126,7 @@ class TestGeneratePairInteraction(unittest.TestCase):
                 correct_mix[(1, 0)] = param[(1, 0)]
             for key, val in correct_mix.items():
                 for key2, val2 in val.items():
-                    self.assertEqual(val2, mix[key][key2])
+                    assert val2 == mix[key][key2]
 
     def test_check_pair_params(self):
         """Test the check pair params."""
@@ -134,17 +134,13 @@ class TestGeneratePairInteraction(unittest.TestCase):
             0: {'sigma': 1.0, 'epsilon': 1.5, 'rcut': 2.},
             1: {'sigma': 2.0, 'rcut': 3.}
         }
-        self.assertFalse('epsilon' in parameters[1])
+        assert 'epsilon' not in parameters[1]
         _check_pair_parameters(parameters)
-        self.assertTrue('epsilon' in parameters[1])
-        self.assertAlmostEqual(parameters[1]['epsilon'], 0.0)
+        assert 'epsilon' in parameters[1]
+        assert parameters[1]['epsilon'] == 0.0
         # Missing rcut:
         parameters = {0: {'sigma': 1.0, 'epsilon': 1.5, 'factor': 123.}}
-        self.assertFalse('rcut' in parameters[0])
+        assert 'rcut' not in parameters[0]
         _check_pair_parameters(parameters)
-        self.assertTrue('rcut' in parameters[0])
-        self.assertAlmostEqual(parameters[0]['rcut'], 123.)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert 'rcut' in parameters[0]
+        assert parameters[0]['rcut'] == 123.

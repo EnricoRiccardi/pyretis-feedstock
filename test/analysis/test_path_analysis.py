@@ -5,7 +5,7 @@
 import copy
 import logging
 import os
-import unittest
+import pytest
 import numpy as np
 from pyretis.analysis.path_analysis import (
     analyse_path_ensemble,
@@ -56,7 +56,7 @@ def add_some_paths(ensemble, raw_data):
         ensemble.add_path_data(dummy_path, path['status'])
 
 
-class AnalysePathEnsembleTest(unittest.TestCase):
+class AnalysePathEnsembleTest:
     """Test that we run the analysis for PathEnsemble results."""
 
     def test_no_accept_ens_1(self):
@@ -71,9 +71,9 @@ class AnalysePathEnsembleTest(unittest.TestCase):
         settings['tis'] = {'detect': -0.9}
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with self.assertRaises(AssertionError) as err:
+        with pytest.raises(AssertionError) as err:
             analyse_path_ensemble(raw_data, settings)
-        self.assertIn("1", str(err.exception))
+        assert "1" in str(err.value)
 
     def test_no_accept_ens_0(self):
         """Test when no accepted paths are available in 0-."""
@@ -87,9 +87,9 @@ class AnalysePathEnsembleTest(unittest.TestCase):
         settings['tis'] = {'detect': -0.9}
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with self.assertRaises(AssertionError) as err:
+        with pytest.raises(AssertionError) as err:
             analyse_path_ensemble(raw_data, settings)
-        self.assertIn("0", str(err.exception))
+        assert "0" in str(err.value)
 
     def test_path_analysis(self):
         """Test the path ensemble analysis."""
@@ -136,21 +136,21 @@ class AnalysePathEnsembleTest(unittest.TestCase):
             raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
             res = analyse_path_ensemble(raw_data, settings)
             for key, val in ens['test'].items():
-                self.assertAlmostEqual(val[-1], res[key][val[0]])
+                assert val[-1] == pytest.approx(res[key][val[0]])
             results.append(analyse_path_ensemble(raw_data, settings))
         match = match_probabilities(results[1:], detects[1:], settings)
-        self.assertAlmostEqual(match['prob'], 0.0005277540804156307)
+        assert match['prob'] == pytest.approx(0.0005277540804156307)
         flux = retis_flux(results[0], results[1], 0.002)
-        self.assertAlmostEqual(flux[0], 0.26572079970779655)
-        self.assertAlmostEqual(flux[1], 0.02422284635774688)
+        assert flux[0] == pytest.approx(0.26572079970779655)
+        assert flux[1] == pytest.approx(0.02422284635774688)
         rate = retis_rate(match['prob'], match['relerror'], flux[0], flux[1])
-        self.assertAlmostEqual(rate[0], 0.00014023523629709417)
-        self.assertAlmostEqual(rate[1], 0.4734317724627789)
+        assert rate[0] == pytest.approx(0.00014023523629709417)
+        assert rate[1] == pytest.approx(0.4734317724627789)
 
         # Re-check the last one:
         settings['analysis']['maxblock'] = 0
         res = analyse_path_ensemble(raw_data, settings)
-        self.assertAlmostEqual(val[-1], res[key][val[0]])
+        assert val[-1] == pytest.approx(res[key][val[0]])
 
     def test_skipping(self):
         """Test the skip_lines funcionality."""
@@ -167,13 +167,13 @@ class AnalysePathEnsembleTest(unittest.TestCase):
         settings['analysis']['skip'] = 10000
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with self.assertRaisesRegex(AssertionError, "No accepted paths"):
+        with pytest.raises(AssertionError, match="No accepted paths"):
             analyse_path_ensemble(raw_data, settings)
         # Make sure we can skip all trajectories
         settings['analysis']['skip'] = 49
         _ = analyse_path_ensemble(raw_data, settings)
         # Test more skipping than possible (Hard to hit normally)
-        with self.assertRaisesRegex(RuntimeError, "Skipping more trajs than"):
+        with pytest.raises(RuntimeError, match="Skipping more trajs than"):
             skip_paths([1, 1], 2, 3)
         # Test exact skipping of all
         weights, nacc = skip_paths([1, 2], 3, 3)
@@ -184,7 +184,7 @@ class AnalysePathEnsembleTest(unittest.TestCase):
         ens['ensemble_number'] = 1
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
         settings['analysis']['skip'] = 10000
-        with self.assertRaisesRegex(AssertionError, "No accepted paths"):
+        with pytest.raises(AssertionError, match="No accepted paths"):
             analyse_path_ensemble(raw_data, settings)
 
     def test_permeability_path_analysis_interfaces(self):
@@ -323,23 +323,23 @@ class AnalysePathEnsembleTest(unittest.TestCase):
 
             res = analyse_repptis_ensemble(raw_data, settings)
             for key, val in ens['test'].items():
-                self.assertAlmostEqual(val[-1], res[key][val[0]])
+                assert val[-1] == pytest.approx(res[key][val[0]])
             if ens['ensemble_number'] > 0:
                 p_types.append(res['ptypes'])
             results.append(res)
         pcrossdict = repptis_running_pcross_analysis(p_types)
-        self.assertAlmostEqual(pcrossdict['overall-prun'][-1],
-                               0.00010317722881789884)
-        self.assertAlmostEqual(pcrossdict['overall-error'][-1],
-                               0.4873103759019344)
+        assert pcrossdict['overall-prun'][-1] == pytest.approx(
+            0.00010317722881789884)
+        assert pcrossdict['overall-error'][-1] == pytest.approx(
+            0.4873103759019344)
         flux = retis_flux(results[0], results[1], 0.01)
-        self.assertAlmostEqual(flux[0], 0.7346382685689098)
-        self.assertAlmostEqual(flux[1], 0.19580016239096693)
+        assert flux[0] == pytest.approx(0.7346382685689098)
+        assert flux[1] == pytest.approx(0.19580016239096693)
         rate = retis_rate(pcrossdict['overall-prun'][-1],
                           pcrossdict['overall-error'][-1],
                           flux[0], flux[1])
-        self.assertAlmostEqual(rate[0], 7.579794073451942e-05)
-        self.assertAlmostEqual(rate[1], 0.5251753098290262)
+        assert rate[0] == pytest.approx(7.579794073451942e-05)
+        assert rate[1] == pytest.approx(0.5251753098290262)
 
     def test_path_analysis_pptis_skiplines(self):
         """Test skiplines path ensemble analysis for REPPTIS simulations."""
@@ -400,23 +400,23 @@ class AnalysePathEnsembleTest(unittest.TestCase):
             raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
             res = analyse_repptis_ensemble(raw_data, settings)
             for key, val in ens['test'].items():
-                self.assertAlmostEqual(val[-1], res[key][val[0]])
+                assert val[-1] == pytest.approx(res[key][val[0]])
             if ens['ensemble_number'] > 0:
                 p_types.append(res['ptypes'])
             results.append(res)
         pcrossdict = repptis_running_pcross_analysis(p_types)
-        self.assertAlmostEqual(pcrossdict['overall-prun'][-1],
-                               0.00011041092698379775)
-        self.assertAlmostEqual(pcrossdict['overall-error'][-1],
-                               0.5460014951716033)
+        assert pcrossdict['overall-prun'][-1] == pytest.approx(
+            0.00011041092698379775)
+        assert pcrossdict['overall-error'][-1] == pytest.approx(
+            0.5460014951716033)
         flux = retis_flux(results[0], results[1], 0.01)
-        self.assertAlmostEqual(flux[0], 0.7391039317281317)
-        self.assertAlmostEqual(flux[1], 0.21291472586483318)
+        assert flux[0] == pytest.approx(0.7391039317281317)
+        assert flux[1] == pytest.approx(0.21291472586483318)
         rate = retis_rate(pcrossdict['overall-prun'][-1],
                           pcrossdict['overall-error'][-1],
                           flux[0], flux[1])
-        self.assertAlmostEqual(rate[0], 8.160515023947258e-05)
-        self.assertAlmostEqual(rate[1], 0.5860463405053592)
+        assert rate[0] == pytest.approx(8.160515023947258e-05)
+        assert rate[1] == pytest.approx(0.5860463405053592)
 
     def test_path_analysis_pptis_local_nans(self):
         """Test REPPTIS analysis when some local probs are NaN.
@@ -481,22 +481,18 @@ class AnalysePathEnsembleTest(unittest.TestCase):
             raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
             res = analyse_repptis_ensemble(raw_data, settings)
             for key, val in ens['test'].items():
-                self.assertAlmostEqual(val[-1], res[key][val[0]])
+                assert val[-1] == pytest.approx(res[key][val[0]])
             if ens['ensemble_number'] > 0:
                 p_types.append(res['ptypes'])
             results.append(res)
         pcrossdict = repptis_running_pcross_analysis(p_types)
-        self.assertTrue(np.isnan(pcrossdict['overall-prun'][-1]))
-        self.assertTrue(np.isnan(pcrossdict['overall-error'][-1]))
+        assert np.isnan(pcrossdict['overall-prun'][-1])
+        assert np.isnan(pcrossdict['overall-error'][-1])
         flux = retis_flux(results[0], results[1], 0.01)
-        self.assertAlmostEqual(flux[0], 0.7391039317281317)
-        self.assertAlmostEqual(flux[1], 0.21291472586483318)
+        assert flux[0] == pytest.approx(0.7391039317281317)
+        assert flux[1] == pytest.approx(0.21291472586483318)
         rate = retis_rate(pcrossdict['overall-prun'][-1],
                           pcrossdict['overall-error'][-1],
                           flux[0], flux[1])
-        self.assertTrue(np.isnan(rate[0]))
-        self.assertTrue(np.isnan(rate[1]))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert np.isnan(rate[0])
+        assert np.isnan(rate[1])

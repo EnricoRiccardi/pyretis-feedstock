@@ -4,7 +4,7 @@
 """Test the common methods in pyretis.inout.common."""
 import os
 import logging
-import unittest
+import pytest
 from pyretis.inout.common import (
     make_dirs,
     simplify_ensemble_name,
@@ -29,7 +29,7 @@ def remove_dir(dirname):
         pass
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods from pyretis.inout.common."""
     def test_create_empty_ensembles(self):
         """Test that we can properly create empty ensembles."""
@@ -44,18 +44,16 @@ class TestMethods(unittest.TestCase):
         settings['ensemble'][0]['interface'] = 1
         settings['ensemble'][0]['tis'] = {'ensemble_number': 123321}
         create_empty_ensembles(settings)
-        self.assertTrue(settings['ensemble'][0]['interface'] == 1)
-        self.assertTrue(
-            settings['ensemble'][0]['tis']['ensemble_number'] == 123321)
+        assert settings['ensemble'][0]['interface'] == 1
+        assert settings['ensemble'][0]['tis']['ensemble_number'] == 123321
 
         settings = {'simulation': {'interfaces': [1, 2, 3, 4, 5],
                                    'flux': True,
                                    'zero_ensemble': True},
                     'tis': {'ensemble_number': 123321}}
         create_empty_ensembles(settings)
-        self.assertTrue(
-            settings['ensemble'][0]['tis']['ensemble_number'] == 123321)
-        self.assertTrue(len(settings['ensemble']) == 1)
+        assert settings['ensemble'][0]['tis']['ensemble_number'] == 123321
+        assert len(settings['ensemble']) == 1
 
         settings = {'simulation': {'interfaces': [1, 2, 3, 4, 5],
                                    'flux': True,
@@ -64,18 +62,17 @@ class TestMethods(unittest.TestCase):
                                   'gnappo': 'lappo',
                                   'tis': {'ensemble_number': 3}}]}
         create_empty_ensembles(settings)
-        self.assertEqual(settings['ensemble'][3]['interface'], 3)
-        self.assertEqual(settings['ensemble'][3]['gnappo'], 'lappo')
-        self.assertEqual(
-            settings['ensemble'][3]['tis']['ensemble_number'], 3)
+        assert settings['ensemble'][3]['interface'] == 3
+        assert settings['ensemble'][3]['gnappo'] == 'lappo'
+        assert settings['ensemble'][3]['tis']['ensemble_number'] == 3
         # todo. This should be part of the ensamble numering issue.
-        # with self.assertRaises(ValueError) as err:
+        # with pytest.raises(ValueError) as err:
         #    create_empty_ensembles(settings)
-        # self.assertEqual('Invalid entry for setting ensemble',
-        #    str(err.exception))
+        # assert 'Invalid entry for setting ensemble',
+        #    str(err.value))
         # settings['ensemble'][0] = {'tis': {'ensemble_number': 'flux'}}
         # create_empty_ensembles(settings)
-        # self.assertTrue(
+        # assert
         #     settings['simulation']['ensemble'][0]['tis']['ensemble_number'],
         #     'flux')
 
@@ -83,16 +80,16 @@ class TestMethods(unittest.TestCase):
         """Test that we can create directories."""
         dirname = os.path.join(HERE, 'testdir')
         make_dirs(dirname)
-        self.assertTrue(os.path.isdir(dirname))
+        assert os.path.isdir(dirname)
         remove_dir(dirname)
         dirname = os.path.join(HERE, 'already_exists')
-        with self.assertRaises(OSError):
+        with pytest.raises(OSError):
             make_dirs(dirname)
         dirname = os.path.join(HERE, 'dir_exists')
         remove_dir(dirname)
         make_dirs(dirname)
         msg = make_dirs(dirname)
-        self.assertTrue(msg.endswith('already exist.'))
+        assert msg.endswith('already exist.')
         remove_dir(dirname)
 
     def test_simplify_ensemble_name(self):
@@ -100,34 +97,34 @@ class TestMethods(unittest.TestCase):
         cases = [('[0^-]', '000'), ('[0^+]', '001'), ('[1^+]', '002')]
         for case in cases:
             txt = simplify_ensemble_name(case[0], fmt='{:03d}')
-            self.assertEqual(txt, case[1])
+            assert txt == case[1]
         txt = simplify_ensemble_name('001', fmt='{:03d}')
-        self.assertEqual(txt, '001')
+        assert txt == '001'
         txt = simplify_ensemble_name('[1]', fmt='{:03d}')
-        self.assertEqual(txt, '002')
+        assert txt == '002'
 
     def test_add_dirname(self):
         """Test that we can add a directory to a filename."""
         path = add_dirname('filename.txt', 'path')
-        self.assertEqual(path, os.path.join('path', 'filename.txt'))
+        assert path == os.path.join('path', 'filename.txt')
         path = add_dirname('filename.txt', None)
-        self.assertEqual(path, 'filename.txt')
+        assert path == 'filename.txt'
 
     def test_name_file(self):
         """Test that we can name a file."""
         name = name_file('test', 'txt', path='path')
         filename = ''.join(['test', os.extsep, 'txt'])
         filepath = os.path.join('path', filename)
-        self.assertEqual(name, filepath)
+        assert name == filepath
 
     def test_generate_filename(self):
         """Test the generation of file names."""
         settings = {'output': {}}
         name = generate_file_name('base.txt', 'dir', settings)
-        self.assertEqual(name, os.path.join('dir', 'base.txt'))
+        assert name == os.path.join('dir', 'base.txt')
         settings = {'output': {'prefix': 'abc-'}}
         name = generate_file_name('base.txt', 'dir', settings)
-        self.assertEqual(name, os.path.join('dir', 'abc-base.txt'))
+        assert name == os.path.join('dir', 'abc-base.txt')
 
     def test_check_python_version(self):
         # DO custom import and go from there to prevent overriding anything
@@ -135,9 +132,5 @@ class TestMethods(unittest.TestCase):
         # Set the min python version to next mayor version to remember updating
         import pyretis.inout.common as common
         common.MIN_PYTHON_VERSION = (4, 0)
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             common.check_python_version()
-
-
-if __name__ == '__main__':
-    unittest.main()

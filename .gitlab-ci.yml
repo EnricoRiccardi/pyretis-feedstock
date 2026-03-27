@@ -59,8 +59,8 @@ pystyle:
 test:
   stage: light_test
   script:
-  - pip install coverage
-  - coverage run -p -m unittest discover -s test
+  - pip install coverage pytest pytest-cov
+  - pytest --cov=pyretis --cov-report=xml test/
   <<: *coverage_artifacts
   needs: []
 
@@ -77,7 +77,7 @@ test_pyvisa:
   - cd examples/test/test-pyvisa/
   - ./run-all-pyvisa.sh
   - cd ../../../
-  - coverage run -p -m unittest discover -s test/pyvisa
+  - pytest --cov=pyretis test/pyvisa/
   <<: *coverage_artifacts
   needs: []
 
@@ -135,8 +135,8 @@ test_openmm:
   - python -V
   - conda list
   - python -m openmm.testInstallation
-  - pip install coverage
-  - coverage run -p -m unittest discover -s test
+  - pip install coverage pytest pytest-cov
+  - pytest --cov=pyretis --cov-report=xml test/
   <<: *coverage_artifacts
   needs: []
 

@@ -241,7 +241,7 @@ def make_internal_path(start, end, maxorder, interface=None, points=100):
     """
     xxx = [start[0], maxorder[0], end[0]]
     yyy = [start[1], maxorder[1], end[1]]
-    warnings.simplefilter('ignore', np.RankWarning)
+    warnings.simplefilter('ignore', getattr(np, 'RankWarning', Warning))
     par = np.polyfit(xxx, yyy, 2)
     xre = np.linspace(0., xxx[-1], points)
     yre = np.polyval(par, xre)

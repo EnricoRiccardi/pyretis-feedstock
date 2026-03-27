@@ -9,12 +9,9 @@ for GROMACS.
 """
 import sys
 import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-)
-from time import sleep  # noqa: E402
-import numpy as np  # noqa: E402
-from pyretis.inout.formats.gromacs import (  # noqa: E402
+from time import sleep
+import numpy as np
+from pyretis.inout.formats.gromacs import (
     read_gromos96_file,
     write_gromos96_file,
     write_trr_frame,

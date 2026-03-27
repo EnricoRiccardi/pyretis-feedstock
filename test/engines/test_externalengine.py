@@ -5,7 +5,7 @@
 import os
 import logging
 import filecmp
-import unittest
+import pytest
 import tempfile
 import numpy as np
 from pyretis.core.system import System
@@ -62,26 +62,26 @@ class DummyExternal(ExternalMDEngine):
         """Modify velocities, dummy method."""
 
 
-class TestExternalEngine(unittest.TestCase):
+class TestExternalEngine:
     """Run tests for the external engine."""
 
-    def test_exe_dir(self):
+    def test_exe_dir(self, caplog):
         """Test exe_dir property."""
         engine = DummyExternal('test', 1.0, 10)
-        self.assertIsNone(engine.exe_dir)
+        assert engine.exe_dir is None
         logging.disable(logging.INFO)
-        with self.assertLogs('pyretis.engines.engine', level='WARNING'):
+        with caplog.at_level(logging.WARNING, logger='pyretis.engines.engine'):
             engine.exe_dir = 'non-existing-dir'
         logging.disable(logging.CRITICAL)
-        self.assertEqual('non-existing-dir', engine.exe_dir)
+        assert 'non-existing-dir' == engine.exe_dir
 
-    def test_integration_step(self):
+    def test_integration_step(self, caplog):
         """Test that the integration step fails for the external integrator."""
         engine = DummyExternal('test', 1.0, 10)
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             engine.integration_step(None)
 
-    def test_read_input_settings(self):
+    def test_read_input_settings(self, caplog):
         """Test that we can read input settings."""
         filename = os.path.join(HERE, 'input.txt')
         engine = DummyExternal('test', 1.0, 10)
@@ -89,9 +89,9 @@ class TestExternalEngine(unittest.TestCase):
         settings = engine._read_input_settings(filename)
         correct = {'b': '100', 'a': '1', 'another setting': 'text'}
         for key, val in correct.items():
-            self.assertEqual(val, settings[key])
+            assert val == settings[key]
 
-    def test_modify_input(self):
+    def test_modify_input(self, caplog):
         """Test that we can modify input settings."""
         engine = DummyExternal('test', 1.0, 10)
         filename = os.path.join(HERE, 'input.txt')
@@ -104,9 +104,9 @@ class TestExternalEngine(unittest.TestCase):
             correct = {'b': '100', 'a': '1', 'another setting': 'hello',
                        'c': '101'}
             for key, val in correct.items():
-                self.assertEqual(val, settings2[key])
+                assert val == settings2[key]
 
-    def test_move_file(self):
+    def test_move_file(self, caplog):
         """Test that we can move files."""
         engine = DummyExternal('test', 1.0, 10)
         filename = os.path.join(HERE, 'empty_file')
@@ -115,12 +115,12 @@ class TestExternalEngine(unittest.TestCase):
         outfile = os.path.join(HERE, 'empty_file2')
         # pylint: disable=protected-access
         engine._movefile(filename, outfile)
-        self.assertTrue(os.path.isfile(outfile))
-        self.assertFalse(os.path.isfile(filename))
+        assert os.path.isfile(outfile)
+        assert not os.path.isfile(filename)
         engine._removefile(outfile)
         engine._removefile(filename)
 
-    def test_copy_file(self):
+    def test_copy_file(self, caplog):
         """Test that we can copy files."""
         engine = DummyExternal('test', 1.0, 10)
         filename = os.path.join(HERE, 'empty_file')
@@ -129,14 +129,14 @@ class TestExternalEngine(unittest.TestCase):
         outfile = os.path.join(HERE, 'empty_file_copy')
         # pylint: disable=protected-access
         engine._copyfile(filename, outfile)
-        self.assertTrue(os.path.isfile(outfile))
-        self.assertTrue(os.path.isfile(filename))
+        assert os.path.isfile(outfile)
+        assert os.path.isfile(filename)
         compare = filecmp.cmp(filename, outfile)
-        self.assertTrue(compare)
+        assert compare
         engine._removefile(outfile)
         engine._removefile(filename)
 
-    def test_removefiles(self):
+    def test_removefiles(self, caplog):
         """Test that we can remove several files."""
         engine = DummyExternal('test', 1.0, 10)
         files = []
@@ -150,9 +150,9 @@ class TestExternalEngine(unittest.TestCase):
         engine._remove_files(HERE, files)
         for i in files:
             filename = os.path.join(HERE, i)
-            self.assertFalse(os.path.isfile(filename))
+            assert not os.path.isfile(filename)
 
-    def test_cleanup(self):
+    def test_cleanup(self, caplog):
         """Test the cleanup method."""
         dirname = os.path.join(HERE, 'testdir')
         make_dirs(dirname)
@@ -167,29 +167,29 @@ class TestExternalEngine(unittest.TestCase):
         engine.exe_dir = dirname
         engine.clean_up()
         for i in files:
-            self.assertFalse(os.path.isfile(i))
+            assert not os.path.isfile(i)
         remove_dir(dirname)
 
-    def test_read_configuration(self):
+    def test_read_configuration(self, caplog):
         """Test that we can read a configuration."""
         engine = DummyExternal('test', 1.0, 10)
         filename = os.path.join(HERE, 'config.xyz')
         # pylint: disable=protected-access
         box, xyz, vel, atoms = engine._read_configuration(filename)
         correct_box = np.array([1., 2., 3.])
-        self.assertTrue(np.allclose(box, correct_box))
+        assert np.allclose(box, correct_box)
         correct_atoms = ['Ba', 'Hf', 'O', 'O', 'O']
         for i, j in zip(correct_atoms, atoms):
-            self.assertEqual(i, j)
+            assert i == j
         correct_xyz = np.array([[0., 0., 0.], [0.5, 0.5, 0.5],
                                 [0.5, 0.5, 0.], [0.5, 0., 0.5],
                                 [0., 0.5, 0.5]])
-        self.assertTrue(np.allclose(xyz, correct_xyz))
+        assert np.allclose(xyz, correct_xyz)
         correct_vel = np.array([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.],
                                 [4., 4., 4.], [5., 5., 5.]])
-        self.assertTrue(np.allclose(vel, correct_vel))
+        assert np.allclose(vel, correct_vel)
 
-    def test_calculate_order(self):
+    def test_calculate_order(self, caplog):
         """Test calculation of the order parameter."""
         engine = DummyExternal('test', 1.0, 10)
         filename = os.path.join(HERE, 'config.xyz')
@@ -199,17 +199,17 @@ class TestExternalEngine(unittest.TestCase):
         system.particles.config = (filename, 0)
         ensemble = {'order_function': order_function, 'system': system}
         order = engine.calculate_order(ensemble)
-        self.assertAlmostEqual(order[0], 0.0)
-        self.assertAlmostEqual(order[1], 1.0)
+        assert order[0] == pytest.approx(0.0)
+        assert order[1] == pytest.approx(1.0)
         system.particles.vel_rev = True
         order = engine.calculate_order(ensemble)
-        self.assertAlmostEqual(order[1], -1.0)
+        assert order[1] == pytest.approx(-1.0)
         engine.ext = 'A_cool_estention'
         engine.exe_dir = '.'
         engine.dump_phasepoint(system)
-        self.assertIn(engine.ext, system.particles.config[0])
+        assert engine.ext in system.particles.config[0]
 
-    def test_calculate_order_external(self):
+    def test_calculate_order_external(self, caplog):
         """Test calculation of the order parameter with external engine."""
         cmd = os.path.join(HERE, 'mockcp2k.py')
         dir_name = os.path.join(HERE, 'cp2k_input')
@@ -227,42 +227,32 @@ class TestExternalEngine(unittest.TestCase):
                     'engine': engine}
         order = engine.calculate_order(ensemble)
         # Check that have assigned the box to correctly calculate the order.
-        self.assertEqual(order[0], 0.7731715808)
-        self.assertEqual(order[1], 1.)
+        assert order[0] == 0.7731715808
+        assert order[1] == 1.
 
-    def test_execute_command(self):
+    def test_execute_command(self, caplog):
         """Test what happens when the execution fails."""
         engine = DummyExternal('test', 1.0, 10)
         cmd = [os.path.join(HERE, 'aprogram.py')]
         engine.execute_command(cmd, cwd=HERE, inputs=b'')
         cmd.append('arg')
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             engine.execute_command(cmd, cwd=HERE, inputs=b'')
         # The outputs should be reatined after the previous error:
         with open(os.path.join(HERE, 'stdout.txt'), 'r',
                   encoding="utf8") as stdout:
             lines = stdout.readlines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(
-                lines[0].strip(),
-                'This is a program for testing external commands.'
-            )
+            assert len(lines) == 1
+            assert (lines[0].strip() ==
+                    'This is a program for testing external commands.')
         with open(os.path.join(HERE, 'stderr.txt'), 'r',
                   encoding="utf8") as stdout:
             lines = stdout.readlines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(
-                lines[0].strip(),
-                'ERROR: Program got arguments:'
-            )
-            self.assertEqual(
-                lines[1].strip(),
-                ' '.join(cmd)
-            )
+            assert len(lines) == 2
+            assert (lines[0].strip() ==
+                    'ERROR: Program got arguments:')
+            assert (lines[1].strip() ==
+                    ' '.join(cmd))
         for fname in ('stdout.txt', 'stderr.txt'):
             # pylint: disable=protected-access
             engine._removefile(os.path.join(HERE, fname))
-
-
-if __name__ == '__main__':
-    unittest.main()

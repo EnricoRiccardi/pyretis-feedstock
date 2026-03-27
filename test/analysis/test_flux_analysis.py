@@ -3,10 +3,11 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test module for flux analysis."""
 import logging
-import unittest
+import pytest
 import warnings
 import os
 import pickle
+import sys
 import numpy as np
 from pyretis.analysis import analyse_md_flux
 from pyretis.analysis.flux_analysis import analyse_flux, find_crossings
@@ -18,7 +19,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class FluxTest(unittest.TestCase):
+class TestFluxAnalysis:
     """Test that we can analyse for initial flux."""
 
     def test_flux_analysis(self):
@@ -45,7 +46,7 @@ class FluxTest(unittest.TestCase):
                                           settings=settings)
 
         results = results_all['flux']
-        self.assertFalse(results['eff_cross'])
+        assert not results['eff_cross']
 
         correct_file = os.path.join(HERE, 'flux-results.dat')
         for i in data:
@@ -57,18 +58,23 @@ class FluxTest(unittest.TestCase):
         for key0 in ('eff_cross', 'ncross', 'neffcross',
                      'flux', 'runflux', 'interfaces', 'cross_time',
                      'neffc/nc', 'pMD', '1-p', 'teffMD', 'corrMD'):
-            self.assertTrue(key0 in correct_data)
-            self.assertTrue(key0 in results)
+            assert key0 in correct_data
+            assert key0 in results
             for i, j in zip(correct_data[key0], results[key0]):
-                self.assertTrue(np.allclose(i, j))
-        self.assertAlmostEqual(correct_data['totalcycle'],
-                               results['totalcycle'])
+                try:
+                    assert np.allclose(np.asanyarray(i), np.asanyarray(j))
+                except Exception as e:
+                    sys.stderr.write(f"\nFAILED on key: {key0}\n")
+                    sys.stderr.write(f"i: {i} ({type(i)})\n")
+                    sys.stderr.write(f"j: {j} ({type(j)})\n")
+                    raise e
+        assert correct_data['totalcycle'] == results['totalcycle']
         for key, val in correct_data['times'].items():
-            self.assertAlmostEqual(val, results['times'][key])
+            assert val == pytest.approx(results['times'][key])
         for data1, data2 in zip(correct_data['errflux'],
                                 results['errflux']):
             for i, j in zip(data1, data2):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(np.asanyarray(i), np.asanyarray(j))
 
     def test_flux_analysis_B(self):
         """Test the flux analysis considers also flux from state B."""
@@ -86,9 +92,9 @@ class FluxTest(unittest.TestCase):
         }
         settings['analysis'] = SECTIONS['analysis']
         results_all = analyse_flux(fluxdata, settings)
-        self.assertEqual(results_all['eff_cross'][0][0], (637, 2279))
-        self.assertEqual(results_all['teffMD'][0], 9999.0)
-        self.assertEqual(results_all['corrMD'][0], 3.334111370456819)
+        assert results_all['eff_cross'][0][0] == (637, 2279)
+        assert results_all['teffMD'][0] == 9999.0
+        assert results_all['corrMD'][0] == 3.334111370456819
 
     def test_crossing_calculation(self):
         """Test calculation of crossings from order parameter data."""
@@ -103,16 +109,23 @@ class FluxTest(unittest.TestCase):
         cross_correct = None
         with CrossFile(filename_cross, 'r') as crossfile:
             cross_correct = next(crossfile.load())['data']
-        self.assertEqual(len(cross), len(cross_correct))
+        assert len(cross) == len(cross_correct)
         for i, j in zip(cross, cross_correct):
-            self.assertEqual(i[0], j[0])
-            self.assertEqual(i[1], j[1] - 1)
-            self.assertIn(i[2], ('+', '-'))
+            assert i[0] == j[0]
+            assert i[1] == j[1] - 1
+            assert i[2] in ('+', '-')
             if i[2] == '-':
-                self.assertEqual(j[2], -1)
+                assert j[2] == -1
             elif i[2] == '+':
-                self.assertEqual(j[2], 1)
+                assert j[2] == 1
 
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_flux_analysis_line186(self):
+        """Test the logic path for line 186 (simulation ends in A)."""
+        fluxdata = [(10, 1, -1)]
+        settings = {
+            'simulation': {'endcycle': 100, 'interfaces': [-0.9, -0.8, -0.7]},
+            'engine': {'timestep': 0.1, 'subcycles': 1},
+            'analysis': {'skipcross': 1, 'maxblock': 1, 'blockskip': 1}
+        }
+        results = analyse_flux(fluxdata, settings)
+        assert results['times']['A'] == 90  # 100 - 10

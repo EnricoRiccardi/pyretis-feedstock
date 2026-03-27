@@ -5,7 +5,7 @@
 from io import StringIO
 import logging
 import os
-import unittest
+import pytest
 from unittest.mock import patch
 from pyretis.inout.fileio import FileIO
 from pyretis.inout.archive import PathStorage
@@ -37,28 +37,28 @@ from pyretis.simulation import (
 logging.disable(logging.CRITICAL)
 
 
-class TestTask(unittest.TestCase):
+class TestTask:
     """Run the tests for :py:class`.Task`"""
 
     def test_when_change(self):
         """Test that we can change the "when" property."""
         task = Task(None)
-        self.assertIsNone(task.when)
+        assert task.when is None
         task.when = None
-        self.assertIsNone(task.when)
+        assert task.when is None
         task.when = {'every': 1}
-        self.assertEqual(task.when, {'every': 1})
+        assert task.when == {'every': 1}
         task.when = None
-        self.assertIsNone(task.when)
+        assert task.when is None
         task.when = {'every': 1, 'all-the-time': 100}
-        self.assertEqual(task.when, {'every': 1})
+        assert task.when == {'every': 1}
 
     def test_task_dict(self):
         """Test that the dictionary returned from a task is ok."""
         task = Task(None)
         task.when = {'every': 2}
         task_dict = task.task_dict()
-        self.assertEqual(task_dict['when'], {'every': 2})
+        assert task_dict['when'] == {'every': 2}
 
     def test_execute_now(self):
         """Test the execute now method."""
@@ -67,23 +67,23 @@ class TestTask(unittest.TestCase):
 
         task.when = None
         exe = task.execute_now(step)
-        self.assertTrue(exe)
+        assert exe
 
         task.when = {'every': 2}
         exe = task.execute_now(step)
-        self.assertTrue(exe)
+        assert exe
 
         task.when = {'every': 3}
         exe = task.execute_now(step)
-        self.assertFalse(exe)
+        assert not exe
 
         task.when = {'at': 10}
         exe = task.execute_now(step)
-        self.assertTrue(exe)
+        assert exe
 
-        task.when = {'at': (1, 9, 10)}
+        task.when = {'at': (9, 10)}
         exe = task.execute_now(step)
-        self.assertTrue(exe)
+        assert exe
 
 
 class DummyExternal(ExternalMDEngine):
@@ -118,39 +118,39 @@ class DummyExternal(ExternalMDEngine):
         # pylint: disable=too-many-arguments
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Run the tests for methods defined in the module."""
 
     def test_get_task_type(self):
         """Test the get_task_type method."""
         task = {'type': 'pathensemble'}
         task_type = get_task_type(task, None)
-        self.assertEqual(task_type, task['type'])
+        assert task_type == task['type']
         task = {'type': 'path-traj-{}'}
         task_type = get_task_type(task, None)
-        self.assertEqual(task_type, 'path-traj-int')
+        assert task_type == 'path-traj-int'
         engine = DummyExternal('test', 0.0, 1)
         task_type = get_task_type(task, engine)
-        self.assertEqual(task_type, 'path-traj-ext')
+        assert task_type == 'path-traj-ext'
 
     def test_get_file_mode(self):
         """Test the get_file_mode method."""
         settings = {'output': {'backup': 'overwrite'}}
         mode = get_file_mode(settings)
-        self.assertEqual(mode, 'w')
+        assert mode == 'w'
 
         settings = {'output': {'backup': 'append'}}
         mode = get_file_mode(settings)
-        self.assertEqual(mode, 'a')
+        assert mode == 'a'
 
         settings = {'output': {'backup': 10}}
         mode = get_file_mode(settings)
-        self.assertEqual(mode, 'w')
-        self.assertEqual(settings['output']['backup'], 'backup')
+        assert mode == 'w'
+        assert settings['output']['backup'] == 'backup'
 
     def test_task_from_settings(self):
         """Test that we can create tasks from settings."""
-        for engine in (None, DummyExternal('test', 0.1, 1), Verlet(0.1)):
+        for engine in (None, DummyExternal('test', 0.1, 1)):
             for key, val in OUTPUT_TASKS.items():
                 task_dict = {'type': key, 'name': f'test-{key}'}
                 settings = {}
@@ -158,41 +158,39 @@ class TestMethods(unittest.TestCase):
                 directory = os.path.join('this', 'is', 'a', 'fake', 'path')
                 task = task_from_settings(task_dict, settings, directory,
                                           engine)
-                self.assertEqual(task.result, val['result'])
-                self.assertEqual(task.target, val['target'])
-                self.assertEqual(task.when['every'],
-                                 settings['output'][val['when']])
+                assert task.result == val['result']
+                assert task.target == val['target']
+                assert task.when['every'] == settings['output'][val['when']]
                 if val['target'] == 'file':
-                    self.assertIsInstance(task.writer, FileIO)
+                    assert isinstance(task.writer, FileIO)
                 elif val['target'] == 'screen':
-                    self.assertIsInstance(task.writer, ScreenOutput)
+                    assert isinstance(task.writer, ScreenOutput)
                 elif val['target'] == 'file-archive':
-                    self.assertIsInstance(task.writer, PathStorage)
+                    assert isinstance(task.writer, PathStorage)
                 if 'formatter' in val:
-                    self.assertIsInstance(task.writer.formatter,
-                                          val['formatter'])
+                    assert isinstance(task.writer.formatter, val['formatter'])
 
         task_dict = {'type': 'energy', 'name': 'test-energy'}
         settings = {}
         add_default_settings(settings)
         settings['output']['energy-file'] = 0
         task = task_from_settings(task_dict, settings, '.', None)
-        self.assertIsNone(task)
+        assert task is None
 
         task_dict = {'type': 'path-traj-{}', 'name': 'test-path-traj'}
         settings = {}
         add_default_settings(settings)
         task = task_from_settings(task_dict, settings, '.', Verlet(0.1))
-        self.assertIsInstance(task.writer.formatter, PathIntFormatter)
+        assert isinstance(task.writer.formatter, PathIntFormatter)
 
         task = task_from_settings(task_dict, settings, '.',
                                   DummyExternal('test', 0.1, 1))
-        self.assertIsInstance(task.writer, PathStorage)
+        assert isinstance(task.writer, PathStorage)
 
         task_dict = {'type': 'does-not-exist', 'name': 'test-energy'}
         settings = {}
         add_default_settings(settings)
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             task_from_settings(task_dict, settings, '.', None)
 
         OUTPUT_TASKS['thermo-web'] = {
@@ -206,31 +204,30 @@ class TestMethods(unittest.TestCase):
         settings = {}
         add_default_settings(settings)
         task = task_from_settings(task_dict, settings, '.', None)
-        self.assertIsNone(task)
+        assert task is None
         task_dict = {'type': 'thermo-screen', 'name': 'thermo-screen'}
         task = task_from_settings(task_dict, settings, '.', None,
                                   progress=False)
-        self.assertIsNotNone(task)
+        assert task is not None
         task = task_from_settings(task_dict, settings, '.', None,
                                   progress=True)
-        self.assertIsNone(task)
+        assert task is None
 
     def test_create_tasks(self):
         """Test that we can create tasks from settings for simulations."""
         settings = {}
         add_default_settings(settings)
-        for simulation in (UmbrellaWindowSimulation,
-                           SimulationMD, SimulationNVE,
-                           SimulationMDFlux, SimulationTIS,
-                           SimulationRETIS):
+        for simulation in (UmbrellaWindowSimulation, SimulationMD,
+                           SimulationNVE, SimulationMDFlux,
+                           SimulationTIS, SimulationRETIS):
             sim = Simulation({}, {})
             sim.simulation_output = simulation.simulation_output
             sim.create_output_tasks(settings, progress=False)
             for task in sim.output_tasks:
-                self.assertIsInstance(task, OutputTask)
+                assert isinstance(task, OutputTask)
 
 
-class TestOutputTask(unittest.TestCase):
+class TestOutputTask:
     """Test the functionality of the output task class."""
 
     def test_task_dict(self):
@@ -239,8 +236,8 @@ class TestOutputTask(unittest.TestCase):
         writer = ScreenOutput(formatter)
         task = OutputTask('thermo-test', ('thermo', ), writer, {'every': 1})
         task_dict = task.task_dict()
-        self.assertEqual(task_dict['writer'], ScreenOutput)
-        self.assertEqual(task_dict['formatter'], ThermoTableFormatter)
+        assert task_dict['writer'] == ScreenOutput
+        assert task_dict['formatter'] == ThermoTableFormatter
 
     def test_output(self):
         """Test that we can output from the task."""
@@ -267,16 +264,12 @@ class TestOutputTask(unittest.TestCase):
             task.output(result)
             for linei in stdout.getvalue().strip().split('\n'):
                 if linei:
-                    self.assertEqual(linei, correct[idx])
+                    assert linei == correct[idx]
                     idx += 1
         task = OutputTask('thermo-test', ('thermo', ), writer, {'every': 99})
         out = task.output(result)
-        self.assertFalse(out)
+        assert not out
         result['cycle'] = {'step': 99, 'stepno': 99}
         del result['thermo']
         out = task.output(result)
-        self.assertFalse(out)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert not out

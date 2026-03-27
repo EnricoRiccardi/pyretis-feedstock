@@ -3,6 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the common methods in pyretis.pyvisa.statistical_methods."""
 import unittest
+import pytest
 from unittest import mock
 import numpy as np
 import pandas
@@ -18,7 +19,7 @@ colormap = 'viridis'
 
 
 @unittest.skipIf(HAS_PYVISA_REQ is False, "PyVisA reqs not installed")
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Testing class of pyretis.pyvisa.statistical_methods."""
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
@@ -28,7 +29,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_pyvisa_pca(self, mock_plt):
@@ -37,7 +38,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_k_means(self, mock_plt):
@@ -46,7 +47,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_hierarchical(self, mock_plt):
@@ -55,7 +56,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_gaussian_mixture(self, mock_plt):
@@ -67,7 +68,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_spectral(self, mock_plt):
@@ -76,7 +77,7 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.figure got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.plt")
     def test_random_forest(self, mock_plt):
@@ -85,14 +86,14 @@ class TestMethods(unittest.TestCase):
         # Assert plt.show has been called
         mock_plt.show.assert_called_once_with()
         # Assert plt.subplots got called
-        self.assertTrue(mock_plt.figure.called)
+        assert mock_plt.figure.called
 
     @mock.patch(f"{__name__}.statistical_methods.graphviz")
     def test_decision_tree(self, mock_graphviz):
         """Test if decision tree plot is generated."""
         statistical_methods.decision_tree(Dataframe, TRUE_FALSE, 3)
         # Assert graphviz.Source has been called
-        self.assertTrue(mock_graphviz.Source.called)
+        assert mock_graphviz.Source.called
 
 
 if __name__ == '__main__':

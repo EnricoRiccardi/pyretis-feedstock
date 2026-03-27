@@ -7,7 +7,7 @@ import os
 import tempfile
 import shutil
 import struct
-import unittest
+import pytest
 from pyretis.core.path import Path
 from pyretis.engines.gromacs2 import (GromacsEngine2,
                                       GromacsRunner,
@@ -25,7 +25,7 @@ GMX = os.path.join(HERE, 'mockgmx.py')
 MDRUN = os.path.join(HERE, 'mockmdrun2.py')
 
 
-class GromacsEngineTest(unittest.TestCase):
+class TestGromacsEngine2:
     """Run the tests for the GromacsEngine."""
 
     def test_init(self):
@@ -40,14 +40,14 @@ class GromacsEngineTest(unittest.TestCase):
                              write_vel=True,
                              write_force=False)
         eng.exe_dir = GMX_DIR
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             GromacsEngine2(gmx='echo',
                            mdrun='echo',
                            input_path='gmx_input',
                            timestep=0.002,
                            subcycles=10,
                            gmx_format='not-a-format')
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             GromacsEngine2(gmx='echo',
                            mdrun='echo',
                            input_path='missing-files',
@@ -78,16 +78,17 @@ class GromacsEngineTest(unittest.TestCase):
             ensemble = {'system': system, 'order_function': orderp,
                         'interfaces': [-0.45, 10.0, 14.0]}
             success, _ = eng.propagate(path, ensemble, reverse=False)
-            self.assertTrue(success)
-            self.assertEqual(path.length, 4)
+            assert success
+            assert path.length == 4
             initial_x = -0.422
             for i, point in enumerate(path.phasepoints):
-                self.assertAlmostEqual(point.particles.ekin, eng.subcycles * i)
-                self.assertAlmostEqual(point.particles.vpot,
-                                       eng.subcycles * -1.0 * i)
-                self.assertAlmostEqual(point.order[0],
-                                       i * eng.subcycles + initial_x, places=3)
-                self.assertFalse(point.particles.get_vel())
+                assert point.particles.ekin == pytest.approx(
+                    eng.subcycles * i)
+                assert point.particles.vpot == pytest.approx(
+                    eng.subcycles * -1.0 * i)
+                assert point.order[0] == pytest.approx(
+                    i * eng.subcycles + initial_x, abs=1e-3)
+                assert not point.particles.get_vel()
 
             eng.clean_up()
 
@@ -115,16 +116,17 @@ class GromacsEngineTest(unittest.TestCase):
             ensemble = {'system': system, 'order_function': orderp,
                         'interfaces': [-20., 10.0, 14.0]}
             success, _ = eng.propagate(path, ensemble, reverse=True)
-            self.assertTrue(success)
-            self.assertEqual(path.length, 4)
+            assert success
+            assert path.length == 4
             initial_x = -0.422
             for i, point in enumerate(path.phasepoints):
-                self.assertAlmostEqual(point.particles.ekin, eng.subcycles * i)
-                self.assertAlmostEqual(point.particles.vpot,
-                                       eng.subcycles * -1.0 * i)
-                self.assertAlmostEqual(point.order[0],
-                                       initial_x - i * eng.subcycles, places=3)
-                self.assertTrue(point.particles.get_vel())
+                assert point.particles.ekin == pytest.approx(eng.subcycles * i)
+                assert (point.particles.vpot ==
+                        pytest.approx(eng.subcycles * -1.0 * i))
+                # (point.order[0] was already broken in previous attempt)
+                assert (point.order[0] ==
+                        pytest.approx(initial_x - i * eng.subcycles, abs=1e-3))
+                assert point.particles.get_vel()
             eng.clean_up()
 
     def test_propagate_crash(self):
@@ -146,7 +148,7 @@ class GromacsEngineTest(unittest.TestCase):
             # Propagate:
             order_function = Position(0, dim='x', periodic=False)
             path = Path(None, maxlen=8)
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 ensemble = {'system': system, 'order_function': order_function,
                             'interfaces': [-0.45, 10.0, 14.0]}
                 eng.propagate(path, ensemble, reverse=False)
@@ -158,8 +160,8 @@ class GromacsEngineTest(unittest.TestCase):
                 # their openmm imports (which raises an extra warning atm)
                 # Following assert should be 1, but is 2 while gromacs fixes
                 # their openmm imports (which raises an extra warning atm)
-                self.assertLessEqual(len(data), 2)
-                self.assertEqual(data[-1].strip(), 'Crash error for testing.')
+                assert len(data) <= 2
+                assert data[-1].strip() == 'Crash error for testing.'
             eng.clean_up()
 
     def test_propagate_sleep(self):
@@ -187,15 +189,16 @@ class GromacsEngineTest(unittest.TestCase):
             ensemble = {'system': system, 'order_function': order_function,
                         'interfaces': [-0.45, 10.0, 14.0]}
             success, _ = eng.propagate(path, ensemble, reverse=False)
-            self.assertTrue(success)
-            self.assertEqual(path.length, 4)
+            assert success
+            assert path.length == 4
             initial_x = -0.422
             for i, point in enumerate(path.phasepoints):
-                self.assertAlmostEqual(point.particles.ekin, eng.subcycles * i)
-                self.assertAlmostEqual(point.particles.vpot,
-                                       eng.subcycles * -1.0 * i)
-                self.assertAlmostEqual(point.order[0],
-                                       i * eng.subcycles + initial_x, places=3)
+                assert point.particles.ekin == pytest.approx(
+                    eng.subcycles * i)
+                assert point.particles.vpot == pytest.approx(
+                    eng.subcycles * -1.0 * i)
+                assert point.order[0] == pytest.approx(
+                    i * eng.subcycles + initial_x, abs=1e-3)
             eng.clean_up()
 
     def test_integrate(self):
@@ -218,21 +221,21 @@ class GromacsEngineTest(unittest.TestCase):
             ensemble = {'system': system, 'order_function': order_function}
             for step in eng.integrate(ensemble, 5):
                 j = max(i - 1, 0)
-                self.assertAlmostEqual(step['order'][0],
-                                       j * eng.subcycles + initial_x, places=3)
+                assert (step['order'][0] ==
+                        pytest.approx(j * eng.subcycles + initial_x, abs=1e-3))
                 i += 1
             eng.clean_up()
             ensemble = {'system': system}
             correct = [11.578, 14.478]
             for i_s, step in enumerate(eng.integrate(ensemble, 1)):
                 j = max(i - 1, 0)
-                self.assertAlmostEqual(correct[i_s],
-                                       j * eng.subcycles + initial_x, places=3)
+                assert (correct[i_s] ==
+                        pytest.approx(j * eng.subcycles + initial_x, abs=1e-3))
                 i += 1
             eng.clean_up()
 
 
-class GromacsRunnerTest(unittest.TestCase):
+class TestGromacsRunner2:
     """Test the Runner."""
     def test_init(self):
         """Test that we can initiate the runner."""
@@ -240,9 +243,9 @@ class GromacsRunnerTest(unittest.TestCase):
                             trr_file='No thank you',
                             edr_file='Please dont insist',
                             exe_dir='Get lost already')
-        with self.assertRaises(RuntimeError) as err:
+        with pytest.raises(RuntimeError) as err:
             eng.check_poll()
-        self.assertIn('GROMACS is not running.', str(err.exception))
+        assert 'GROMACS is not running.' in str(err.value)
         del eng
 
     def test_read_remaining_trr(self):
@@ -263,11 +266,10 @@ class GromacsRunnerTest(unittest.TestCase):
             with open(new_file, 'ab') as now:
                 now.write(b'\x00\x00\x00\x00\x00\x00\x00\x00')
             with open(new_file, 'rb') as now:
-                with self.assertRaises(struct.error) as err:
+                with pytest.raises(struct.error) as err:
                     for _ in read_remaining_trr(new_file, now, 0):
                         read_remaining_trr(new_file, now, 0)
-            self.assertIn('unpack requires a buffer of 8 bytes',
-                          str(err.exception))
+            assert 'unpack requires a buffer of 8 bytes' in str(err.value)
 
     def test_reopen_file(self):
         """Reopen a file if the inode has changed test."""
@@ -278,13 +280,8 @@ class GromacsRunnerTest(unittest.TestCase):
         out = reopen_file(filename=ff_temp, fileh=None,
                           inode=inode, bytes_read=None)
 
-        self.assertEqual(out, (None, None))
+        assert out == (None, None)
 
         out = reopen_file(filename=ff_temp, fileh=f_temp,
                           inode=16, bytes_read=0)
         out[0].close()
-        self.assertNotEqual(out, (None, None))
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -5,7 +5,7 @@
 import logging
 import os
 import warnings
-import unittest
+import pytest
 from io import StringIO
 import numpy as np
 import pandas as pd
@@ -83,40 +83,40 @@ def compare_keys(dict1, correct):
     return check
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Testing class of pyretis.pyvisa.orderparam_density."""
 
     def test_PathVisualize_blank(self):
         """Testing initiate PathVisualize."""
         mori = PathVisualize()
         mori.pfile = os.path.join(BASE, 'traj.txt')
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             mori.load_whatever()
-            self.assertIn('not recognised', err.exception)
+            assert 'not recognised' in err.value
 
     def test_PathDensity_blank(self):
         """Testing initiate PathDensity with a compressed input file."""
-        with self.assertRaises(FileNotFoundError) as err:
+        with pytest.raises(FileNotFoundError) as err:
             init_pathdensity(ifile='blank.hdf5')
-            self.assertIn('File blank.hdf5 does not exist.', err.exception)
+            assert 'File blank.hdf5 does not exist.' in err.value
 
     def test_PathDensity(self):
         """Testing the PathDensity class creation from file."""
         ipd = init_pathdensity(BASE, INPUTFILE)
-        self.assertEqual(ipd.iofile, INPUTFILE)
-        self.assertTrue(compare_keys(ipd.infos, CORRECT.keys()))
-        self.assertTrue(compare_keys(ipd.infos['ensemble_names'],
-                                     CORRECT['path']))
-        self.assertTrue(compare_keys(ipd.infos['op_labels'],
-                                     CORRECT['op_labels']))
-        self.assertTrue(compare_keys(ipd.infos['energy_labels'],
-                                     CORRECT['energy_labels']))
-        self.assertTrue(compare_keys(ipd.infos['interfaces'],
-                                     CORRECT['interfaces']))
-        self.assertEqual(ipd.infos['num_op'], CORRECT['num_op'])
+        assert ipd.iofile == INPUTFILE
+        assert compare_keys(ipd.infos, CORRECT.keys())
+        assert compare_keys(ipd.infos['ensemble_names'],
+                            CORRECT['path'])
+        assert compare_keys(ipd.infos['op_labels'],
+                            CORRECT['op_labels'])
+        assert compare_keys(ipd.infos['energy_labels'],
+                            CORRECT['energy_labels'])
+        assert compare_keys(ipd.infos['interfaces'],
+                            CORRECT['interfaces'])
+        assert ipd.infos['num_op'] == CORRECT['num_op']
 
         re_d = PathDensity(basepath='.', iofile=ipd)
-        self.assertIsInstance(re_d, PathDensity)
+        assert isinstance(re_d, PathDensity)
         # test minor functionalities
         re_d.get_traj_energy('no_energy')
 
@@ -124,8 +124,8 @@ class TestMethods(unittest.TestCase):
         """Test comparing PathDensity object."""
         pe_d = init_pathdensity()
         pe_e = init_pathdensity()
-        self.assertEqual(pe_e.infos, pe_d.infos)
-        self.assertEqual(pe_e.traj_dict, pe_d.traj_dict)
+        assert pe_e.infos == pe_d.infos
+        assert pe_e.traj_dict == pe_d.traj_dict
 
     def test_walk_Dirs(self):
         """Testing the walk_Dirs function of PathDensity."""
@@ -139,17 +139,17 @@ class TestMethods(unittest.TestCase):
         with mock.patch('sys.stdout', new=StringIO()):
             pyvisa_compress(BASE, INPUTFILE,
                             pyvisa_dict_hdf5)
-        self.assertTrue(os.path.isfile('pyvisa_compressed_data.hdf5.zip'))
+        assert os.path.isfile('pyvisa_compressed_data.hdf5.zip')
 
-        with self.assertRaises(ImportError) as err:
+        with pytest.raises(ImportError) as err:
             pyvisa_compress('.', 'pyvisa_compressed_data.hdf5.zip', {})
-            self.assertTrue('Cannot compress an already' in err.exception)
+            assert 'Cannot compress an already' in err.value
         check_call(['unzip', 'pyvisa_compressed_data.hdf5.zip'],
                    stdout=DEVNULL, stderr=STDOUT)
 
         with mock.patch('sys.stdout', new=StringIO()):
             re_d = PathDensity('.', 'pyvisa_compressed_data.hdf5')
-        self.assertIsInstance(re_d, PathDensity)
+        assert isinstance(re_d, PathDensity)
         os.remove('pyvisa_compressed_data.hdf5.zip')
         os.remove('pyvisa_compressed_data.hdf5')
 
@@ -161,7 +161,7 @@ class TestMethods(unittest.TestCase):
             # This is to remove the Deprecation Warning due to pandas
             with mock.patch('sys.stderr', new=StringIO()):
                 pe_d.hdf5_data()
-        self.assertTrue(os.path.isfile('pyvisa_compressed_data.hdf5.zip'))
+        assert os.path.isfile('pyvisa_compressed_data.hdf5.zip')
         os.remove('pyvisa_compressed_data.hdf5.zip')
 
     def test_hdf5ing_and_loading(self):
@@ -172,13 +172,13 @@ class TestMethods(unittest.TestCase):
             # This is to remove the Deprecation Warning due to pandas.
             with mock.patch('sys.stderr', new=StringIO()):
                 re_d.hdf5_data()
-        self.assertTrue(os.path.isfile('pyvisa_compressed_data.hdf5.zip'))
+        assert os.path.isfile('pyvisa_compressed_data.hdf5.zip')
         init_pathvisualize('pyvisa_compressed_data.hdf5.zip')
         os.rename('pyvisa_compressed_data.hdf5.zip', 'myhdf.hdf6.zip')
         with mock.patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(TypeError) as err:
+            with pytest.raises(TypeError) as err:
                 init_pathvisualize('myhdf.hdf6.zip')
-                self.assertIn('recognised', err)
+                assert 'recognised' in err
         os.remove('myhdf.hdf6.zip')
 
     def test_get_trajectory_op_length(self):
@@ -189,8 +189,8 @@ class TestMethods(unittest.TestCase):
         for ens in LENGTHS.keys():
             for cyc in LENGTHS[ens]:
                 for idx in range(0, len(LENGTHS[ens][cyc])):
-                    self.assertEqual(LENGTHS[ens][cyc][0],
-                                     re_d.traj_dict[ens][cyc].info['length'])
+                    assert (LENGTHS[ens][cyc][0] ==
+                            re_d.traj_dict[ens][cyc].info['length'])
 
     def test_load_trajectory(self):
         """Test for loading data."""
@@ -229,9 +229,9 @@ class TestMethods(unittest.TestCase):
             criteria['ensemble_name'] = ens
             x2, y2, z2, _ = re_w.load_traj(criteria)
 
-            self.assertEqual(x, x2)
-            self.assertEqual(y, y2)
-            self.assertEqual(z, z2)
+            assert x == x2
+            assert y == y2
+            assert z == z2
 
     def test_move_status(self):
         """Test for move status."""
@@ -240,8 +240,8 @@ class TestMethods(unittest.TestCase):
             pe_d.walk_dirs()
         for cyc in pe_d.traj_dict['005'].keys():
             traj = pe_d.traj_dict['005'][cyc]
-            self.assertEqual(traj.info['status'], STATUS['005'][cyc])
-            self.assertEqual(traj.info['MC-move'], MOVES['005'][cyc])
+            assert traj.info['status'] == STATUS['005'][cyc]
+            assert traj.info['MC-move'] == MOVES['005'][cyc]
 
     def test_load_traj_acc_rej_both_hdf5(self):
         """Load ACC, REJ and BOTH trajectories from hdf5."""
@@ -300,17 +300,17 @@ class TestMethods(unittest.TestCase):
         pe_d = init_pathdensity()
         with mock.patch('sys.stdout', new=StringIO()):
             pe_d.walk_dirs()
-        self.assertTrue(3 not in pe_d.traj_dict['005'].keys())
-        self.assertTrue(0 in pe_d.traj_dict['005'].keys())
+        assert 3 not in pe_d.traj_dict['005'].keys()
+        assert 0 in pe_d.traj_dict['005'].keys()
 
     def test_more_ops(self):
         """Remove Trajectory with no OP values."""
         pe_d = init_pathdensity()
         with mock.patch('sys.stdout', new=StringIO()):
             pe_d.walk_dirs()
-        self.assertEqual(5, len(pe_d.traj_dict['005'][4].frames.columns))
-        self.assertEqual(5, len(pe_d.traj_dict['005'][5].frames.columns))
-        self.assertEqual(2, len(pe_d.traj_dict['004'][1].frames.columns))
+        assert 5 == len(pe_d.traj_dict['005'][4].frames.columns)
+        assert 5 == len(pe_d.traj_dict['005'][5].frames.columns)
+        assert 2 == len(pe_d.traj_dict['004'][1].frames.columns)
 
     def test_remove_nan(self):
         """Test for stability in the most dramatic case.
@@ -328,22 +328,18 @@ class TestMethods(unittest.TestCase):
 
         remove_nan(data)
         # Nothing can be fixed here.
-        self.assertFalse(data['op1'].iloc[0] * 0 == 0)
+        assert not data['op1'].iloc[0] * 0 == 0
         # Nothing can be fixed here and the start shall remain the same.
-        self.assertEqual(data['op2'].iloc[0], 0)
-        self.assertFalse(data['op2'].iloc[3] * 0 == 0)
+        assert data['op2'].iloc[0] == 0
+        assert not data['op2'].iloc[3] * 0 == 0
         # Test nan at the beginning, it should be fixed.
-        self.assertEqual(data['op3'].iloc[0], 4)
-        self.assertEqual(data['op3'].iloc[3], 4)
+        assert data['op3'].iloc[0] == 4
+        assert data['op3'].iloc[3] == 4
         # Test nan disappearing (most common case).
-        self.assertEqual(data['op4'].iloc[2], 4)
+        assert data['op4'].iloc[2] == 4
 
         # Test that the function works with normal lists also.
         bad = [0, float('nan'), 1]
         not_bad = [0, 1, 1]
         remove_nan([bad])
-        self.assertEqual(bad, not_bad)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert bad == not_bad

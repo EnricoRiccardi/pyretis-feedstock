@@ -7,7 +7,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-import unittest
+import pytest
 from io import StringIO
 from unittest.mock import patch
 import numpy as np
@@ -200,7 +200,7 @@ def compare_trajs_int(path_load, path):
     return status
 
 
-class TestReadPathFilesExt(unittest.TestCase):
+class TestReadPathFilesExt:
     """Run the tests for the reading external trajectories."""
 
     def test_read_path_ext(self):
@@ -217,7 +217,7 @@ class TestReadPathFilesExt(unittest.TestCase):
             for i in path_ensemble.directories():
                 make_dirs(i)
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(0, len(files))
+            assert 0 == len(files)
             gmx = GromacsEngine(GMX, MDRUN, gmx_dir,
                                 timestep=0.002,
                                 subcycles=3,
@@ -235,13 +235,13 @@ class TestReadPathFilesExt(unittest.TestCase):
                         'engine': gmx}
             with patch('sys.stdout', new=StringIO()):
                 path_ok = read_path_files_ext(path, path_load, ensemble)
-                self.assertEqual(path_ok, (True, 'ACC'))
+                assert path_ok == (True, 'ACC')
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(2, len(files))
-            self.assertIn('trajF.trr', files)
-            self.assertIn('trajB.trr', files)
+            assert 2 == len(files)
+            assert 'trajF.trr' in files
+            assert 'trajB.trr' in files
             cmpok = compare_trajs(path_load, path)
-            self.assertTrue(cmpok)
+            assert cmpok
 
     def test_read_path_ext_no_order(self):
         """Test reading of external trajectories with missing order.txt."""
@@ -259,12 +259,12 @@ class TestReadPathFilesExt(unittest.TestCase):
             for i in path_ensemble.directories():
                 make_dirs(i)
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(0, len(files))
+            assert 0 == len(files)
             files = find_files_in_dir(path_load)
-            self.assertEqual(2, len(files))
-            self.assertIn('energy.txt', files)
-            self.assertIn('traj.txt', files)
-            self.assertNotIn('order.txt', files)
+            assert 2 == len(files)
+            assert 'energy.txt' in files
+            assert 'traj.txt' in files
+            assert 'order.txt' not in files
             gmx = GromacsEngine(GMX, MDRUN, gmx_dir,
                                 timestep=0.002,
                                 subcycles=3,
@@ -282,11 +282,11 @@ class TestReadPathFilesExt(unittest.TestCase):
                         'engine': gmx}
             with patch('sys.stdout', new=StringIO()):
                 path_ok = read_path_files_ext(path, path_load, ensemble)
-                self.assertEqual(path_ok, (True, 'ACC'))
+                assert path_ok == (True, 'ACC')
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(2, len(files))
-            self.assertIn('trajF.trr', files)
-            self.assertIn('trajB.trr', files)
+            assert 2 == len(files)
+            assert 'trajF.trr' in files
+            assert 'trajB.trr' in files
 
     def test_read_path_ext_no_energy(self):
         """Test reading of external trajectories with missing order.txt."""
@@ -303,12 +303,12 @@ class TestReadPathFilesExt(unittest.TestCase):
             for i in path_ensemble.directories():
                 make_dirs(i)
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(0, len(files))
+            assert 0 == len(files)
             files = find_files_in_dir(path_load)
-            self.assertEqual(2, len(files))
-            self.assertNotIn('energy.txt', files)
-            self.assertIn('traj.txt', files)
-            self.assertIn('order.txt', files)
+            assert 2 == len(files)
+            assert 'energy.txt' not in files
+            assert 'traj.txt' in files
+            assert 'order.txt' in files
             gmx = GromacsEngine(GMX, MDRUN, gmx_dir,
                                 timestep=0.002,
                                 subcycles=3,
@@ -326,14 +326,14 @@ class TestReadPathFilesExt(unittest.TestCase):
                         'engine': gmx}
             with patch('sys.stdout', new=StringIO()):
                 path_ok = read_path_files_ext(path, path_load, ensemble)
-                self.assertEqual(path_ok, (True, 'ACC'))
+                assert path_ok == (True, 'ACC')
             files = find_files_in_dir(path_ensemble.directory['accepted'])
-            self.assertEqual(2, len(files))
-            self.assertIn('trajF.trr', files)
-            self.assertIn('trajB.trr', files)
+            assert 2 == len(files)
+            assert 'trajF.trr' in files
+            assert 'trajB.trr' in files
             for i in path.phasepoints:
-                self.assertIsNone(i.particles.ekin)
-                self.assertIsNone(i.particles.vpot)
+                assert i.particles.ekin is None
+                assert i.particles.vpot is None
 
     def test_check_path(self):
         """Test checking of the path."""
@@ -367,21 +367,21 @@ class TestReadPathFilesExt(unittest.TestCase):
                 read_path_files_ext(path,
                                     path_load, ensemble)
             accept, status = _check_path(path, path_ensemble)
-            self.assertTrue(accept)
-            self.assertEqual(status, 'ACC')
+            assert accept
+            assert status == 'ACC'
             path_ensemble = PathEnsembleExt(23, [-0.26, 0.2, 0.4],
                                             exe_dir=tempdir)
             accept, status = _check_path(path, path_ensemble)
-            self.assertFalse(accept)
-            self.assertEqual(status, 'EWI')
+            assert not accept
+            assert status == 'EWI'
             path_r = path.reverse(
                 Position(0, dim='x', periodic=False)
             )
             path_ensemble = PathEnsembleExt(23, [-0.26, 0.02, 0.2],
                                             exe_dir=tempdir)
             accept, status = _check_path(path_r, path_ensemble)
-            self.assertFalse(accept)
-            self.assertEqual(status, 'SWI')
+            assert not accept
+            assert status == 'SWI'
             path.append(
                 set_up_system([-0.26, 0.0], [('somefile.trr', 0), True],
                               internal=False)
@@ -389,11 +389,11 @@ class TestReadPathFilesExt(unittest.TestCase):
             path_ensemble = PathEnsembleExt(23, [-0.26, 0.3, 0.3],
                                             exe_dir=tempdir)
             accept, status = _check_path(path, path_ensemble)
-            self.assertFalse(accept)
-            self.assertEqual(status, 'NCR')
+            assert not accept
+            assert status == 'NCR'
 
 
-class TestReadPathFiles(unittest.TestCase):
+class TestReadPathFiles:
     """Run the tests for reading internal trajectories."""
 
     def test_read_path(self):
@@ -416,10 +416,10 @@ class TestReadPathFiles(unittest.TestCase):
                         'engine': engine}
             with patch('sys.stdout', new=StringIO()):
                 accept, status = read_path_files(path, path_load, ensemble)
-                self.assertTrue(accept)
-                self.assertEqual(status, 'ACC')
+                assert accept
+                assert status == 'ACC'
             cmpt = compare_trajs_int(path_load, path)
-            self.assertTrue(cmpt)
+            assert cmpt
 
     def test_read_path_noorder(self):
         """Test reading of internal trajectories with missing order.txt."""
@@ -443,14 +443,14 @@ class TestReadPathFiles(unittest.TestCase):
                         'engine': engine}
             with patch('sys.stdout', new=StringIO()):
                 accept, status = read_path_files(path, path_load, ensemble)
-                self.assertTrue(accept)
-                self.assertEqual(status, 'ACC')
+                assert accept
+                assert status == 'ACC'
             shutil.copyfile(
                 os.path.join(INTERNAL_LOAD, '001', 'order.txt'),
                 os.path.join(path_load, 'order.txt')
             )
             cmpt = compare_trajs_int(path_load, path)
-            self.assertTrue(cmpt)
+            assert cmpt
 
     def test_read_path_noenergy(self):
         """Test reading of internal trajectories with missing energy.txt."""
@@ -473,14 +473,14 @@ class TestReadPathFiles(unittest.TestCase):
                         'engine': engine}
             with patch('sys.stdout', new=StringIO()):
                 accept, status = read_path_files(path, path_load, ensemble)
-                self.assertTrue(accept)
-                self.assertEqual(status, 'ACC')
+                assert accept
+                assert status == 'ACC'
             for i in path.phasepoints:
-                self.assertIsNone(i.particles.ekin)
-                self.assertIsNone(i.particles.vpot)
+                assert i.particles.ekin is None
+                assert i.particles.vpot is None
 
 
-class TestInitiateLoad(unittest.TestCase):
+class TestInitiateLoad:
     """Test the full initiate load for a TIS simulation."""
 
     @staticmethod
@@ -585,21 +585,21 @@ class TestInitiateLoad(unittest.TestCase):
                 simulation, _ = \
                     self._set_up_for_load_int(settings, tempdir)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
+                assert init
             # We expect now that we have loaded for 001:
-            self.assertEqual(len(simulation.ensembles), 1)
-            self.assertEqual(simulation.ensembles[0]['path_ensemble']
-                             .ensemble_number, 1)
+            assert len(simulation.ensembles) == 1
+            assert simulation.ensembles[0]['path_ensemble'] \
+                             .ensemble_number == 1
             # Check that the path contains what it should:
             path = simulation.ensembles[0]['path_ensemble'].last_path
             # Check that we created an ensemble dir
             ensemble_dir = os.path.join(tempdir, '001')
-            self.assertTrue(os.path.isdir(ensemble_dir))
+            assert os.path.isdir(ensemble_dir)
             # All memory is dumped to file.
-            self.assertTrue(compare_trajs_int(ensemble_dir, path))
+            assert compare_trajs_int(ensemble_dir, path)
             # Just delete simulation to force closing of files:
             del simulation
-            self.assertTrue(compare_trajs_int(ensemble_dir, path))
+            assert compare_trajs_int(ensemble_dir, path)
 
     def test_fail_wrong_engine(self):
         """Test that the test fail for an unsupported engine type."""
@@ -610,7 +610,7 @@ class TestInitiateLoad(unittest.TestCase):
             ensemble = simulation.ensembles[0]
             ensemble['engine'].engine_type = 'this-should-fail!'
             with patch('sys.stdout', new=StringIO()):
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     simulation.initiate(settings)
 
     def test_internal_load_sparse(self):
@@ -624,28 +624,28 @@ class TestInitiateLoad(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()):
                 simulation = self._set_up_for_load_2(settings, tempdir)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
+                assert init
 
             paths = []
             for i in range(3):
                 paths.append(
                     simulation.ensembles[i]['path_ensemble'].last_path)
             del simulation
-            self.assertTrue(compare_trajs_int(os.path.join(tempdir, '000'),
-                                              paths[0]))
+            assert compare_trajs_int(os.path.join(tempdir, '000'),
+                                     paths[0])
 
-            self.assertTrue(os.path.exists(os.path.join(tempdir, '000')))
-            self.assertTrue(os.path.exists(os.path.join(tempdir, '001',
-                                                        'traj')))
-            self.assertTrue(os.path.exists(os.path.join(tempdir, '002',
-                                                        'generate')))
-            self.assertTrue(os.path.exists(os.path.join(tempdir, '001',
-                                                        'pathensemble.txt')))
-            self.assertTrue(os.path.exists(os.path.join(tempdir, '002',
-                                                        'order.txt')))
-            self.assertEqual(paths[0].status, 'ACC')
+            assert os.path.exists(os.path.join(tempdir, '000'))
+            assert os.path.exists(os.path.join(tempdir, '001',
+                                                        'traj'))
+            assert os.path.exists(os.path.join(tempdir, '002',
+                                                        'generate'))
+            assert os.path.exists(os.path.join(tempdir, '001',
+                                                        'pathensemble.txt'))
+            assert os.path.exists(os.path.join(tempdir, '002',
+                                                        'order.txt'))
+            assert paths[0].status == 'ACC'
             for i in range(1, 2):
-                self.assertEqual(paths[i].status, 'ACC')
+                assert paths[i].status == 'ACC'
 
     def test_internal_explorer(self):
         """Test the explorer for internal trajectories."""
@@ -659,12 +659,12 @@ class TestInitiateLoad(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()):
                 simulation = self._set_up_for_load_2(settings, tempdir)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
+                assert init
 
                 # Does it work too?
                 res = simulation.step()
-                self.assertEqual(res['status-1'], 'EXP')
-                self.assertEqual(res['status-2'], 'EXP')
+                assert res['status-1'] == 'EXP'
+                assert res['status-2'] == 'EXP'
 
     def test_internal_explorer_bad_init(self):
         """Test the explorer for internal trajectories."""
@@ -682,13 +682,13 @@ class TestInitiateLoad(unittest.TestCase):
                 settings['simulation']['interfaces'].append(1000)
                 simulation = self._set_up_for_load_2(settings, tempdir)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
+                assert init
 
                 # Does it work too?
                 res = simulation.step()
-                self.assertEqual(res['status-0'], 'EXP')
+                assert res['status-0'] == 'EXP'
                 # It shall try anyhow.
-                self.assertEqual(res['status-2'], 'EXP')
+                assert res['status-2'] == 'EXP'
 
     def test_internal_load_sparse_and_kick(self):
         """Test the load initialise that fixes paths."""
@@ -703,9 +703,9 @@ class TestInitiateLoad(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()):
                 simulation = self._set_up_for_load_2(settings, tempdir)
                 # Check that we fail first
-                with self.assertRaises(ValueError) as cm:
+                with pytest.raises(ValueError) as cm:
                     simulation.initiate(settings)
-                self.assertIn("load_and_kick", str(cm.exception))
+                assert "load_and_kick" in str(cm.value)
 
         settings = parse_settings_file(os.path.join(HERE, 'internal',
                                                     'retis-load',
@@ -721,7 +721,7 @@ class TestInitiateLoad(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()):
                 simulation2 = self._set_up_for_load_2(settings, tempdir)
                 init = simulation2.initiate(settings)
-                self.assertTrue(init)
+                assert init
 
     def test_initiate_load_fail(self):
         """Test that the initiate load fails for non-existing load folder."""
@@ -732,7 +732,7 @@ class TestInitiateLoad(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()):
                 simulation = self._set_up_for_load(settings, tempdir,
                                                    copy_load=False)
-                with self.assertRaises(FileNotFoundError):
+                with pytest.raises(FileNotFoundError):
                     simulation.initiate(settings)
 
     def test_initiate_load_fail2(self):
@@ -748,10 +748,10 @@ class TestInitiateLoad(unittest.TestCase):
                                                                    100,
                                                                    100000]
             with patch('sys.stdout', new=StringIO()):
-                with self.assertRaises(ValueError) as err:
+                with pytest.raises(ValueError) as err:
                     _ = simulation.initiate(settings)
-                self.assertTrue('000 does not satisfy the relative ensemble'
-                                in str(err.exception))
+                assert '000 does not satisfy the relative ensemble' \
+                    in str(err.value)
 
     def test_reorderframes(self):
         """Test the reorderframes function."""
@@ -765,10 +765,10 @@ class TestInitiateLoad(unittest.TestCase):
         # Test that the re-order function generated path
         # satisfies the ensemble requirements (R, R case)
         path, _ = reorderframes(path, path_ensemble)
-        self.assertTrue(path.ordermin[0] < interfaces[1])
-        self.assertTrue(path.ordermax[0] > interfaces[1])
-        self.assertEqual(path.get_start_point(left, right), 'R')
-        self.assertEqual(path.get_end_point(left, right), 'R')
+        assert path.ordermin[0] < interfaces[1]
+        assert path.ordermax[0] > interfaces[1]
+        assert path.get_start_point(left, right) == 'R'
+        assert path.get_end_point(left, right) == 'R'
 
         # Test that the re-order function generated path
         # satisfies the ensemble requirements (L, L case)
@@ -778,10 +778,10 @@ class TestInitiateLoad(unittest.TestCase):
         path = fill_path()
         path, _ = reorderframes(path, path_ensemble)
 
-        self.assertTrue(path.get_start_point(left, right) == 'L')
-        self.assertTrue(path.get_end_point(left, right) == 'L')
-        self.assertTrue(path.ordermin[0] < interfaces[1])
-        self.assertTrue(path.ordermax[0] > interfaces[1])
+        assert path.get_start_point(left, right) == 'L'
+        assert path.get_end_point(left, right) == 'L'
+        assert path.ordermin[0] < interfaces[1]
+        assert path.ordermax[0] > interfaces[1]
 
         # Test that the re-order function generated path
         # satisfies the ensemble requirements (L, R case)
@@ -791,8 +791,8 @@ class TestInitiateLoad(unittest.TestCase):
         path = fill_path()
         path, _ = reorderframes(path, path_ensemble)
 
-        self.assertTrue(path.get_start_point(left, right) == 'L')
-        self.assertFalse(path.get_end_point(left, right) == 'L')
+        assert path.get_start_point(left, right) == 'L'
+        assert not path.get_end_point(left, right) == 'L'
 
     def test_clean_path(self):
         """Test the clean_path function."""
@@ -801,13 +801,13 @@ class TestInitiateLoad(unittest.TestCase):
 
         path = fill_path()
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 6)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == 6
+        assert _check_path(path, path_ensemble)
 
         # Same results?
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 6)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == 6
+        assert _check_path(path, path_ensemble)
 
         # Some intuitive numerical checks: only crossing points
         # shall remain (4 for the 0 interface and one for the B
@@ -828,11 +828,11 @@ class TestInitiateLoad(unittest.TestCase):
             if interfaces[0] < phasepoint.order[0] < interfaces[2]:
                 counter_m += 1
 
-        self.assertEqual(path.length, (counter_r + counter_l + counter_m))
-        self.assertEqual((counter_r, counter_m, counter_l), (11, 1, 8))
-        self.assertTrue(path.length == initial_length)
-        self.assertEqual(path.length, 20)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == (counter_r + counter_l + counter_m)
+        assert (counter_r, counter_m, counter_l) == (11, 1, 8)
+        assert path.length == initial_length
+        assert path.length == 20
+        assert _check_path(path, path_ensemble)
 
         # This creates a bad path, invalid start but some ok frames
         path = fill_path(scale=0.1)
@@ -852,11 +852,11 @@ class TestInitiateLoad(unittest.TestCase):
             if interfaces[0] <= phasepoint.order[0] < interfaces[2]:
                 counter_m += 1
 
-        self.assertEqual(path.length, (counter_r + counter_l + counter_m))
-        self.assertEqual((counter_r, counter_m, counter_l), (0, 21, 0))
-        self.assertTrue(path.length > initial_length)
-        self.assertEqual(path.length, 21)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == (counter_r + counter_l + counter_m)
+        assert (counter_r, counter_m, counter_l) == (0, 21, 0)
+        assert path.length > initial_length
+        assert path.length == 21
+        assert _check_path(path, path_ensemble)
 
         # This creates a good path, bookkeeping case for 0 ens
         path = fill_path(scale=0.1)
@@ -876,11 +876,11 @@ class TestInitiateLoad(unittest.TestCase):
             if interfaces[0] <= phasepoint.order[0] < interfaces[2]:
                 counter_m += 1
 
-        self.assertEqual(path.length, (counter_r + counter_l + counter_m))
-        self.assertEqual((counter_r, counter_m, counter_l), (0, 14, 0))
-        self.assertTrue(path.length < initial_length)
-        self.assertEqual(path.length, 14)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == (counter_r + counter_l + counter_m)
+        assert (counter_r, counter_m, counter_l) == (0, 14, 0)
+        assert path.length < initial_length
+        assert path.length == 14
+        assert _check_path(path, path_ensemble)
 
     def test_clean_path_2(self):
         """Test the clean_path function."""
@@ -891,8 +891,8 @@ class TestInitiateLoad(unittest.TestCase):
 
         fill_path(path, npoints=20000, scale=0.01)
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 5)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == 5
+        assert _check_path(path, path_ensemble)
 
         interfaces = [-14., -10., 10]
         path_ensemble = PathEnsemble(0, interfaces)
@@ -901,8 +901,8 @@ class TestInitiateLoad(unittest.TestCase):
 
         fill_path(path)
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 6)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == 6
+        assert _check_path(path, path_ensemble)
 
         # Check that it doesn't fix the impossible.
         # Too large interfaces, all should be kept
@@ -911,10 +911,10 @@ class TestInitiateLoad(unittest.TestCase):
 
         path = fill_path(npoints=1000, scale=0.16)
         path, _ = reorderframes(path, path_ensemble)
-        self.assertEqual((_check_path(path, path_ensemble)),
-                         (False, 'EWI'))
+        assert _check_path(path, path_ensemble) == \
+            (False, 'EWI')
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 21)
+        assert path.length == 21
 
         # Too large orderp, almost nothing should remain
         interfaces = [-16., 0., 16]
@@ -922,8 +922,8 @@ class TestInitiateLoad(unittest.TestCase):
         path = fill_path(npoints=1000, scale=16016)
         path, _ = reorderframes(path, path_ensemble)
         clean_path(path, path_ensemble)
-        self.assertEqual((_check_path(path, path_ensemble)), (False, 'EWI'))
-        self.assertEqual(path.length, 5)
+        assert _check_path(path, path_ensemble) == (False, 'EWI')
+        assert path.length == 5
 
     def test_clean_path3(self):
         """Test the clean_path function."""
@@ -934,8 +934,8 @@ class TestInitiateLoad(unittest.TestCase):
         fill_path(path, npoints=20, scale=0.01)
         path_ensemble.start_condition = ('L', 'R')
         clean_path(path, path_ensemble)
-        self.assertEqual(path.length, 20)
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.length == 20
+        assert _check_path(path, path_ensemble)
 
         interfaces = [-1., 0., 1]
         path_ensemble = PathEnsemble(0, interfaces)
@@ -943,12 +943,12 @@ class TestInitiateLoad(unittest.TestCase):
         path = Path(rgen, maxlen=1000)
         fill_path(path, npoints=16, scale=0.1)
         path_ensemble.start_condition = ('L', 'R')
-        self.assertTrue(path.phasepoints[0].order[0] <= interfaces[0])
-        self.assertTrue(path.phasepoints[path.ordermax[1]].order[0] >
-                        interfaces[-1])
+        assert path.phasepoints[0].order[0] <= interfaces[0]
+        assert path.phasepoints[path.ordermax[1]].order[0] > \
+            interfaces[-1]
         clean_path(path, path_ensemble)
-        self.assertTrue(path.phasepoints[-1].order[0] <= interfaces[0])
-        self.assertEqual(path.length, 11)
+        assert path.phasepoints[-1].order[0] <= interfaces[0]
+        assert path.length == 11
 
         interfaces = [-1., 0., 10]
         path_ensemble = PathEnsemble(0, interfaces)
@@ -957,8 +957,8 @@ class TestInitiateLoad(unittest.TestCase):
         fill_path(path, npoints=160, scale=0.01)
         path_ensemble.start_condition = ('L', 'R')
         clean_path(path, path_ensemble)
-        self.assertFalse(path.phasepoints[0].order[0] <= interfaces[0])
-        self.assertFalse(path.phasepoints[-1].order[0] > interfaces[-1])
+        assert not path.phasepoints[0].order[0] <= interfaces[0]
+        assert not path.phasepoints[-1].order[0] > interfaces[-1]
 
     def test_clean_reorder_path_repptis(self):
         """Test clean path and reorderframes for pptis ensembles"""
@@ -971,10 +971,10 @@ class TestInitiateLoad(unittest.TestCase):
         fill_path(path, npoints=20, scale=0.055)
         path_ensemble.start_condition = ('L', 'R')
         clean_path(path, path_ensemble, simtype='repptis')
-        self.assertEqual(path.length, 17)
-        self.assertTrue(_check_path(path, path_ensemble))
-        self.assertTrue(path.phasepoints[0].order[0] < interfaces[0])
-        self.assertTrue(path.phasepoints[-1].order[0] > interfaces[-1])
+        assert path.length == 17
+        assert _check_path(path, path_ensemble)
+        assert path.phasepoints[0].order[0] < interfaces[0]
+        assert path.phasepoints[-1].order[0] > interfaces[-1]
         # 1B) LM* path --> Makes an LML path
         interfaces = [-1., 0, 2.]
         path_ensemble = PathEnsemble(3, interfaces)
@@ -984,13 +984,13 @@ class TestInitiateLoad(unittest.TestCase):
         path_ensemble.start_condition = ('L', 'R')
         clean_path(path, path_ensemble, simtype='repptis')
         pathnew, (accept, status) = reorderframes(path, path_ensemble)
-        self.assertTrue(accept)
-        self.assertEqual(status, 'ACC')
-        self.assertTrue(pathnew.phasepoints[0].order[0] < interfaces[0])
-        self.assertTrue(pathnew.phasepoints[-1].order[0] < interfaces[0])
-        self.assertTrue(pathnew.ordermax[0] > interfaces[1])
-        self.assertTrue(_check_path(pathnew, path_ensemble))
-        self.assertFalse(_check_path(path, path_ensemble)[0])
+        assert accept
+        assert status == 'ACC'
+        assert pathnew.phasepoints[0].order[0] < interfaces[0]
+        assert pathnew.phasepoints[-1].order[0] < interfaces[0]
+        assert pathnew.ordermax[0] > interfaces[1]
+        assert _check_path(pathnew, path_ensemble)[0]
+        assert not _check_path(path, path_ensemble)[0]
         # 2) ensemble [0^+-'] should only give LMR, RML, or LML paths
         interfaces = [-1, -1, 0]
         path_ensemble = PathEnsemble(1, interfaces)
@@ -999,9 +999,9 @@ class TestInitiateLoad(unittest.TestCase):
         fill_path(path, npoints=20, scale=0.055)
         path_ensemble.start_condition = ('L', 'R')
         clean_path(path, path_ensemble, simtype='repptis')
-        self.assertTrue(path.phasepoints[0].order[0] < interfaces[0])
-        self.assertTrue(path.phasepoints[-1].order[0] > interfaces[-1])
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.phasepoints[0].order[0] < interfaces[0]
+        assert path.phasepoints[-1].order[0] > interfaces[-1]
+        assert _check_path(path, path_ensemble)
         # 2b) what if start_condition is only L
         interfaces = [-1, -1, 0]
         path_ensemble = PathEnsemble(1, interfaces)
@@ -1010,9 +1010,9 @@ class TestInitiateLoad(unittest.TestCase):
         fill_path(path, npoints=20, scale=0.055)
         path_ensemble.start_condition = 'L'
         clean_path(path, path_ensemble, simtype='repptis')
-        self.assertTrue(path.phasepoints[0].order[0] < interfaces[0])
-        self.assertTrue(path.phasepoints[-1].order[0] < interfaces[0])
-        self.assertTrue(_check_path(path, path_ensemble))
+        assert path.phasepoints[0].order[0] < interfaces[0]
+        assert path.phasepoints[-1].order[0] < interfaces[0]
+        assert _check_path(path, path_ensemble)
 
     def test_external_load(self):
         """Test the load initialise for external trajectories."""
@@ -1044,15 +1044,15 @@ class TestInitiateLoad(unittest.TestCase):
                 simulation = create_simulation(settings)
                 simulation.set_up_output(settings)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
+                assert init
             for to_test in ['accepted', 'order.txt',
                             'energy.txt', 'pathensemble.txt']:
-                self.assertTrue(os.path.exists(os.path.join(tempdir, '023',
-                                                            to_test)))
-            self.assertEqual(simulation.ensembles[0]['path_ensemble']
-                             .last_path.status, 'ACC')
-            self.assertEqual(simulation.ensembles[0]['path_ensemble']
-                             .last_path.weight, 42.0)
+                assert os.path.exists(os.path.join(tempdir, '023',
+                                                   to_test))
+            assert simulation.ensembles[0]['path_ensemble'] \
+                             .last_path.status == 'ACC'
+            assert simulation.ensembles[0]['path_ensemble'] \
+                             .last_path.weight == 42.0
 
     def test_external_load_cp2k(self):
         """Test the load initialise for external trajectories with cp2k."""
@@ -1082,18 +1082,17 @@ class TestInitiateLoad(unittest.TestCase):
             simulation.set_up_output(settings)
             with patch('sys.stdout', new=StringIO()):
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
-            self.assertTrue(self._test_dirs(tempdir))
+                assert init
+            assert self._test_dirs(tempdir)
 
             for i in range(3):
-                self.assertEqual(
-                    simulation.ensembles[i]['path_ensemble'].last_path.status,
-                    'ACC')
+                assert simulation.ensembles[i]['path_ensemble'] \
+                    .last_path.status == 'ACC'
                 path = simulation.ensembles[i]['path_ensemble'].last_path
                 for j in range(int(path.length/3)):
                     point1 = path.phasepoints[j]
                     point2 = path.phasepoints[-1-j]
-                    self.assertEqual(point1.order[0], point2.order[0])
+                    assert point1.order[0] == point2.order[0]
 
     def test_external_load_external(self):
         """Test the load initialise for external trajectories."""
@@ -1128,23 +1127,22 @@ class TestInitiateLoad(unittest.TestCase):
                 simulation = create_simulation(settings)
                 simulation.set_up_output(settings)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
-            self.assertTrue(self._test_dirs(tempdir))
+                assert init
+            assert self._test_dirs(tempdir)
 
             for i in range(4):
-                self.assertEqual(
-                    simulation.ensembles[i]
-                    ['path_ensemble'].last_path.status, 'ACC')
+                assert simulation.ensembles[i]['path_ensemble'] \
+                   .last_path.status == 'ACC'
 
-            self.assertTrue(os.path.exists(os.path.join(load_dir, '004',
-                                                        'traj.txt')))
+            assert os.path.exists(os.path.join(load_dir, '004',
+                                               'traj.txt'))
 
             for i in range(1, 4):
                 path = simulation.ensembles[i]['path_ensemble'].last_path
                 for j in range(int(path.length / 2) - 1):
                     point1 = path.phasepoints[j]
                     point2 = path.phasepoints[j + 1]
-                    self.assertTrue(point1.order[0] <= point2.order[0])
+                    assert point1.order[0] <= point2.order[0]
 
     def test_external_load_external_2(self):
         """Test the load initialise for external trajectories."""
@@ -1178,22 +1176,21 @@ class TestInitiateLoad(unittest.TestCase):
                 simulation = create_simulation(settings)
                 simulation.set_up_output(settings)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
-            self.assertTrue(self._test_dirs(tempdir))
+                assert init
+            assert self._test_dirs(tempdir)
 
             for i in range(3):
-                self.assertEqual(
-                    simulation.ensembles[i]['path_ensemble'].last_path.status,
-                    'ACC')
+                assert simulation.ensembles[i]['path_ensemble'] \
+                   .last_path.status == 'ACC'
 
-            self.assertTrue(os.path.exists(os.path.join(load_dir, '004',
-                                                        'traj.txt')))
+            assert os.path.exists(os.path.join(load_dir, '004',
+                                               'traj.txt'))
 
             for i in range(1, 3):
                 path = simulation.ensembles[i]['path_ensemble'].last_path
                 for j in range(int(path.length/3)):
-                    self.assertEqual(path.phasepoints[j].order[0],
-                                     path.phasepoints[-1-j].order[0])
+                    assert path.phasepoints[j].order[0] == \
+                                     path.phasepoints[-1-j].order[0]
 
     def test_external_load_external_trr(self):
         """Test the load initialise for external trajectories."""
@@ -1227,21 +1224,20 @@ class TestInitiateLoad(unittest.TestCase):
                 simulation = create_simulation(settings)
                 simulation.set_up_output(settings)
                 init = simulation.initiate(settings)
-                self.assertTrue(init)
-            self.assertTrue(self._test_dirs(tempdir))
+                assert init
+            assert self._test_dirs(tempdir)
 
             for i in range(4):
-                self.assertEqual(
-                    simulation.ensembles[i]['path_ensemble'].last_path.status,
-                    'ACC')
+                assert simulation.ensembles[i]['path_ensemble'] \
+                   .last_path.status == 'ACC'
 
-            self.assertTrue(os.path.exists(os.path.join(load_dir, '004',
-                                                        'traj.txt')))
+            assert os.path.exists(os.path.join(load_dir, '004',
+                                               'traj.txt'))
 
             exp_len = [None, 11, 11, 11]
             for i in range(1, 4):
                 path = simulation.ensembles[i]['path_ensemble'].last_path
-                self.assertEqual(path.length, exp_len[i])
+                assert path.length == exp_len[i]
 
     @staticmethod
     def _create_empty_gro_files(tempdir, nfiles):
@@ -1264,54 +1260,50 @@ class TestInitiateLoad(unittest.TestCase):
             self._set_up_for_load(settings, tempdir)
             # Remove the ensemble directory to test what happens:
             edir = os.path.join(tempdir, '001')
-            self.assertTrue(os.path.isdir(tempdirbase))
-            self.assertTrue(os.path.isdir(tempdir))
-            self.assertTrue(os.path.isdir(edir))
+            assert os.path.isdir(tempdirbase)
+            assert os.path.isdir(tempdir)
+            assert os.path.isdir(edir)
             shutil.rmtree(edir)
-            self.assertFalse(os.path.isdir(edir))
+            assert not os.path.isdir(edir)
             # And remove the initial.xyz:
             remove_file(os.path.join(tempdir, 'initial.xyz'))
-            with self.assertRaises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError):
                 _do_the_dirty_load_job(tempdir, edir)
             # Create some fake .gro files to see what happens next:
             grofiles = self._create_empty_gro_files(tempdir, 3)
             accepted = os.path.join(edir, 'accepted')
-            self.assertFalse(os.path.isdir(edir))
-            self.assertFalse(os.path.isdir(accepted))
+            assert not os.path.isdir(edir)
+            assert not os.path.isdir(accepted)
             _do_the_dirty_load_job(tempdir, edir)
             # Check that edir was created:
-            self.assertTrue(os.path.isdir(edir))
+            assert os.path.isdir(edir)
             # Check that the accepted dir was crated:
-            self.assertTrue(os.path.isdir(accepted))
+            assert os.path.isdir(accepted)
             # And that the gro files were copied:
             for i in grofiles:
-                self.assertTrue(os.path.isfile(os.path.join(accepted, i)))
+                assert os.path.isfile(os.path.join(accepted, i))
                 remove_file(os.path.join(tempdir, i))
             # Remove the accepted dir and see what happens:
             shutil.rmtree(accepted)
-            with self.assertRaises(FileNotFoundError):
+            with pytest.raises(FileNotFoundError):
                 _do_the_dirty_load_job(tempdir, edir)
             # Add some files in tempdir and see what happens:
             grofiles = self._create_empty_gro_files(tempdir, 3)
-            self.assertFalse(os.path.isdir(accepted))
+            assert not os.path.isdir(accepted)
             _do_the_dirty_load_job(tempdir, edir)
-            self.assertTrue(os.path.isdir(accepted))
+            assert os.path.isdir(accepted)
             # Check that files were copied:
             for i in grofiles:
-                self.assertTrue(os.path.isfile(os.path.join(accepted, i)))
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, i)))
+                assert os.path.isfile(os.path.join(accepted, i))
+                assert os.path.isfile(os.path.join(tempdir, i))
                 remove_file(os.path.join(tempdir, i))
             shutil.rmtree(accepted)
             # Add some files in edir and see what happens:
             grofiles = self._create_empty_gro_files(edir, 3)
-            self.assertFalse(os.path.isdir(accepted))
+            assert not os.path.isdir(accepted)
             _do_the_dirty_load_job(tempdir, edir)
-            self.assertTrue(os.path.isdir(accepted))
+            assert os.path.isdir(accepted)
             # Check that files were moved:
             for i in grofiles:
-                self.assertTrue(os.path.isfile(os.path.join(accepted, i)))
-                self.assertFalse(os.path.isfile(os.path.join(tempdir, i)))
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert os.path.isfile(os.path.join(accepted, i))
+                assert not os.path.isfile(os.path.join(tempdir, i))

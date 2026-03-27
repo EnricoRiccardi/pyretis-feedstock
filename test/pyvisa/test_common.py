@@ -5,7 +5,7 @@
 import colorama
 import os
 import logging
-import unittest
+import pytest
 import numpy as np
 import tempfile
 import shutil
@@ -32,7 +32,7 @@ def del_list_ind(data_list, to_delete):
         del data_list[i]
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods from pyretis.pyvisa.common."""
 
     def test_try_data_shift(self):
@@ -61,24 +61,24 @@ class TestMethods(unittest.TestCase):
                 sy.append(y[i])
         # Evaluate correct data, should do nothing:
         nx, ny = try_data_shift(x, y, False)
-        self.assertEqual(x, nx)
-        self.assertEqual(y, ny)
+        assert x == nx
+        assert y == ny
         # Evaluate x-shifted data:
         nx, ny = try_data_shift(sx, y, False)
-        self.assertEqual(ny, y)
-        self.assertFalse(np.average(sx) == np.average(nx))
+        assert ny == y
+        assert not np.average(sx == np.average(nx))
         # Evaluate y-shifted data:
         nx, ny = try_data_shift(x, sy, False)
-        self.assertEqual(x, nx)
-        self.assertFalse(np.average(sy) == np.average(ny))
+        assert x == nx
+        assert not np.average(sy == np.average(ny))
         # Evaluate x&y-shifted data:
         nx, ny = try_data_shift(sx, sy, False)
-        self.assertFalse(np.average(sx) == np.average(nx))
-        self.assertFalse(np.average(sy) == np.average(ny))
+        assert not np.average(sx == np.average(nx))
+        assert not np.average(sy == np.average(ny))
         # Evaluate x&y-shifted data, but with op1 flag to hold:
         nx, ny = try_data_shift(sx, sy, True)
-        self.assertEqual(sx, nx)
-        self.assertFalse(np.average(sy) == np.average(ny))
+        assert sx == nx
+        assert not np.average(sy == np.average(ny))
 
     def test_where_to_from(self):
         """Test to get the right L and R and * trj start and end labels."""
@@ -90,7 +90,7 @@ class TestMethods(unittest.TestCase):
         # For a certain trj, we test different interfaces.
         for int_a, int_b, result in zip(int_as, int_bs,  results):
             start, end = where_from_to(trj, int_a, int_b)
-            self.assertEqual((start, end), result)
+            assert (start, end) == result
 
         # Let's check the zero ensemble.
         trjs = [[0, 2], [6, 5], [1, 6]]
@@ -98,7 +98,7 @@ class TestMethods(unittest.TestCase):
 
         for trj, result in zip(trjs, results):
             start, end = where_from_to(trj, int_a=3)
-            self.assertEqual((start, end), result)
+            assert (start, end) == result
 
     def test_find_rst_file(self):
         """Test for finding the rst file."""
@@ -106,27 +106,27 @@ class TestMethods(unittest.TestCase):
         os.chdir(start_path)
         rst_path = os.path.join(HERE, 'test_simulation_dir/input.rst')
         final_path = find_rst_file(start_path)
-        self.assertEqual(rst_path, final_path)
+        assert rst_path == final_path
         final_path = find_rst_file('/')
-        self.assertEqual('/', '/')
+        assert '/' == '/'
 
     def test_read_traj_txt_file(self):
         """Test for reading a traj.txt file."""
         txt_file = os.path.join(HERE, 'test_simulation_dir/traj.txt')
         files = read_traj_txt_file(txt_file)
-        self.assertEqual(len(files.keys()), 2)
+        assert len(files.keys()) == 2
 
     def test_get_trjs(self):
         """Test for _get_trjs."""
         dir_file = os.path.join(HERE, 'test_simulation_dir')
         trj_list = _get_trjs(dir_file)
         found = sum([1 for trj in trj_list if 'traj.' in trj])
-        self.assertGreater(found, 0)
+        assert found > 0
 
     def test_find_data(self):
         """Test for find_data."""
         ass = find_data(HERE, data=HERE + '/test_simulation_dir/traj.txt')
-        self.assertIn('traj.', ass['000']['traj']['0']['traj'][0])
+        assert 'traj.' in ass['000']['traj']['0']['traj'][0]
 
         source = os.path.join(HERE, 'test_simulation_dir/003/order.txt')
         tmp = os.path.join(HERE, 'test_simulation_dir/003/banana')
@@ -135,12 +135,12 @@ class TestMethods(unittest.TestCase):
         target = os.path.join(HERE, 'test_simulation_dir',
                               '003', 'traj', 'traj-acc',
                               '0', 'traj', 'traj.xyz')
-        self.assertEqual(ass['003']['traj']['0']['traj'][0], target)
+        assert ass['003']['traj']['0']['traj'][0] == target
         os.rename(tmp, source)
 
         ass = find_data(HERE, data=HERE + '/test_simulation_dir/traj.txt')
-        self.assertIn('test_simulation_dir/traj.txt',
-                      ass['000']['traj']['0']['traj'][0])
+        assert ('test_simulation_dir/traj.txt' in
+                ass['000']['traj']['0']['traj'][0])
 
     def test_recalculate_all(self):
         """Test for recalculate_all."""
@@ -148,13 +148,9 @@ class TestMethods(unittest.TestCase):
             tmp_dir = os.path.join(tempdir, 'test_simulation_dir')
             shutil.copytree(HERE + '/test_simulation_dir', tmp_dir)
             with mock.patch('sys.stdout', new=StringIO()):
-                self.assertFalse(recalculate_all(tmp_dir, 'input.rst'))
+                assert not recalculate_all(tmp_dir, 'input.rst')
                 file_new = os.path.join(tmp_dir, 'input.rst')
                 os.system(f"sed -i s/'class = Position'/' '/ {file_new}")
-                self.assertTrue(recalculate_all(tmp_dir, 'input.rst'))
-                self.assertFalse(recalculate_all(tmp_dir, 'input.rst',
-                                                 ensemble_names=[]))
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert recalculate_all(tmp_dir, 'input.rst')
+                assert not recalculate_all(tmp_dir, 'input.rst',
+                                           ensemble_names=[])

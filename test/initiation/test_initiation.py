@@ -4,7 +4,7 @@
 """Test generic initiation methods."""
 import logging
 from io import StringIO
-import unittest
+import pytest
 from unittest.mock import patch
 from pyretis.initiation import (
     initiate_kick,
@@ -17,7 +17,7 @@ from pyretis.initiation import (
 logging.disable(logging.CRITICAL)
 
 
-class TestInitiate(unittest.TestCase):
+class TestInitiate:
     """Run the tests for the reading external trajectories."""
 
     def test_get_initiation_method(self):
@@ -52,11 +52,7 @@ class TestInitiate(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()):
             for case in cases:
                 method = get_initiation_method(case['settings'])
-                self.assertEqual(method, case['method'])
+                assert method == case['method']
         settings = {'initial-path': {'method': 'santas little failer'}}
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             get_initiation_method(settings)
-
-
-if __name__ == '__main__':
-    unittest.main()

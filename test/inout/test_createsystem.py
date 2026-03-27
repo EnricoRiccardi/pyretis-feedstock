@@ -4,7 +4,7 @@
 """Test the methods in pyretis.setup.createsystem"""
 import os
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.units import create_conversion_factors
 from pyretis.core.box import RectangularBox, TriclinicBox
@@ -80,7 +80,7 @@ class DummyExternal(ExternalMDEngine):
         """Initialise the dummy engine."""
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods from .createsystem"""
 
     def test_list_get(self):
@@ -88,17 +88,17 @@ class TestMethods(unittest.TestCase):
         lst = [1, 2, 3]
         for idx, i in enumerate(lst):
             item = list_get(lst, idx)
-            self.assertEqual(item, i)
+            assert item == i
         for i in range(3, 10):
             item = list_get(lst, i)
-            self.assertEqual(item, lst[-1])
+            assert item == lst[-1]
 
     def test_guess_particle_mass(self):
         """Test the guess_particle_mass method."""
         mass = guess_particle_mass(0, 'He', 'g/mol')
-        self.assertAlmostEqual(mass, 4.002602)
+        assert mass == pytest.approx(4.002602)
         mass = guess_particle_mass(0, 'X', 'g/mol')
-        self.assertAlmostEqual(mass, 1.0)
+        assert mass == pytest.approx(1.0)
 
     def test_initial_positions_lattice(self):
         """Test that we can generate positions on a lattice."""
@@ -113,17 +113,17 @@ class TestMethods(unittest.TestCase):
         settings['particles']['ptype'] = [42]
         particles, box = initial_positions_lattice(settings)
         for i in particles.ptype:
-            self.assertEqual(i, 42)
+            assert i == 42
         for i in particles.mass:
-            self.assertAlmostEqual(i, 1.23)
+            assert i == pytest.approx(1.23)
         for i in particles.name:
-            self.assertEqual(i, 'X')
+            assert i == 'X'
         lenx, leny, lenz = box['high']
-        self.assertAlmostEqual(lenx, 1.64414138)
-        self.assertAlmostEqual(leny / lenx, 2.0)
-        self.assertAlmostEqual(lenz / lenx, 3.0)
+        assert lenx == pytest.approx(1.64414138)
+        assert leny / lenx == pytest.approx(2.0)
+        assert lenz / lenx == pytest.approx(3.0)
 
-    def test_initial_positions_file(self):
+    def test_initial_positions_file(self, caplog):
         """Test that we can get initial positions from a file."""
         gro = os.path.join(HERE, 'config.gro')
         settings = {
@@ -132,43 +132,43 @@ class TestMethods(unittest.TestCase):
         }
         create_conversion_factors(settings['system']['units'])
         particles, box, vel = initial_positions_file(settings)
-        self.assertTrue(vel)
-        self.assertEqual(particles.dim, 3)
+        assert vel
+        assert particles.dim == 3
         for i in box['cell']:
-            self.assertAlmostEqual(i, 20.0)
+            assert i == pytest.approx(20.0)
         for i, j in zip(particles.name, ['Ba', 'Hf', 'O', 'O', 'O']):
-            self.assertEqual(i, j)
+            assert i == j
         # Test override particle names:
         settings['particles']['name'] = ['X', 'Y', 'Z']
         particles, _, _ = initial_positions_file(settings)
         for i, j in zip(particles.name, ['X', 'Y', 'Z', 'Z', 'Z']):
-            self.assertEqual(i, j)
+            assert i == j
         # Test override dimensions:
         settings['system']['dimensions'] = 2
         particles, _, _ = initial_positions_file(settings)
-        self.assertEqual(particles.dim, 2)
+        assert particles.dim == 2
         # Test missing file info:
         settings['particles']['position'] = {}
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             initial_positions_file(settings)
         # Test unknown format:
         settings['particles']['position'] = {'input_file': 'file.fancy_format'}
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             initial_positions_file(settings)
         # Test .txt format and multiple snapshots:
         settings['particles']['position'] = {
             'input_file': os.path.join(HERE, 'config.txt')
         }
         logging.disable(logging.INFO)
-        with self.assertLogs('pyretis.setup.createsystem',
-                             level='WARNING'):
+        with caplog.at_level(logging.WARNING,
+                             logger='pyretis.setup.createsystem'):
             initial_positions_file(settings)
         # Test empty config:
         settings['particles']['position'] = {
             'input_file': os.path.join(HERE, 'config_empty.txt')
         }
         logging.disable(logging.CRITICAL)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             initial_positions_file(settings)
 
     def test_create_initial_positions(self):
@@ -194,7 +194,7 @@ class TestMethods(unittest.TestCase):
         settings['particles'] = {
             'position': {'something-else': None},
         }
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             create_initial_positions(settings)
 
     def test_set_up_box(self):
@@ -204,24 +204,24 @@ class TestMethods(unittest.TestCase):
             'box': {'cell': [1, 2, 3], 'periodic': [True, False, True]}
         }
         box = set_up_box(settings, None)
-        self.assertIsInstance(box, RectangularBox)
+        assert isinstance(box, RectangularBox)
         for i, j in zip(box.cell, [1., 2., 3.]):
-            self.assertAlmostEqual(i, j)
+            assert i == pytest.approx(j)
         for i, j in zip(box.periodic, [True, False, True]):
-            self.assertEqual(i, j)
+            assert i == j
         # From dict, with missing settings:
         settings = {}
         boxs = {'cell': [1, 2, 3, 4, 5, 6]}
         box = set_up_box(settings, boxs)
-        self.assertIsInstance(box, TriclinicBox)
+        assert isinstance(box, TriclinicBox)
         mat = np.array([[1., 4., 5.], [0., 2., 6.], [0., 0., 3.]])
-        self.assertTrue(np.allclose(box.box_matrix, mat))
+        assert np.allclose(box.box_matrix, mat)
         # When we have no settings at all:
         settings = {}
         box = set_up_box(settings, None)
-        self.assertIsInstance(box, RectangularBox)
+        assert isinstance(box, RectangularBox)
         for i in box.periodic:
-            self.assertFalse(i)
+            assert not i
 
     def test_create_velocities(self):
         """Test that we can create velocities."""
@@ -237,7 +237,7 @@ class TestMethods(unittest.TestCase):
         }
         create_velocities(system, settings, True)
         temp = system.calculate_temperature()
-        self.assertAlmostEqual(temp, 4.321)
+        assert temp == pytest.approx(4.321)
         # If we want to scale to some energy:
         settings['particles']['velocity'] = {
             'scale': 100.,
@@ -250,8 +250,8 @@ class TestMethods(unittest.TestCase):
         restart = {'simulation': {'restart': 'Let me alone'}}
         restart['restart'] = {'system': system.restart_info()}
         system2 = create_system(restart)
-        self.assertEqual(system.units, system2.units)
-        self.assertTrue(system == system2)
+        assert system.units == system2.units
+        assert system == system2
 
     def test_create_system_settings(self):
         """Test creation of system from settings."""
@@ -273,17 +273,17 @@ class TestMethods(unittest.TestCase):
         }
         create_conversion_factors(settings['system']['units'])
         system = create_system(settings)
-        self.assertIsInstance(system.particles, Particles)
+        assert isinstance(system.particles, Particles)
         system = create_system(settings)
         settings['engine'] = {'type': 'external',
                               'input_files': {}}
         system = create_system(settings)
-        self.assertIsInstance(system.particles, ParticlesExt)
+        assert isinstance(system.particles, ParticlesExt)
         # Test that missing 'particles' in settings and internal engine gives
         # an KeyError
         settings['simulation'] = 'restart'
         del settings['system']
-        with self.assertRaises(KeyError):
+        with pytest.raises(KeyError):
             create_system(settings)
 
     def test_create_system(self):
@@ -298,12 +298,12 @@ class TestMethods(unittest.TestCase):
         system2.load_restart_info(restart)
         system4 = create_system(restart)
 
-        self.assertIsInstance(system, System)
-        self.assertIsInstance(system2, System)
-        self.assertIsInstance(system4, System)
+        assert isinstance(system, System)
+        assert isinstance(system2, System)
+        assert isinstance(system4, System)
 
         # todo wish-list to make restarts always possible
-        # self.assertTrue(system2 == system4)
+        # assert system2 == system4
 
         # From settings:
         settings = {
@@ -317,9 +317,5 @@ class TestMethods(unittest.TestCase):
             'density': 0.9,
         }
         system3 = create_system(settings)
-        self.assertIsInstance(system3.particles, Particles)
-        self.assertIsInstance(system3, System)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert isinstance(system3.particles, Particles)
+        assert isinstance(system3, System)

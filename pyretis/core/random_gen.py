@@ -161,41 +161,49 @@ class RandomGeneratorBase(metaclass=ABCMeta):
                                        dof, selection=None, momentum=True):
         """Generate velocities from a Maxwell distribution.
 
-        The velocities are drawn to match a given temperature and this
+        The velocities are drawn to match a given temperature. This
         function can be applied to a subset of the particles.
 
-        The generation is done in three steps:
+        The generation is performed in three steps:
 
-        1) We generate velocities from a standard normal distribution.
-
-        2) We scale the velocity of particle `i` with
-           ``1.0/sqrt(mass_i)`` and reset the momentum.
-
-        3) We scale the velocities to the set temperature.
+        1.  Initial velocities are drawn from a standard normal
+            distribution (0, 1).
+        2.  Velocities are scaled by ``1.0 / sqrt(mass)`` to account
+            for particle masses. The linear momentum is reset if
+            requested.
+        3.  The velocities are scaled to match the target kinetic
+            temperature exactly.
 
         Parameters
         ----------
-        particles : object like :py:class:`.Particles`
+        particles : object
             These are the particles to set the velocity of.
         boltzmann : float
             The Boltzmann factor in correct units.
         temperature : float
-            The desired temperature.
-            Typically, `system.temperature['set']` will be used here.
-        dof : list of floats, optional
-            The degrees of freedom to subtract. Its shape should
-            be equal to the number of dimensions.
+            The desired temperature. Typically,
+            ``system.temperature['set']`` will be used here.
+        dof : list of floats or numpy.array
+            The degrees of freedom to subtract. Its shape should be
+            equal to the number of dimensions.
         selection : list of ints, optional
-            A list with indices of the particles to consider.
-            Can be used to only apply it to a selection of particles
+            A list with indices of the particles to consider. Can be
+            used to only apply it to a selection of particles.
         momentum : boolean, optional
-            If true, we will reset the momentum.
+            If True, we will reset the linear momentum of the particles
+            (or the selected subset) after generating the initial
+            velocities.
 
         Returns
         -------
-        out : None
-            Returns `None` but modifies velocities of the selected
-            particles.
+        None
+            The velocities of the selected particles are modified
+            in-place.
+
+        See also
+        --------
+        draw_maxwellian_velocities : For drawing velocities without
+            assigning them in-place.
 
         """
         if selection is None:
@@ -301,20 +309,24 @@ class RandomGenerator(RandomGeneratorBase):
 
         Parameters
         ----------
-        shape : int, optional
-            The number of numbers to draw
+        shape : int or tuple of ints, optional
+            The number of numbers to draw. Default is 1, which
+            returns an array of one random number.
 
         Returns
         -------
-        out : float
-            Pseudo-random number in [0, 1)
+        out : float or numpy.array
+            Pseudo-random number in [0, 1). If shape is an integer,
+            a 1D array is returned. If shape is a tuple, an array
+            with the given shape is returned.
 
         Note
         ----
-        Here, we will just draw a list of numbers and not for
-        an arbitrary shape.
+        This is a convenience wrapper for `self.rgen.random_sample`.
 
         """
+        if shape is None:
+            shape = 1
         return self.rgen.rand(shape)
 
     def get_state(self):
@@ -489,16 +501,22 @@ class ReservoirSampler:
     def get_item(self):
         """Return the next item from the reservoir.
 
+        The items are returned in the order they were added to the
+        reservoir (with wrapping). If the end of the reservoir is
+        reached, a critical message is logged and the index is reset
+        to zero.
+
         Returns
         -------
-        out : any type
-            Returns an item from the reservoir.
+        out : any
+            The next item from the reservoir. The type depends on what
+            was stored in the reservoir.
 
         """
         if self.ret_idx >= self.length:
             self.ret_idx = 0
-            msg = ['Out of bounds in the reservoir sampler!']
-            msg += ['Please increase the size of the reservoir.']
+            msg = ['Out of bounds in the reservoir sampler!',
+                   'Please increase the size of the reservoir.']
             msgtxt = '\n'.join(msg)
             logger.critical(msgtxt)
         ret = self.reservoir[self.ret_idx]
@@ -553,13 +571,20 @@ class MockRandomGenerator(RandomGeneratorBase):
 
         Parameters
         ----------
-        shape : int
-            The number of numbers to draw.
+        shape : int, optional
+            The number of numbers to draw. Default is 1.
 
         Returns
         -------
-        out : float
-            Pseudo-random number in [0, 1).
+        out : numpy.array
+            The pseudo-random numbers in [0, 1).
+
+        Note
+        ----
+        This method draws numbers from a pre-defined sequence
+        (starting with 0.78008018) to ensure deterministic behavior
+        during testing. If the end of the sequence is reached, it
+        wraps around to the beginning.
 
         """
         numbers = []
@@ -587,42 +612,49 @@ class MockRandomGenerator(RandomGeneratorBase):
         Parameters
         ----------
         low : int
-            This is the lower limit
+            The lower limit (inclusive).
         high : int
-            This is the upper limit
+            The upper limit (inclusive).
 
         Returns
         -------
         out : int
-            This is a pseudo-random integer in [low, high].
+            A pseudo-random integer in [low, high].
+
+        Note
+        ----
+        This method uses a number from the pre-defined sequence and
+        scales it to the requested range using:
+        ``idx = rand() * (high - low + 1)``.
 
         """
         idx = self.rand()[0]*(high-low+1)
-        return int(idx) + low
+        return int(idx.item()) + low
 
     def normal(self, loc=0.0, scale=1.0, size=None):
-        """Return values from a normal distribution.
+        """Return values from a "normal" distribution.
 
         Parameters
         ----------
         loc : float, optional
-            The mean of the distribution
+            The mean of the distribution.
         scale : float, optional
-            The standard deviation of the distribution
-        size : int, tuple of ints, optional
-            Output shape, i.e. how many values to generate. Default is
-            None which is just a single value.
+            The standard deviation of the distribution.
+        size : int or tuple of ints, optional
+            Output shape. Default is None, which returns a single
+            value.
 
         Returns
         -------
-        out : float, numpy.array of floats
-            The random numbers generated.
+        out : float or numpy.array
+            The generated "random" numbers.
 
         Note
         ----
-        This is part of the Mock-random number generator. Hence, it
-        won't provide a true normal distribution, though the mean is set to
-        the value of loc.
+        This is part of a mock generator and does NOT provide a true
+        normal distribution. It simply returns values from the
+        pre-defined sequence, shifted by ``loc - 0.5`` if
+        ``norm_shift`` is enabled.
 
         """
         if self.norm_shift:
@@ -673,24 +705,33 @@ class MockRandomGenerator(RandomGeneratorBase):
         return 0.01*(meanm + norm)
 
     def choice(self, a, size=None, replace=True, p=None):
-        """Choose random samples.
+        """Choose random samples from a given array.
 
         Parameters
         ----------
-        a : iterable
-            The group to choose from.
-        size : int, optional
-            The number of samples to choose.
-        replace : bool, optional
-            If to replace samples between draws, default True.
-        p : iterable, optional
-            The probabilities for every option in a,
-            default is an uniform dirstribution.
+        a : 1-D array-like or int
+            If an ndarray, a random sample is generated from its
+            elements. If an int, the random sample is generated as if
+            a were np.arange(a).
+        size : int or tuple of ints, optional
+            Output shape. Default is None, in which case a single
+            value is returned.
+        replace : boolean, optional
+            Whether the sample is with or without replacement.
+        p : 1-D array-like, optional
+            The probabilities associated with each entry in a. If not
+            given the sample assumes a uniform distribution over all
+            entries in a.
 
         Returns
         -------
-        choice : array-like
-            The picked choices.
+        choice : any or numpy.array
+            The generated random samples.
+
+        Note
+        ----
+        This is part of a mock generator and uses the pre-defined
+        sequence to make choices.
 
         """
         if isinstance(a, int):

@@ -5,7 +5,7 @@
 import logging
 import numpy as np
 import os
-import unittest
+import pytest
 from pyretis.analysis import match_all_histograms
 from pyretis.inout.plotting import create_plotter
 from pyretis.inout.report.report import generate_report, get_template
@@ -17,32 +17,32 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class Reporting(unittest.TestCase):
+class TestReporting:
     """Test the generate_report."""
-    def test_generate_report(self):
+    def test_generate_report(self, caplog):
         """Test analysisio function"""
-        with self.assertRaises(ValueError) as ext:
+        with pytest.raises(ValueError) as ext:
             generate_report(report_type='fake', analysis_results={},
                             output='ext')
-        self.assertIn('nkown report type fake', str(ext.exception))
+        assert 'nkown report type fake' in str(ext.value)
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.report.report',
-                                 level='WARNING'):
-                with self.assertRaises(ValueError) as ext:
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.inout.report.report'):
+                with pytest.raises(ValueError) as ext:
                     generate_report(report_type='retis0',
                                     analysis_results={},
                                     output='ext')
-                self.assertIn('Could not locate template', str(ext.exception))
+                assert 'Could not locate template' in str(ext.value)
 
     def test_create_plotter(self):
         """Test create_plotter."""
-        with self.assertRaises(ValueError) as ext:
+        with pytest.raises(ValueError) as ext:
             create_plotter({'plotter': 'Fake'})
-        self.assertIn('Unknown plotter: Fake', str(ext.exception))
+        assert 'Unknown plotter: Fake' in str(ext.value)
 
-        with self.assertRaises(ValueError) as ext:
+        with pytest.raises(ValueError) as ext:
             create_plotter({'plotter': 'mpl', 'output': 'kik'})
-        self.assertIn('Output format "kik" is not support', str(ext.exception))
+        assert 'Output format "kik" is not support' in str(ext.value)
 
     def test_get_template(self):
         """Test get_template."""
@@ -50,7 +50,7 @@ class Reporting(unittest.TestCase):
         ifile = os.path.join(HERE, 'initial-gro.rst')
         nav, path = get_template(output='', report_type='', template=ifile)
 
-        self.assertEqual((path, nav), (HERE, 'initial-gro.rst'))
+        assert (nav, path) == ('initial-gro.rst', HERE)
 
     def test_match_all_histograms(self):
         """Test match histograms for umbrella sampling."""
@@ -66,12 +66,8 @@ class Reporting(unittest.TestCase):
         windows = [[-1.0, -0.4], [-0.5, -0.2], [-0.3, 0.0]]
 
         histograms_s, mix, hist_avg = match_all_histograms(histograms, windows)
-        self.assertTrue(all(histograms_s[0] == [1, 5, 1, 0, 1, 1]))
-        self.assertTrue(all(histograms_s[1] == [1., 3., 1., 0., 3., 1.]))
-        self.assertTrue(all(histograms_s[2] == [1., 2., 1., 0., 7., 1.]))
-        self.assertTrue(all(np.array(mix) == [1.0, 1.0, 1.0]))
-        self.assertTrue(all(hist_avg == np.array([1., 3., 0., 0., 7., 1.])))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert all(histograms_s[0] == [1, 5, 1, 0, 1, 1])
+        assert all(histograms_s[1] == [1., 3., 1., 0., 3., 1.])
+        assert all(histograms_s[2] == [1., 2., 1., 0., 7., 1.])
+        assert np.all(np.array(mix) == [1.0, 1.0, 1.0])
+        assert np.all(hist_avg == np.array([1., 3., 0., 0., 7., 1.]))

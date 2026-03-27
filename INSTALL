@@ -87,7 +87,7 @@ Your installation can be tested by running the tests from the
 main directory:
 
 ```
-python -m unittest discover -v -s test
+pytest -v test/
 ```
 
 Building the documentation

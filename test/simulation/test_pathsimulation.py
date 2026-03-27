@@ -7,7 +7,7 @@ import copy
 import logging
 import os
 import tempfile
-import unittest
+import pytest
 import pathlib
 
 from pyretis.inout.settings import (add_default_settings,
@@ -111,27 +111,27 @@ def create_variables1(exe_path=None):
     return settings, ensembles
 
 
-class TestPathSimulation(unittest.TestCase):
+class TestPathSimulation:
     """Run the tests for the PathSimulation class."""
 
     def test_init(self):
         """Test that we can create the simulation object."""
         settings, ensembles = create_variables()
         simulation = PathSimulation(ensembles, settings, controls={})
-        self.assertTrue(hasattr(simulation, 'rgen'))
+        assert hasattr(simulation, 'rgen')
         settings['engine']['sigma_v'] = 0.1
         simulation = PathSimulation(ensembles, settings, controls={})
-        self.assertEqual(len(simulation.ensembles), len(ensembles))
+        assert len(simulation.ensembles) == len(ensembles)
         for i, j in zip(simulation.ensembles, ensembles):
-            self.assertIs(i, j)
-        self.assertTrue(simulation.settings['tis']['aimless'])
+            assert i is j
+        assert simulation.settings['tis']['aimless']
         settings['simulation']['task'] = 'make-tis-files'
         del settings['ensemble']
         fill_up_tis_and_retis_settings(settings)
         for ens_set in settings['ensemble']:
-            self.assertEqual('tis', ens_set['simulation']['task'])
+            assert 'tis' == ens_set['simulation']['task']
         del settings['tis']
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             PathSimulation(ensembles, settings, controls={})
 
     def test_init_sigma_v(self):
@@ -139,7 +139,7 @@ class TestPathSimulation(unittest.TestCase):
         settings, ensembles = create_variables()
         settings['ensemble'][1]['tis']['sigma_v'] = 0.1
         simulation = PathSimulation(ensembles, settings, controls={})
-        self.assertFalse(simulation.settings['ensemble'][1]['tis']['aimless'])
+        assert not simulation.settings['ensemble'][1]['tis']['aimless']
 
     def test_restart_info(self):
         """Test generation of restart info."""
@@ -149,13 +149,13 @@ class TestPathSimulation(unittest.TestCase):
                                     controls={'steps': 16})
         info = simulation.restart_info()
         for key in ('cycle', 'rgen'):
-            self.assertIn(key, info['simulation'])
-        self.assertEqual(info['simulation']['rgen']['state'][2], 624)
-        self.assertIn('system', info)
+            assert key in info['simulation']
+        assert info['simulation']['rgen']['state'][2] == 624
+        assert 'system' in info
         simulation = PathSimulation(ensembles, settings, controls={})
         simulation.load_restart_info(info)
-        self.assertEqual(simulation.rgen.get_state()['state'][2], 624)
-        self.assertEqual(simulation.cycle['startcycle'], 16)
+        assert simulation.rgen.get_state()['state'][2] == 624
+        assert simulation.cycle['startcycle'] == 16
 
     def test_write_restart_file(self):
         """Test that we can create the restart files."""
@@ -165,16 +165,16 @@ class TestPathSimulation(unittest.TestCase):
             simulation.set_up_output(settings)
             simulation.write_restart(now=True)
             dirs = [i.name for i in os.scandir(tempdir) if i.is_dir()]
-            self.assertEqual(len(dirs), 4)
+            assert len(dirs) == 4
             for i in ensembles:
-                self.assertIn(i['path_ensemble'].ensemble_name_simple, dirs)
+                assert i['path_ensemble'].ensemble_name_simple in dirs
                 for j in os.scandir(
                         i['path_ensemble'].directory['path_ensemble']):
                     if j.is_file():
-                        self.assertEqual('ensemble.restart', j.name)
+                        assert 'ensemble.restart' == j.name
             files = [i.name for i in os.scandir(tempdir) if i.is_file()]
-            self.assertEqual(len(files), 1)
-            self.assertIn('pyretis.restart', files)
+            assert len(files) == 1
+            assert 'pyretis.restart' in files
 
     def test_initiation(self):
         """Test the initiation method."""
@@ -188,14 +188,14 @@ class TestPathSimulation(unittest.TestCase):
             simulation = PathSimulation(ensembles, settings, controls={})
             simulation.set_up_output(settings)
             with patch('sys.stdout', new=StringIO()):
-                self.assertTrue(simulation.initiate(settings))
+                assert simulation.initiate(settings)
             # Check the soft exit option:
             open(os.path.join(tempdir, 'EXIT'), 'w', encoding='utf-8').close()
             with patch('sys.stdout', new=StringIO()):
-                self.assertFalse(simulation.initiate(settings))
+                assert not simulation.initiate(settings)
 
 
-class TestSimulationRETIS(unittest.TestCase):
+class TestSimulationRETIS:
     """Run the tests for the SimulationRETIS class."""
 
     def test_step(self):
@@ -207,11 +207,11 @@ class TestSimulationRETIS(unittest.TestCase):
             simulation = SimulationRETIS(ensembles, settings, controls={})
             simulation.set_up_output(settings)
             with patch('sys.stdout', new=StringIO()):
-                self.assertTrue(simulation.initiate(settings))
+                assert simulation.initiate(settings)
                 result = simulation.step()
                 for key, move in moves.items():
-                    self.assertIn(key, result)
-                    self.assertEqual(move, result[key])
+                    assert key in result
+                    assert move == result[key]
 
     def test_soft_exit(self):
         """Test the soft exit method."""
@@ -223,14 +223,14 @@ class TestSimulationRETIS(unittest.TestCase):
             simulation.cycle['endcycle'] = 1
             exit_file = os.path.join(tempdir, 'EXIT')
             with patch('sys.stdout', new=StringIO()) as stdout:
-                self.assertTrue(simulation.initiate(settings))
+                assert simulation.initiate(settings)
                 pathlib.Path(exit_file).touch()
                 for _ in enumerate(simulation.run()):
                     pass
-                self.assertIn('soft exit', stdout.getvalue().strip())
+                assert 'soft exit' in stdout.getvalue().strip()
                 restart_file = os.path.join(tempdir, 'pyretis.restart')
-                self.assertTrue(os.path.exists(restart_file))
-                self.assertEqual(simulation.cycle['step'], 1)
+                assert os.path.exists(restart_file)
+                assert simulation.cycle['step'] == 1
 
     def test_priority(self):
         """Test the priority shooting feature."""
@@ -240,7 +240,7 @@ class TestSimulationRETIS(unittest.TestCase):
             simulation = SimulationRETIS(ensembles, settings, controls={})
             simulation.set_up_output(settings)
             with patch('sys.stdout', new=StringIO()):
-                self.assertTrue(simulation.initiate(settings))
+                assert simulation.initiate(settings)
                 simulation.cycle['step'] = 2
                 settings['retis']['swapfreq'] = 0.0
                 settings['simulation']['priority_shooting'] = True
@@ -250,11 +250,11 @@ class TestSimulationRETIS(unittest.TestCase):
 
                 # Get nstats['npath'] = 2 for all path_ensembles:
                 result = simulation.step()
-                self.assertNotIn('move-0', result)
-                self.assertIn('move-1', result)
-                self.assertIn('move-2', result)
-                self.assertEqual([2, 2, 2], [i['path_ensemble'].nstats['npath']
-                                             for i in simulation.ensembles])
+                assert 'move-0' not in result
+                assert 'move-1' in result
+                assert 'move-2' in result
+                assert [2, 2, 2] == [i['path_ensemble'].nstats['npath']
+                                     for i in simulation.ensembles]
 
                 # test case when we 100% do swap with unequal nstats['npath']:
                 simulation.ensembles[2]['path_ensemble'].nstats['npath'] = 0
@@ -262,15 +262,15 @@ class TestSimulationRETIS(unittest.TestCase):
 
                 # 1. We do TIS move in ensembles[2] only:
                 result = simulation.step()
-                self.assertNotIn('move-0', result)
-                self.assertIn('move-2', result)
+                assert 'move-0' not in result
+                assert 'move-2' in result
 
                 # We do swap move in when priority_shooting = False:
                 settings['simulation']['priority_shooting'] = False
                 result = simulation.step()
                 for i in range(3):
                     move = 'swap' if i else 'nullmove'
-                    self.assertEqual(move, result.get('move-' + str(i)))
+                    assert move == result.get('move-' + str(i))
 
     def test_priority_tis(self):
         """Test the priority shooting feature for tis."""
@@ -285,7 +285,7 @@ class TestSimulationRETIS(unittest.TestCase):
                 ensembles = create_ensembles(settings)
                 simulation = SimulationTIS(ensembles, settings, controls={})
                 simulation.set_up_output(settings)
-                self.assertTrue(simulation.initiate(settings))
+                assert simulation.initiate(settings)
                 simulation.cycle['endcycle'] = 4
                 simulation.cycle['step'] = 2
                 settings['simulation']['priority_shooting'] = True
@@ -297,11 +297,7 @@ class TestSimulationRETIS(unittest.TestCase):
                 while not simulation.is_finished():
                     simulation.step()
                     cnt += 1
-                self.assertEqual([4, 4, 4], [i['path_ensemble'].nstats['npath']
-                                             for i in simulation.ensembles])
-                self.assertEqual(cnt, 3)
-                self.assertTrue(simulation.is_finished())
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert [4, 4, 4] == [i['path_ensemble'].nstats['npath']
+                                     for i in simulation.ensembles]
+                assert cnt == 3
+                assert simulation.is_finished()

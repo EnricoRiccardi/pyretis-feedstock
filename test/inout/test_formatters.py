@@ -4,7 +4,7 @@
 """A test module for the formatters."""
 import logging
 import os
-import unittest
+import pytest
 import numpy as np
 from pyretis.core import create_box, Particles, System
 from pyretis.core.path import Path
@@ -33,8 +33,6 @@ from .help import (
     create_external_path,
     turn_on_logging,
     set_up_system,
-)
-from .help import (
     create_test_paths,
     DATA_CROSS,
     DATA_CROSS2,
@@ -52,97 +50,91 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class OutputFormatterTest(unittest.TestCase):
-    """Test that OutputFormatter work as intended."""
+class TestOutputFormatter:
+    """Test the generic output formatter."""
 
-    def test_formatter_header(self):
-        """Test that the header work as intended."""
+    def test_initiation(self, caplog):
+        """Test initiation and the header."""
         formatter = OutputFormatter('test-formatter', header=None)
-        self.assertTrue(formatter.header is None)
+        assert formatter.header is None
 
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             OutputFormatter('test-file', header='Just a text header')
 
         txt = 'This is the header, it is very long indeed'
         formatter = OutputFormatter('test-file', header={'text': txt})
-        self.assertEqual(formatter.header, txt)
+        assert formatter.header == txt
 
-        formatter = OutputFormatter('test-file',
-                                    header={'text': txt, 'width': 10})
-        self.assertEqual(formatter.header, txt)
+        formatter = OutputFormatter('test-file', header={'text': txt,
+                                                         'width': 10})
+        assert formatter.header == txt
 
         formatter = OutputFormatter(
-            'test-file',
-            header={'width': (10, 10),
-                    'labels': ('Label1', 'Label2')},
+            'test-file', header={'width': (10, 10),
+                                 'labels': ('Label1', 'Label2')},
         )
-        self.assertEqual(formatter.header, '#   Label1     Label2')
+        assert formatter.header == '#   Label1     Label2'
         formatter.header = txt
-        self.assertEqual(formatter.header, txt)
+        assert formatter.header == txt
 
-    def test_parse(self):
+    def test_parse(self, caplog):
         """Test that the generic parser work for simple data."""
         formatter = OutputFormatter('test-formatter', header=None)
         raw = '1 2.0 3.0     4.123'
         data = formatter.parse(raw)
         correct = [1.0, 2.0, 3.0, 4.123]
-        self.assertEqual(len(data), len(correct))
+        assert len(data) == len(correct)
         for i, j in zip(data, correct):
-            self.assertAlmostEqual(i, j)
+            assert i == pytest.approx(j)
 
 
-class TestCrossFormatter(unittest.TestCase):
+class TestCrossFormatter:
     """Test the CrossFormatter formatter."""
 
-    def test_cross_formatter(self):
+    def test_cross_formatter(self, caplog):
         """Test that we can format crossing data."""
         formatter = CrossFormatter()
-        self.assertEqual(formatter.header, '#     Step  Int Dir')
+        assert formatter.header == '#     Step  Int Dir'
         for i, datai in enumerate(DATA_CROSS):
             for line in formatter.format(i, datai):
-                self.assertEqual(line, CORRECT_CROSS[i])
+                assert line == CORRECT_CROSS[i]
 
-    def test_parse(self):
+    def test_parse(self, caplog):
         """Test that we can parse crossing data."""
         formatter = CrossFormatter()
         for i, j in zip(CORRECT_CROSS, DATA_CROSS2):
             data = formatter.parse(i)
-            self.assertTupleEqual(data, j)
+            assert data == j
 
 
-class TestEnergyFormatter(unittest.TestCase):
+class TestEnergyFormatter:
     """Test the EnergFMT formatter."""
 
-    def test_energy_file_formatter(self):
+    def test_energy_file_formatter(self, caplog):
         """Test that we can format energy data."""
         formatter = EnergyFormatter()
         fields = ['vpot', 'ekin', 'etot', 'temp']
-        self.assertEqual(
-            formatter.header,
-            ('#     Time      Potential        Kinetic          '
-             'Total    Temperature')
-        )
+        assert formatter.header == (
+            '#     Time      Potential        Kinetic'
+            '          Total    Temperature')
         for step, i in enumerate(DATA_ENERGY):
             data = {key: j for (key, j) in zip(fields, i)}
             for line in formatter.format(step, data):
-                self.assertEqual(line, CORRECT_ENERGY[step])
+                assert line == CORRECT_ENERGY[step]
 
-    def test_energy_missing_data(self):
+    def test_energy_missing_data(self, caplog):
         """Test the energy formatting when some data is missing."""
         formatter = EnergyFormatter()
         data = {'vpot': 1.0, 'ekin': 2.0, 'etot': 3.0}
         for line in formatter.format(0, data):
-            self.assertEqual(
-                line,
-                ('         0       1.000000       2.000000'
-                 '       3.000000            nan')
-            )
+            assert line == ('         0       1.000000       2.000000'
+                            '       3.000000            nan')
 
 
-class TestEnergyPathFormatter(unittest.TestCase):
+class TestEnergyPathFormatter:
     """Test the EnergPathFMT formatter."""
 
-    def test_energy_path_formatter(self):
+    def test_energy_path_formatter(self, caplog):
         """Test that we can format energy data from paths."""
         formatter = EnergyPathFormatter()
         paths, _ = create_test_paths(npath=1)
@@ -151,40 +143,40 @@ class TestEnergyPathFormatter(unittest.TestCase):
                    '#     Time      Potential        Kinetic']
         for i, line in enumerate(formatter.format(0, [paths[0], 'ACC'])):
             if i < 2:
-                self.assertEqual(line, correct[i])
+                assert line == correct[i]
             else:
                 point = paths[0].phasepoints[i-2]
                 txt = '{:>10d} {:>14.6f} {:>14.6f}'.format(
                     i-2, point.particles.vpot, point.particles.ekin
                 )
-                self.assertEqual(line, txt)
+                assert line == txt
         # Test handling of empty paths:
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(formatter.format(0, [None, 'ACC']))
         # Just check what happens if we are missing one of the attributes:
         del paths[0].phasepoints[0].particles.vpot
         for i, line in enumerate(formatter.format(0, [paths[0], 'ACC'])):
             if i == 2:
                 split = line.split()
-                self.assertEqual('nan', split[1])
+                assert 'nan' == split[1]
 
 
-class TestOrderFormatter(unittest.TestCase):
+class TestOrderFormatter:
     """Test the OrderFormatter formatter."""
 
-    def test_order_parameter_formatter(self):
+    def test_order_parameter_formatter(self, caplog):
         """Test that we can format order parameter data."""
         formatter = OrderFormatter()
-        self.assertEqual(formatter.header, '#     Time       Orderp')
+        assert formatter.header == '#     Time       Orderp'
         for i, datai in enumerate(DATA_ORDER):
             for line in formatter.format(i, datai):
-                self.assertEqual(line, CORRECT_ORDER[i])
+                assert line == CORRECT_ORDER[i]
 
 
-class TestOrderPathFormatter(unittest.TestCase):
+class TestOrderPathFormatter:
     """Test the OrderPathFormatter formatter."""
 
-    def test_order_path_formatter(self):
+    def test_order_path_formatter(self, caplog):
         """Test that we can format order parameter data for paths."""
         formatter = OrderPathFormatter()
         paths, _ = create_test_paths(npath=1)
@@ -193,14 +185,14 @@ class TestOrderPathFormatter(unittest.TestCase):
                    '#     Time       Orderp']
         for i, line in enumerate(formatter.format(0, [paths[0], 'ACC'])):
             if i < 2:
-                self.assertEqual(line, correct[i])
+                assert line == correct[i]
             else:
                 point = paths[0].phasepoints[i-2]
                 fmt = ' '.join(['{:>10d}'] + len(point.order)*['{:>12.6f}'])
                 txt = fmt.format(i-2, *point.order)
-                self.assertEqual(line, txt)
+                assert line == txt
         # Test handling of empty paths:
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(formatter.format(0, [None, 'ACC']))
 
 
@@ -235,13 +227,11 @@ def generate_system_snapshots(ndim, length=10, npart=10):
         yield system
 
 
-def compare_traj_fmt_file(test, formatter, correct_file, ndim):
+def compare_traj_fmt_file(formatter, correct_file, ndim):
     """Compare formatted trajectory output with a file.
 
     Parameters
     ----------
-    test : object like :py:class:`unittest.TestCase`.
-        The object used for testing.
     formatter : object like :py:class:`.SnapshotFormatter`
         Formatter used to format the trajectory/systems.
     correct_file : string
@@ -256,21 +246,21 @@ def compare_traj_fmt_file(test, formatter, correct_file, ndim):
 
     """
     correct = []
-    with open(correct_file, 'r') as infile:
+    with open(correct_file, 'r', encoding='utf-8') as infile:
         for line in infile:
             correct.append(line.rstrip())
     j = 0
     for i, system in enumerate(generate_system_snapshots(ndim,
                                                          length=5)):
         for line in formatter.format(i, system):
-            test.assertEqual(line, correct[j])
+            assert line == correct[j]
             j += 1
 
 
-class TestSnapshotFormatter(unittest.TestCase):
+class TestSnapshotFormatter:
     """Test the SnapshotFormatter formatter."""
 
-    def test_traj_formatter_full(self):
+    def test_traj_formatter_full(self, caplog):
         """Test that we can format trajectories."""
         formatter1 = SnapshotFormatter(write_vel=False, fmt='full')
         formatter2 = SnapshotFormatter(write_vel=True, fmt='full')
@@ -284,14 +274,14 @@ class TestSnapshotFormatter(unittest.TestCase):
         ]
         for (ndim, filename, formatter) in cases:
             correct_file = os.path.join(HERE, filename)
-            compare_traj_fmt_file(self, formatter, correct_file, ndim)
+            compare_traj_fmt_file(formatter, correct_file, ndim)
 
-    def test_traj_formatter(self):
+    def test_traj_formatter(self, caplog):
         """Test that we can format trajectories."""
         formatter1 = SnapshotFormatter(write_vel=False)
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.formats.snapshot',
-                                 level='WARNING'):
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.inout.formats.snapshot'):
                 formatter1.parse('some text')
         formatter2 = SnapshotFormatter(write_vel=True)
         cases = [
@@ -304,35 +294,35 @@ class TestSnapshotFormatter(unittest.TestCase):
         ]
         for (ndim, filename, formatter) in cases:
             correct_file = os.path.join(HERE, filename)
-            compare_traj_fmt_file(self, formatter, correct_file, ndim)
+            compare_traj_fmt_file(formatter, correct_file, ndim)
 
-    def test_adjust_coordinate(self):
+    def test_adjust_coordinate(self, caplog):
         """Test that we can adjust coordinates."""
         # 1D:
         coord = np.array([10, ])
         coord_ = adjust_coordinate(coord)
-        self.assertTrue(np.allclose(coord_, [[10., 0., 0.]]))
+        assert np.allclose(coord_, [[10.0, 0.0, 0.0]])
         # 1 particle, 1D:
         particles = Particles(dim=1)
         particles.add_particle(np.array([1.0]),
                                np.zeros(1),
                                np.zeros(1))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([1.0, 0.0, 0.0])))
+        assert np.allclose(pos, np.array([1.0, 0.0, 0.0]))
         # 1 particle, 2D:
         particles = Particles(dim=2)
         particles.add_particle(np.array([1.0, 1.0]),
                                np.zeros(2),
                                np.zeros(2))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([1.0, 1.0, 0.0])))
+        assert np.allclose(pos, np.array([1.0, 1.0, 0.0]))
         # 1 particle, 3D:
         particles = Particles(dim=3)
         particles.add_particle(np.array([1.0, 1.0, 1.0]),
                                np.zeros(3),
                                np.zeros(3))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([1.0, 1.0, 1.0])))
+        assert np.allclose(pos, np.array([1.0, 1.0, 1.0]))
         # 2 particles, 1D:
         particles = Particles(dim=1)
         particles.add_particle(np.array([1.0]),
@@ -342,8 +332,8 @@ class TestSnapshotFormatter(unittest.TestCase):
                                np.zeros(1),
                                np.zeros(1))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([[1., 0., 0.],
-                                                   [-1., 0., 0.]])))
+        assert np.allclose(pos, np.array([[1.0, 0.0, 0.0],
+                                          [-1.0, 0.0, 0.0]]))
         # 2 particles, 2D:
         particles = Particles(dim=2)
         particles.add_particle(np.array([1.0, -1.0]),
@@ -353,8 +343,8 @@ class TestSnapshotFormatter(unittest.TestCase):
                                np.zeros(2),
                                np.zeros(2))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([[1., -1., 0.],
-                                                   [-1., 1., 0.]])))
+        assert np.allclose(pos, np.array([[1.0, -1.0, 0.0],
+                                          [-1.0, 1.0, 0.0]]))
 
         # 3 particles, 3D:
         particles = Particles(dim=3)
@@ -365,26 +355,26 @@ class TestSnapshotFormatter(unittest.TestCase):
                                np.zeros(3),
                                np.zeros(3))
         pos = adjust_coordinate(particles.pos)
-        self.assertTrue(np.allclose(pos, np.array([[1., -1., 0.5],
-                                                   [-1., 1., -0.5]])))
+        assert np.allclose(pos, np.array([[1.0, -1.0, 0.5],
+                                          [-1.0, 1.0, -0.5]]))
 
 
-class TestPathIntFormatter(unittest.TestCase):
+class TestPathIntFormatter:
     """Test that the PathFMT formatter work as intended."""
 
-    def test_pathint_formatter(self):
+    def test_pathint_formatter(self, caplog):
         """Test the formatter for internal paths."""
         formatter = PathIntFormatter()
         paths, _ = create_test_paths(npath=2)
         k = -1
         for i, line in enumerate(formatter.format(0, [paths[1], 'ACC'])):
             if i == 0:
-                self.assertEqual('# Cycle: 0, status: ACC', line)
+                assert '# Cycle: 0, status: ACC' == line
             else:
                 j = i - 1
                 if j % 10 == 0:
                     k += 1
-                    self.assertEqual(f'Snapshot: {k}', line)
+                    assert f'Snapshot: {k}' == line
                 else:
                     # Assume 3D:
                     k_float = float(k)
@@ -392,43 +382,43 @@ class TestPathIntFormatter(unittest.TestCase):
                     vel = [-k_float for _ in range(3)]
                     fmt = ' '.join(['{:15.9f}'] * 6)
                     txt = fmt.format(*pos, *vel)
-                    self.assertEqual(txt, line)
+                    assert txt == line
         # Test handling of empty paths:
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(formatter.format(0, [None, 'ACC']))
 
-    def test_parse(self):
+    def test_parse(self, caplog):
         """Test that we can parse trajectory data."""
         formatter = PathIntFormatter()
         raw = '1.0 2.0 3.0 4.0 5.0 6.0'
         pos, vel = formatter.parse(raw)
         correct_pos = np.array([1., 2., 3.])
         correct_vel = np.array([4., 5., 6.])
-        self.assertTrue(np.allclose(pos, correct_pos))
-        self.assertTrue(np.allclose(vel, correct_vel))
-        with self.assertRaises(ValueError):
+        assert np.allclose(pos, correct_pos)
+        assert np.allclose(vel, correct_vel)
+        with pytest.raises(ValueError):
             raw = '1.0'
             formatter.parse(raw)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             raw = '1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0'
             formatter.parse(raw)
 
 
-class TestPathExtFormatter(unittest.TestCase):
+class TestPathExtFormatter:
     """Test that the external path formatter work as intended."""
 
-    def test_pathext_formatter(self):
+    def test_pathext_formatter(self, caplog):
         """Test the formatter for external paths."""
         path, _ = create_external_path()
         formatter = PathExtFormatter()
         for corr, snap in zip(CORRECT_PATH_EXT,
                               formatter.format(0, [path, 'ACC'])):
-            self.assertEqual(corr, snap)
+            assert corr == snap
         # Test handling of empty paths:
-        with self.assertRaises(StopIteration):
+        with pytest.raises(StopIteration):
             next(formatter.format(0, [None, 'ACC']))
 
-    def test_parse(self):
+    def test_parse(self, caplog):
         """Test parsing of path data."""
         formatter = PathExtFormatter()
         k = 0
@@ -436,14 +426,14 @@ class TestPathExtFormatter(unittest.TestCase):
             if line.strip().startswith('#'):
                 continue
             data = formatter.parse(line)
-            self.assertListEqual(list(data), PATH_EXT_RAW[k])
+            assert list(data) == PATH_EXT_RAW[k]
             k += 1
 
 
-class TestPathEnsembleFormatter(unittest.TestCase):
+class TestPathEnsembleFormatter:
     """Test the formatting of path ensemble data."""
 
-    def test_formatting(self):
+    def test_formatting(self, caplog):
         """Test the formatting of path data."""
         formatter = PathEnsembleFormatter()
         rgen = MockRandomGenerator(seed=0)
@@ -462,9 +452,9 @@ class TestPathEnsembleFormatter(unittest.TestCase):
              '  0.000000000e+00       0       0  1.000000000e+00'),
         ]
         for line, correct in zip(formatter.format(0, ens), corrects):
-            self.assertEqual(line, correct)
+            assert line == correct
 
-    def test_parse(self):
+    def test_parse(self, caplog):
         """Test parsing of formatted data."""
         formatter = PathEnsembleFormatter()
         raw = [
@@ -496,8 +486,9 @@ class TestPathEnsembleFormatter(unittest.TestCase):
         for i, j in zip(raw, correct):
             assert_equal_path_dict(formatter.parse(i), j)
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.formats.pathensemble',
-                                 level='WARNING'):
+            with caplog.at_level(
+                    logging.WARNING,
+                    logger='pyretis.inout.formats.pathensemble'):
                 formatter.parse('1 2 3')
         # Also test a line with a comment:
         out = formatter.parse('1 2 3 A B C 4 ACC sh 5 6 7 8 9 8 7 2 # comment')
@@ -520,51 +511,47 @@ class TestPathEnsembleFormatter(unittest.TestCase):
                'interface': ('A', 'B', 'C'), 'length': 4, 'weight': 2.,
                'ordermax': (6.0, 8), 'ordermin': (5.0, 7), 'status': 'ACC'}
 
-        with self.assertRaises(AssertionError) as err:
+        with pytest.raises(AssertionError) as err:
             assert_equal_path_dict(out, cor)
-        self.assertEqual(str(err.exception), 'Different weight')
+        assert str(err.value) == 'Different weight'
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods defined in the formatters module."""
 
-    def test_apply_format(self):
+    def test_apply_format(self, caplog):
         """Test that we can apply a format."""
         txt = apply_format(12345.7, '{:7.2f}')
-        self.assertEqual(txt, '1.2e+04')
+        assert txt == '1.2e+04'
         txt = apply_format(-1234568.9, '{:7.2f}')
-        self.assertEqual(txt, ' -1e+06')
+        assert txt == ' -1e+06'
         txt = apply_format(-1234568.9, '{:8.2f}')
-        self.assertEqual(txt, '-1.2e+06')
+        assert txt == '-1.2e+06'
         txt = apply_format(-1234568.9, '{:9.2f}')
-        self.assertEqual(txt, '-1.23e+06')
+        assert txt == '-1.23e+06'
         txt = apply_format(123.45, '{:>10.2f}')
-        self.assertEqual(txt, '    123.45')
+        assert txt == '    123.45'
 
-    def test_format_number(self):
+    def test_format_number(self, caplog):
         """Test that we can format numbers as expected."""
         txt = format_number(99.9, 0.0, 100, fmtf='{0:<4.2f}',
                             fmte='{0:<4.2e}')
-        self.assertEqual(txt, '99.90')
+        assert txt == '99.90'
         txt = format_number(100.1, 0.0, 100, fmtf='{0:<4.2f}',
                             fmte='{0:<4.2e}')
-        self.assertEqual(txt, '1.00e+02')
+        assert txt == '1.00e+02'
         txt = format_number(-100.1, 0.0, 100, fmtf='{0:<4.2f}',
                             fmte='{0:<4.2e}')
-        self.assertEqual(txt, '-1.00e+02')
+        assert txt == '-1.00e+02'
 
-    def test_get_formatter(self):
+    def test_get_formatter(self, caplog):
         """Test that we can select the log formatter."""
         formatter = get_log_formatter(0)
-        self.assertIsInstance(formatter, PyretisLogFormatter)
-        self.assertEqual(formatter._fmt,  # pylint: disable=protected-access
-                         LOG_DEBUG_FMT)
+        assert isinstance(formatter, PyretisLogFormatter)
+        # pylint: disable=protected-access
+        assert formatter._fmt == LOG_DEBUG_FMT
 
         formatter = get_log_formatter(100)
-        self.assertIsInstance(formatter, PyretisLogFormatter)
-        self.assertEqual(formatter._fmt,  # pylint: disable=protected-access
-                         LOG_FMT)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert isinstance(formatter, PyretisLogFormatter)
+        # pylint: disable=protected-access
+        assert formatter._fmt == LOG_FMT

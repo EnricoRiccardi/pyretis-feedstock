@@ -3,13 +3,13 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the lattice generation tools in pyretis.tools"""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.tools.lattice import generate_lattice
 logging.disable(logging.CRITICAL)
 
 
-class LatticeTest(unittest.TestCase):
+class TestLattice:
     """Test the lattice generation in pyretis.tools.lattice."""
 
     def test_lattice_generation(self):
@@ -63,33 +63,30 @@ class LatticeTest(unittest.TestCase):
         # Test bcc:
         for key in args:
             xyz_g, size_g = generate_lattice(key, args[key], **kwargs[key])
-            self.assertTrue(np.allclose(xyz_g, xyz[key], atol=1.0e-8))
-            self.assertTrue(np.allclose(np.array(size_g), size[key],
-                                        atol=1.0e-8))
+            assert np.allclose(xyz_g, xyz[key], atol=1.0e-8)
+            assert np.allclose(np.array(size_g), size[key], atol=1.0e-8)
         # Test if we give almost nothing
         pos, size = generate_lattice(lattice='1d')
-        self.assertEqual(pos[0], 0)
-        self.assertEqual(size, [[0.0, 1]])
+        assert pos[0] == 0
+        assert size == [[0.0, 1]]
 
     def test_generate_no_lcon_or_dens(self):
         """Test if the generate lattice methods fails when it should."""
         # Test if we feed it some unknown lattice:
         args = ['undefined lattice', None]
         kwargs = dict(lcon=None, density=None)
-        self.assertRaises(ValueError, generate_lattice,
-                          *args, **kwargs)
+        with pytest.raises(ValueError):
+            generate_lattice(*args, **kwargs)
         # Test if we feed it some strange arguments:
         args = [['undefined', 'lattice'], None]
-        self.assertRaises(ValueError, generate_lattice,
-                          *args, **kwargs)
+        with pytest.raises(ValueError):
+            generate_lattice(*args, **kwargs)
         # Test if we do not give lattice parameters:
         args = ['sc', [1, 1, 1]]
-        self.assertRaises(ValueError, generate_lattice, *args)
+        with pytest.raises(ValueError):
+            generate_lattice(*args)
         # Test if we give to few repeats
         args = ['sc', [1, 1]]
         kwargs = dict(lcon=1.0)
-        self.assertRaises(ValueError, generate_lattice, *args, **kwargs)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        with pytest.raises(ValueError):
+            generate_lattice(*args, **kwargs)

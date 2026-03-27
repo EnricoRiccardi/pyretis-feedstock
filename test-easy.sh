@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-coverage run -p -m unittest discover -s test 
+python -m pytest --cov=pyretis test/
 pycodestyle
 pydocstyle --count pyretis 
 python devtools/run_linting.py -i pyretis 

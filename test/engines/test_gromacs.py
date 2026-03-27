@@ -7,7 +7,7 @@ import numpy as np
 import os
 import shutil
 import tempfile
-import unittest
+import pytest
 from pyretis.core.path import Path
 from pyretis.core.common import counter
 from pyretis.engines import GromacsEngine
@@ -27,7 +27,7 @@ GMX_DIR3 = os.path.join(HERE, 'gmx_input3')
 GMX_LOAD = os.path.join(HERE, '../initiation/gromacs/gmx_input')
 
 
-class GromacsEngineTest(unittest.TestCase):
+class TestGromacsEngine:
     """Run the tests for the GROMACS Engine."""
 
     def test_init(self):
@@ -42,7 +42,7 @@ class GromacsEngineTest(unittest.TestCase):
                             write_vel=True,
                             write_force=False)
         eng.exe_dir = GMX_DIR
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             GromacsEngine(gmx='echo',
                           mdrun='echo',
                           input_path='gmx_input',
@@ -65,19 +65,19 @@ class GromacsEngineTest(unittest.TestCase):
         """Test a single read."""
         for i, _ in enumerate(read_gromacs_generic('no_file.g96')):
             max_i = i
-        self.assertEqual(max_i, 0)
+        assert max_i == 0
         any_g96 = os.path.join(HERE, '..', 'inout', 'config.g96')
         for i, _ in enumerate(read_gromacs_generic(any_g96)):
             max_i = i
-        self.assertEqual(max_i, 0)
+        assert max_i == 0
         any_gro = os.path.join(HERE, 'gmx_input', 'conf.gro')
         for i, _ in enumerate(read_gromacs_generic(any_gro)):
             max_i = i
-        self.assertEqual(max_i, 0)
+        assert max_i == 0
         any_trr = os.path.join(HERE, '..', 'tools', '2water.trr')
         for i, _ in enumerate(read_gromacs_generic(any_trr)):
             max_i = i
-        self.assertEqual(max_i, 5)
+        assert max_i == 5
 
     def test_single_step(self):
         """Test a single step using the MOCK GROMACS engine."""
@@ -98,10 +98,10 @@ class GromacsEngineTest(unittest.TestCase):
             # Create the system:
             system = make_test_system((eng.input_files['conf'], 0))
             out = eng.step(system, 'gmx_mock_step')
-            self.assertEqual(out, 'gmx_mock_step.gro')
+            assert out == 'gmx_mock_step.gro'
             # Check that output files are present:
             for i in ('conf.gro', 'gmx_mock_step.gro'):
-                self.assertTrue(os.path.isfile(os.path.join(rundir, i)))
+                assert os.path.isfile(os.path.join(rundir, i))
             # Check that output files contain the expected data:
             _, xyz1, vel1, _ = read_gromacs_gro_file(
                 os.path.join(rundir, 'conf.gro')
@@ -109,20 +109,19 @@ class GromacsEngineTest(unittest.TestCase):
             _, xyz2, vel2, _ = read_gromacs_gro_file(
                 os.path.join(rundir, 'gmx_mock_step.gro')
             )
-            self.assertTrue(np.allclose(xyz2 - xyz1,
-                                        eng.subcycles * np.ones_like(xyz1)))
-            self.assertTrue(np.allclose(
+            assert np.allclose(xyz2 - xyz1,
+                               eng.subcycles * np.ones_like(xyz1))
+            assert np.allclose(
                 vel1,
                 np.repeat([0.1111, 0.2222, 0.3333], 27).reshape(3, 27).T
-            ))
-            self.assertTrue(np.allclose(vel2, np.ones_like(vel2)))
-            # Check the final state:
-            self.assertAlmostEqual(eng.subcycles * 1.0, system.particles.ekin)
-            self.assertAlmostEqual(eng.subcycles * -1.0, system.particles.vpot)
-            self.assertEqual(
-                system.particles.get_pos()[0],
-                os.path.join(rundir, 'gmx_mock_step.gro')
             )
+            assert np.allclose(vel2, np.ones_like(vel2))
+            # Check the final state:
+            assert eng.subcycles * 1.0 == pytest.approx(system.particles.ekin)
+            assert eng.subcycles * -1.0 == \
+                pytest.approx(system.particles.vpot)
+            assert system.particles.get_pos()[0] == \
+                os.path.join(rundir, 'gmx_mock_step.gro')
             eng.clean_up()
 
     def test_modify_velocities(self):
@@ -148,14 +147,14 @@ class GromacsEngineTest(unittest.TestCase):
                                                  {'aimless': True,
                                                   'momentum': False})
 
-            self.assertAlmostEqual(kin_new, 1234.5678)
-            self.assertTrue(dek == float('inf'))
+            assert kin_new == pytest.approx(1234.5678)
+            assert dek == float('inf')
             # Check that aiming fails:
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 eng.modify_velocities(ensemble, {'aimless': False,
                                                  'momentum': False})
             # Check that rescaling fails:
-            with self.assertRaises(NotImplementedError):
+            with pytest.raises(NotImplementedError):
                 eng.modify_velocities(ensemble, {'aimless': False,
                                                  'momentum': True,
                                                  'rescale': 11})
@@ -163,8 +162,8 @@ class GromacsEngineTest(unittest.TestCase):
             dek, kin_new = eng.modify_velocities(ensemble,
                                                  {'aimless': True,
                                                   'momentum': False})
-            self.assertAlmostEqual(kin_new, 1234.5678)
-            self.assertAlmostEqual(dek, 0.0)
+            assert kin_new == pytest.approx(1234.5678)
+            assert dek == pytest.approx(0.0)
             eng.clean_up()
 
     def test_propagate_forward(self):
@@ -194,12 +193,13 @@ class GromacsEngineTest(unittest.TestCase):
             success, _ = eng.propagate(path, ensemble, reverse=False)
             initial_x = -0.422
             for i, point in enumerate(path.phasepoints):
-                self.assertAlmostEqual(point.particles.ekin, eng.subcycles * i)
-                self.assertAlmostEqual(point.particles.vpot,
-                                       -1.0 * eng.subcycles * i)
-                self.assertAlmostEqual(point.order[0],
-                                       i * eng.subcycles + initial_x, places=3)
-            self.assertTrue(success)
+                assert point.particles.ekin == \
+                    pytest.approx(eng.subcycles * i)
+                assert point.particles.vpot == \
+                    pytest.approx(-1.0 * eng.subcycles * i)
+                assert point.order[0] == pytest.approx(i * eng.subcycles +
+                                                       initial_x, abs=1e-3)
+            assert success
             eng.clean_up()
 
     def test_propagate_backward(self):
@@ -228,7 +228,7 @@ class GromacsEngineTest(unittest.TestCase):
                         'interfaces': [-0.45, 10.0, 14.0]}
             counter.count = -1
             success, _ = eng.propagate(path, ensemble, reverse=True)
-            self.assertFalse(success)
+            assert not success
             # Check that velocities were reversed:
             _, _, vel1, _ = read_gromacs_gro_file(
                 os.path.join(rundir, '0_conf.gro')
@@ -236,7 +236,7 @@ class GromacsEngineTest(unittest.TestCase):
             _, _, vel2, _ = read_gromacs_gro_file(
                 os.path.join(rundir, 'r_0_conf.gro')
             )
-            self.assertTrue(np.allclose(vel1, -1.0 * vel2))
+            assert np.allclose(vel1, -1.0 * vel2)
             eng.clean_up()
 
     def test_integrate(self):
@@ -263,9 +263,8 @@ class GromacsEngineTest(unittest.TestCase):
             initial_x = -0.422
             ensemble = {'system': system, 'order_function': order_function}
             for step in eng.integrate(ensemble, 3):
-                self.assertAlmostEqual(step['order'][0],
-                                       i * eng.subcycles + initial_x,
-                                       places=3)
+                assert step['order'][0] == pytest.approx(i * eng.subcycles +
+                                                         initial_x, abs=1e-3)
                 i += 1
             # Clean
             eng.clean_up()
@@ -278,21 +277,18 @@ class GromacsEngineTest(unittest.TestCase):
                             timestep=0.002,
                             subcycles=3,
                             gmx_format='gro')
+
         terms = 'full'
-        self.assertEqual(
-            str(eng.select_energy_terms(terms)),
+        assert str(eng.select_energy_terms(terms)) == \
             r"b'Potential\nKinetic-En.\nTotal-Energy\nTemperature\nPressure'"
-        )
+
         terms = 'path'
-        self.assertEqual(
-            str(eng.select_energy_terms(terms)),
+        assert str(eng.select_energy_terms(terms)) == \
             r"b'Potential\nKinetic-En.'"
-        )
+
         terms = 'non_allowed_term'  # Will be equal to terms = 'path'.
-        self.assertEqual(
-            str(eng.select_energy_terms(terms)),
+        assert str(eng.select_energy_terms(terms)) == \
             r"b'Potential\nKinetic-En.'"
-        )
 
     def test_check_fails(self):
         """Test behavior if orderfunction not given."""
@@ -311,31 +307,31 @@ class GromacsEngineTest(unittest.TestCase):
             system = make_test_system((eng.input_files['conf'], 0))
             # Propagate:
             for step in eng.integrate({'system': system}, 1):
-                self.assertTrue("thermo" in step)
-                self.assertFalse("order" in step)
+                assert "thermo" in step
+                assert "order" not in step
             order_function = Position(0, dim='x', periodic=False)
             eng.ext = "notexistingextension"
             ensemble = {'system': system, 'order_function': order_function}
             # Propagate:
-            with self.assertRaises(Exception) as context:
+            with pytest.raises(Exception) as context:
                 for _ in eng.integrate(ensemble, 1):
                     pass
-            self.assertTrue("GROMACS engine does not support reading" in
-                            str(context.exception))
+            assert "GROMACS engine does not support reading" in \
+                str(context.value)
             path = Path(None, maxlen=3)
             ensemble = {'system': system, 'order_function': order_function,
                         'interfaces':  [-1., 0.0, 1.0]}
-            with self.assertRaises(Exception) as context:
+            with pytest.raises(Exception) as context:
                 eng.propagate(path, ensemble, reverse=True)
-            self.assertTrue("GROMACS engine does not support writing" in
-                            str(context.exception))
+            assert "GROMACS engine does not support writing" in \
+                str(context.value)
 
             # Add a non existing .ndx file and get an error
             eng.input_files['index'] = 'ufo.ndx'
-            with self.assertRaises(Exception) as context:
+            with pytest.raises(Exception) as context:
                 eng._execute_grompp('should_be_a_grompp.mdp',
                                     'configuration.gro', 'a_label')
-            self.assertTrue("(GROMACS engine) fail" in str(context.exception))
+            assert "(GROMACS engine) failed" in str(context.value)
 
             eng.clean_up()
 
@@ -358,15 +354,16 @@ class GromacsEngineTest(unittest.TestCase):
             out_gro = os.path.join(tempdir, 'output.gro')
             eng._extract_frame(any_trr, 4, out_gro)
             # Check the created output file:
-            self.assertTrue(os.path.isfile(out_gro))
+            assert os.path.isfile(out_gro)
             with open(out_gro, 'r', encoding="utf8") as infile:
                 data = [i.strip().split() for i in infile]
             # Note: this is a fake output from a fake engine
-            self.assertEqual(data[0][1], 'froggy')
+            assert data[0][1] == 'froggy'
 
             # This tests only the creation of the conf.g96
             shutil.copytree(GMX_LOAD, tempdir+'2')
-            anytrr = os.path.join(GMX_LOAD, '../loader/023/accepted/trajB.trr')
+            anytrr = os.path.join(GMX_LOAD,
+                                  '../loader/023/accepted/trajB.trr')
             eng = GromacsEngine(gmx=GMX,
                                 mdrun=MDRUN,
                                 input_path=tempdir+'2',
@@ -377,19 +374,15 @@ class GromacsEngineTest(unittest.TestCase):
             # Note, we use a fake engine and it will just copy the file
             eng.exe_dir = tempdir+'2'
             eng._extract_frame(anytrr, 0, out_gro)
-            self.assertTrue(os.path.isfile(out_gro))
+            assert os.path.isfile(out_gro)
 
             shutil.rmtree(os.path.join(tempdir+'2'), 'conf.gro')
             # A partial test to avoid the need to install GROMACS to run
-            with self.assertRaises(RuntimeError) as err:
+            with pytest.raises(RuntimeError) as err:
                 GromacsEngine(gmx=GMX,
                               mdrun=MDRUN,
                               input_path=tempdir+'2',
                               timestep=0.002,
                               subcycles=1,
                               gmx_format='g96')
-            self.assertTrue('GROMACS' in str(err.exception))
-
-
-if __name__ == '__main__':
-    unittest.main(module='test_gromacs')
+            assert 'GROMACS' in str(err.value)

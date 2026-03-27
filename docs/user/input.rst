@@ -69,7 +69,7 @@ or add any text you like, e.g.:
     task = md-nve
     steps = 100
 
-Both this two examples define keywords for
+Both of these two examples define keywords for
 the :ref:`Simulation <user-section-simulation>` section.
 
 Formatting of keywords
@@ -94,7 +94,7 @@ which is identical to:
     UNITS = lj
     tAsK = md-nve
 
-There are some important exceptions where they keyword settings
+There are some important exceptions where the keyword settings
 are in fact **case-sensitive**:
 
 - When using external Python modules and classes, for instance:
