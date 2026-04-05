@@ -565,7 +565,7 @@ def retis_swap_zero(ensembles, settings, cycle):
     # the configuration and append it to the new path:
     phase_point = path_ensemble1.last_path.phasepoints[1].copy()
     logger.debug('Point is %s', phase_point)
-    engine1.dump_phasepoint(phase_point, 'second')
+    engine0.dump_phasepoint(phase_point, 'second')
     path0.append(phase_point)
     if path0.length == maxlen0:
         path0.status = 'BTX'
@@ -599,7 +599,7 @@ def retis_swap_zero(ensembles, settings, cycle):
         path1 = path_tmp.empty_path(maxlen=maxlen1)
         phase_point = path_ensemble0.last_path.phasepoints[-2].copy()
         logger.debug('Add second last point: %s', phase_point)
-        engine0.dump_phasepoint(phase_point, 'second_last')
+        engine1.dump_phasepoint(phase_point, 'second_last')
         path1.append(phase_point)
         path1 += path_tmp  # Add rest of the path.
     else:

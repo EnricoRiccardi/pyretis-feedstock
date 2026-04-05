@@ -1,212 +1,24 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""Simple script to compare the outcome of two simulations.
+"""Result comparison for MDFlux restart simulation.
 
 Here we compare a full simulation with one where we have stopped
 and restarted after 100 steps.
 """
-import itertools
 import os
 import sys
-import tempfile
-import fileinput
 import colorama
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from pyretis.inout import print_to_screen
-from pyretis.inout.formats.cross import CrossFile
+from pyretis.testing.simulation_comparison import (
+    compare_restarted_text_files,
+    compare_restarted_cross_files
+)
+
 plt.style.use('seaborn-v0_8')
-
-
-def files_overlap(file1, file2):
-    """Check for overlap between two files.
-
-    Here, the overlap is defined as the last line of file1 and
-    the first line of file2.
-
-    Parameters
-    ----------
-    file1 : string
-        The file to read the last line from.
-    file2 : string
-        The file to read the first line from.
-
-    """
-    last_line = None
-    with open(file1, 'r', encoding='utf-8') as infile1:
-        for lines in infile1:
-            last_line = lines
-    first_line = None
-    with open(file2, 'r', encoding='utf-8') as infile2:
-        for lines in infile2:
-            first_line = lines
-            break
-    return last_line == first_line
-
-
-def compare_lists(list1, list2):
-    """Compare contents of two lists."""
-    if len(list1) == len(list2):
-        for i, j in zip(list1, list2):
-            if not i == j:
-                return 1
-        return 0
-    return 1
-
-
-def compare_lists_lists(list1, list2):
-    """Compare contents of lists of lists."""
-    if len(list1) == len(list2):
-        for list1i, list2i in zip(list1, list2):
-            if len(list1i) == len(list2i):
-                for i, j in zip(list1i, list2i):
-                    if not i == j:
-                        return 1
-            else:
-                return 1
-        return 0
-    return 1
-
-
-def remove_comments(filename):
-    """Remove commented lines if present."""
-    for line in fileinput.input(filename, inplace=1):
-        if '#' not in line:
-            sys.stdout.write(line)
-
-
-def compare_crossings(file11, file12, file2):
-    """Compare the crossings found.
-
-    Here, we expect that the contents of file11 and file12 together
-    equals the contents of file2. In some cases, there can be an
-    overlap between file11 and file12, and we check for that as well.
-
-    Parameters
-    ----------
-    file11 : string
-        The file containing the first part of the crossing data.
-    file12 : string
-        The file containing the second part of the crossing data.
-    file2 : string
-        The file containing the full crossing data.
-
-    """
-    remove_comments(file12)
-    data1 = []
-    with tempfile.NamedTemporaryFile(prefix='cross_', suffix='.txt') as tmp:
-        print_to_screen(
-            f'Joining: {file11} + {file12} -> {tmp.name}',
-            level='info'
-        )
-        with open(tmp.name, 'w', encoding='utf-8') as outfile:
-            with open(file11, 'r', encoding='utf-8') as infile:
-                for lines in infile:
-                    outfile.write(lines)
-            skip = files_overlap(file11, file12)
-            with open(file12, 'r', encoding='utf-8') as infile:
-                for i, lines in enumerate(infile):
-                    if i == 0:
-                        if not skip:
-                            outfile.write(lines)
-                    else:
-                        outfile.write(lines)
-        data1 = list(CrossFile(tmp.name, 'r').load())
-    data2 = list(CrossFile(file2, 'r').load())
-    if len(data1) != len(data2):
-        print_to_screen('Different number of blocks in crossing data!',
-                        level='error')
-        return 1
-    # Compare blocks
-    for block1, block2 in zip(data1, data2):
-        ret = compare_lists(block1['comment'], block2['comment'])
-        if ret != 0:
-            print_to_screen('Comment in crossing files do not match!',
-                            level='error')
-            return ret
-        ret = compare_lists_lists(block1['data'], block2['data'])
-        if ret != 0:
-            print_to_screen('Crossing files do not match!', level='error')
-            print_to_screen(block1['data'], block2['data'])
-            return ret
-    print_to_screen('Crossing files match!', level='success')
-    return 0
-
-
-def compare_step_output(file11, file12, file2):
-    """Compare step-wise output from PyRETIS.
-
-    Here, we assume that the output in file2 is obtained
-    by concatenating file11 and file12. file11 and file12
-    should have one line in common: the final line in file11
-    should be identical to the first line in file12.
-
-    Parameters
-    ----------
-    file11 : string
-        A file to open, part 1.
-    file12 : string
-        A file to open, part 2.
-    file2 : string
-        A file to open, we will check if this one is
-        equal (line-by-line) to file11+file12.
-
-    Returns
-    -------
-    None, just prints out the result of the comparison.
-
-    """
-    remove_comments(file12)
-    print_to_screen('\nComparing files:', level='info')
-    print_to_screen(f'{file11} + {file12} == {file2}?')
-    with open(file11, 'r', encoding='utf-8') as file11_h:
-        with open(file12, 'r', encoding='utf-8') as file12_h:
-            with open(file2, 'r', encoding='utf-8') as file2_h:
-                first_line = next(file12_h)
-                error = False
-                for i, (dt1, dt2) in enumerate(zip(itertools.chain(file11_h,
-                                                                   file12_h),
-                                               file2_h)):
-                    if not dt1 == dt2:
-                        print_to_screen(f'Error for line no: {i}',
-                                        level='error')
-                        print_to_screen('Lines were:', level='error')
-                        print_to_screen(dt1.strip(), level='error')
-                        print_to_screen(dt2.strip(), level='error')
-                        error = True
-                        break
-
-    if not error:
-        print_to_screen('Joined files contain same data!')
-        last_line, len11 = read_last_line(file11)
-        if last_line == first_line:
-            print_to_screen(f'First in {file11} = last in {file12}')
-            _, len12 = read_last_line(file12)
-            _, len2 = read_last_line(file2)
-            if len11 + len12 == len2 + 1:
-                print_to_screen('Number of lines are correct.')
-                print_to_screen('Files are equal!', level='success')
-                return 0
-            print_to_screen('Number of lines are incorrect', level='error')
-            print_to_screen(len11, len12)
-            return 1
-        print_to_screen(f'First in {file11} != last in {file12}',
-                        level='error')
-        return 1
-    return 1
-
-
-def read_last_line(filename):
-    """Read the last line from a file + count number of lines in the file."""
-    i = 0
-    last_line = None
-    with open(filename, 'r', encoding='utf-8') as infile:
-        for lines in infile:
-            last_line = lines
-            i += 1
-    return last_line, i
 
 
 def make_fig():
@@ -234,39 +46,27 @@ def plot_in_ax(axes, infile, lab, fat=False, colors=None, style='-'):
     """Just do some plotting."""
     ax1, ax2, _ = axes
     data = np.loadtxt(infile)
-    if fat:
-        width = 7
-    else:
-        width = 3
+    width = 7 if fat else 3
     lines = []
     for i, idx in enumerate((1, 2, 3)):
-        if colors is None:
-            line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8)
-        else:
-            line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8, color=colors[i])
+        color = colors[i] if colors else None
+        line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
+                         ls=style, lw=width, alpha=0.8, color=color)
         lines.append(line)
     ax2.plot(data[:, 0], data[:, 4], label=lab, ls=style, lw=width, alpha=0.9)
     return lines
 
 
 def plot_in_ax_op(axes, infile, lab, fat=False, colors=None, style='-'):
-    """Just do some plotting."""
+    """Just do some plotting for order parameter."""
     _, _, ax3 = axes
     data = np.loadtxt(infile)
-    if fat:
-        width = 7
-    else:
-        width = 3
+    width = 7 if fat else 3
     lines = []
     for i, idx in enumerate((1, 2)):
-        if colors is None:
-            line, = ax3.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8)
-        else:
-            line, = ax3.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8, color=colors[i])
+        color = colors[i] if colors else None
+        line, = ax3.plot(data[:, 0], data[:, idx], label=lab,
+                         ls=style, lw=width, alpha=0.8, color=color)
         lines.append(line)
     return lines
 
@@ -326,32 +126,55 @@ def make_plots():
 
 
 def main(args):
-    """Run comparisons."""
+    """Run comparisons.
+
+    Parameters
+    ----------
+    args : list of str
+        Arguments passed to the script.
+
+    Returns
+    -------
+    result : int
+        The number of comparison failures.
+    """
     result = 0
-    ret = compare_crossings(
+    print_to_screen('Comparing crossings...', level='info')
+    equal, msg = compare_restarted_cross_files(
         os.path.join('run-step1', 'cross.txt'),
         os.path.join('run-step2', 'cross.txt'),
         os.path.join('run-full', 'cross.txt'),
     )
-    result += ret
+    if not equal:
+        print_to_screen(f'Crossing files mismatch: {msg}', level='error')
+        result += 1
+    else:
+        print_to_screen('Crossing files match!', level='success')
 
-    ret = compare_step_output(
-        os.path.join('run-step1', 'energy.txt'),
-        os.path.join('run-step2', 'energy.txt'),
-        os.path.join('run-full', 'energy.txt'),
-    )
-    result += ret
+    pairs = [
+        ('energy.txt', 'Comparing energy files'),
+        ('order.txt', 'Comparing order files'),
+    ]
 
-    ret = compare_step_output(
-        os.path.join('run-step1', 'order.txt'),
-        os.path.join('run-step2', 'order.txt'),
-        os.path.join('run-full', 'order.txt'),
-    )
-    result += ret
+    for fname, msg_header in pairs:
+        print_to_screen(f'\n{msg_header}:', level='info')
+        equal, msg = compare_restarted_text_files(
+            os.path.join('run-step1', fname),
+            os.path.join('run-step2', fname),
+            os.path.join('run-full', fname)
+        )
+        if not equal:
+            print_to_screen(f'Restarted {fname} mismatch: {msg}',
+                            level='error')
+            result += 1
+        else:
+            print_to_screen(f'Restarted {fname} match!', level='success')
+
     if 'make_plot' in args:
         fig = make_plots()
         fig.savefig('compare.png')
         plt.show()
+
     if result != 0:
         print_to_screen('\nComparison failed!', level='error')
     else:

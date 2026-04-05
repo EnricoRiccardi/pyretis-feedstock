@@ -3,14 +3,13 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test common methods that are used in testing."""
 import os
-import pytest
-from pyretis.testing.compare import (
-    compare_files,
-    compare_files_lines,
-    compare_files_columns,
-    compare_files_numerical,
+from pyretis.testing.simulation_comparison import (
+    compare_simulation_files,
+    compare_text_line_by_line,
+    compare_data_by_columns,
+    compare_numerical_data,
     compare_traj_archive,
-    compare_pathensemble_files,
+    compare_path_ensemble_data,
 )
 
 
@@ -90,7 +89,7 @@ class TestCompareFiles:
             },
         ]
         for case in cases:
-            result = compare_files_columns(
+            result = compare_data_by_columns(
                 *case['args'], **case['kwargs']
             )
             assert result == case['result']
@@ -116,7 +115,7 @@ class TestCompareFiles:
             },
         ]
         for case in cases:
-            result = compare_files_numerical(*case['args'])
+            result = compare_numerical_data(*case['args'])
             assert result == case['result']
 
     def test_compare_archive(self):
@@ -190,7 +189,7 @@ class TestCompareFiles:
             },
         ]
         for case in cases:
-            result = compare_files_lines(*case['args'], **case['kwargs'])
+            result = compare_text_line_by_line(*case['args'], **case['kwargs'])
             assert result == case['result']
 
     def test_compare_files(self):
@@ -238,7 +237,7 @@ class TestCompareFiles:
             },
         ]
         for case in cases:
-            result = compare_files(*case['args'], **case['kwargs'])
+            result = compare_simulation_files(*case['args'], **case['kwargs'])
             assert result == case['result']
 
     def test_compare_pathensemble_files(self):
@@ -284,11 +283,13 @@ class TestCompareFiles:
             },
         ]
         for case in cases:
-            result = compare_pathensemble_files(
+            result = compare_path_ensemble_data(
                 *case['args'], **case['kwargs']
             )
             assert result == case['result']
         # Check that the cases fail for a line-by-line comparison:
         for case in cases:
-            equal, _ = compare_files(*case['args'], skip=None, mode='line')
+            equal, _ = compare_simulation_files(
+                *case['args'], skip=None, mode='line'
+            )
             assert not equal

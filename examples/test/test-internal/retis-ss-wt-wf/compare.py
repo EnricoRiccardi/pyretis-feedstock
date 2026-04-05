@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""Simple script to compare the outcome of two simulations.
+"""Result comparison for RETIS with SS, WT, and WF.
 
 Here we compare a RETIS simulation of 250 steps to known results.
 """
 from collections import OrderedDict
-from math import isclose
 import os
 import sys
 import colorama
@@ -16,45 +15,13 @@ from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.setup.createsimulation import create_ensembles
 from pyretis.inout.formats.order import OrderPathFile
+from pyretis.testing.simulation_comparison import (
+    compare_path_ensemble_data,
+    compare_data_by_columns,
+    compare_numerical_data
+)
 
 RESULTS = '../results/xxx'
-
-
-def compare_files(fpath1, fpath2):
-    """Compare two files."""
-    print_to_screen(f'Comparing: {fpath1} {fpath2}')
-    similar = True
-    with open(fpath1, 'r') as file1, open(fpath2, 'r') as file2:
-        for linef1, linef2 in zip(file1, file2):
-            linef1 = linef1.rstrip('\r\n')
-            linef2 = linef2.rstrip('\r\n')
-            # In the case of different numpy versions
-            # causing different results for energy and order files:
-            if len(linef1.split()) == 10:
-                linef1_float = float(linef1.split()[7][:-1])
-                linef2_float = float(linef2.split()[7][:-1])
-                similar = abs(linef1_float - linef2_float) < 10**-7
-            elif len(linef1.split()) == 17:  # pathensemble instance
-                linef1_float = float(linef1.split()[9][:-1])
-                linef2_float = float(linef2.split()[9][:-1])
-                similar = abs(linef1_float - linef2_float) < 10**-7
-            elif linef1 == linef2:
-                similar = True
-            else:
-                print('----------------------')
-                print(linef1.strip())
-                print(linef2.strip())
-                similar = False
-
-        if similar:
-            similar = next(file1, None) is None and next(file2, None) is None
-
-    if similar:
-        print_to_screen('\t-> Files are equal!', level='success')
-    else:
-        print_to_screen('\t-> Files are NOT equal!', level='error')
-        sys.exit(1)
-    return 0
 
 
 def check_path_file(ens):
@@ -62,14 +29,13 @@ def check_path_file(ens):
 
     Parameters
     ----------
-    ens : object like :py:class:`.PathEnsemble`
-        The path ensemble to check for.
+    ens : object
+        The path ensemble to check.
 
     Returns
     -------
-    paths : dict
-        Information about the paths in the ensemble.
-
+    status : int
+        0 if successful, 1 otherwise.
     """
     print_to_screen(f'\nReading for {ens.ensemble_name}')
     filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
@@ -78,7 +44,7 @@ def check_path_file(ens):
     start = ens.start_condition
     end = ('R') if ens.ensemble_number == 0 else ('R', 'L')
     something_weird = False
-    with open(filename, 'r') as inputfile:
+    with open(filename, 'r', encoding='utf-8') as inputfile:
         for lines in inputfile:
             if lines.startswith('#'):
                 continue
@@ -121,18 +87,14 @@ def check_path_file(ens):
             if not cross[idx1] or not cross[idx2]:
                 something_weird = True
                 print_to_screen(
-                    'Inconsistent crossings: {} {} (step {})'.format(
-                        cross[idx1],
-                        cross[idx2],
-                        step
-                    ),
+                    f'Inconsistent crossings: {cross[idx1]} '
+                    f'{cross[idx2]} (step {step})',
                     level='error'
                 )
     if not something_weird:
         print_to_screen('Accepted paths are OK!', level='success')
-    else:
-        sys.exit(1)
-    return 0
+        return 0
+    return 1
 
 
 def run_check_path_file(settings):
@@ -143,19 +105,7 @@ def run_check_path_file(settings):
 
 
 def read_path_file(ens):
-    """Read information about paths from pathensemble.txt.
-
-    Parameters
-    ----------
-    ens : object like :py:class:`.PathEnsemble`
-        The path ensemble to read data for.
-
-    Returns
-    -------
-    paths : dict
-        Information about the paths in the ensemble.
-
-    """
+    """Read information about paths from pathensemble.txt."""
     print_to_screen(f'\nReading for {ens.ensemble_name}')
     filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
                             'pathensemble.txt')
@@ -163,7 +113,7 @@ def read_path_file(ens):
     paths = OrderedDict()
     path_acc = OrderedDict()
     current_acc = None
-    with open(filename, 'r') as inputfile:
+    with open(filename, 'r', encoding='utf-8') as inputfile:
         for lines in inputfile:
             if lines.startswith('#'):
                 continue
@@ -192,43 +142,20 @@ def get_swap_parent(paths, ensl, ensr, accl, accr):
 
 
 def check_order_swap(data0, data1, special=2):
-    """Check that order parameters are consistent for swapping.
-
-    Here, we compare order parameters from paths that are generated by
-    swapping.
-
-    Parameters
-    ----------
-    data0 : numpy.array
-        The order parameters from the first path.
-    data1 : numpy.array
-        The order parameters from the second path.
-    special : integer
-        For the two cases, [0-] -> [0+] and [0-] <- [0+] we have
-        to do special comparisons.
-
-    Returns
-    -------
-    out : boolean
-        True if everything is fine, False otherwise.
-
-    """
-    all_ok = False
+    """Check that order parameters are consistent for swapping."""
     if special == 0:
         # for [0-] generated from [0+]:
         # - two last of 0- should equal two first in 0+
-        ok0 = isclose(data0[-2][1], data1[0][1])
-        ok1 = isclose(data0[-1][1], data1[1][1])
-        all_ok = ok0 and ok1
-    elif special == 1:
+        ok0 = np.isclose(data0[-2][1], data1[0][1])
+        ok1 = np.isclose(data0[-1][1], data1[1][1])
+        return ok0 and ok1
+    if special == 1:
         # for [0+] generated from [0-]:
         # - two first of 0+ should equal two last from 0-
-        ok0 = isclose(data0[0][1], data1[-2][1])
-        ok1 = isclose(data0[1][1], data1[-1][1])
-        all_ok = ok0 and ok1
-    else:
-        all_ok = np.allclose(data0, data1)
-    return all_ok
+        ok0 = np.isclose(data0[0][1], data1[-2][1])
+        ok1 = np.isclose(data0[1][1], data1[-1][1])
+        return ok0 and ok1
+    return np.allclose(data0, data1)
 
 
 def get_index(traj):
@@ -237,7 +164,7 @@ def get_index(traj):
 
 
 def check_swaps(paths, accepted, ens, kind):
-    """Check accepted right swaps."""
+    """Check accepted swaps."""
     ofile0 = OrderPathFile(
         os.path.join(generate_ensemble_name(ens), 'order.txt'), 'r'
     )
@@ -255,23 +182,19 @@ def check_swaps(paths, accepted, ens, kind):
     )
     traj1 = ofile1.load()
     traj1i, idx1 = {}, None
-    errors, ok_ones = set(), set()
+    errors = set()
     everything_is_ok = True
     for traj0i in traj0:
         idx0 = get_index(traj0i)
         if idx0 in accepted and paths[idx0]['move'] == move:
             parent = paths[idx0]['swap-parent']
-            if not parent[0] == ens2:
-                raise ValueError('Wrong parent!')
             swap_ok = False
             found = False
-            if traj1i:
-                # just check if we should use this one again:
-                if idx1 == parent[1]:
-                    found = True
-                    swap_ok = check_order_swap(traj0i['data'],
-                                               traj1i['data'],
-                                               special=special)
+            if traj1i and idx1 == parent[1]:
+                found = True
+                swap_ok = check_order_swap(traj0i['data'],
+                                           traj1i['data'],
+                                           special=special)
             if not found:
                 for traj1i in traj1:
                     idx1 = get_index(traj1i)
@@ -285,21 +208,16 @@ def check_swaps(paths, accepted, ens, kind):
                 print_to_screen(f'Could not find parent for {idx0}',
                                 level='warning')
                 everything_is_ok = False
-            else:
-                if swap_ok:
-                    ok_ones.add(idx0)
-                else:
-                    print_to_screen(f'Comparison failed for {idx0}',
-                                    level='error')
-                    everything_is_ok = False
-                    errors.add(idx0)
+            elif not swap_ok:
+                print_to_screen(f'Comparison failed for {idx0}',
+                                level='error')
+                everything_is_ok = False
+                errors.add(idx0)
     if everything_is_ok:
         print_to_screen('All swaps are ok!', level='success')
-    else:
-        print_to_screen('Error for some swaps:', level='error')
-        print_to_screen(errors)
-        sys.exit(1)
-    return 0
+        return 0
+    print_to_screen(f'Error for some swaps: {errors}', level='error')
+    return 1
 
 
 def check_ensemble_swaps(settings):
@@ -313,47 +231,49 @@ def check_ensemble_swaps(settings):
         path_info[i] = pathi
         path_acc[i] = patha
         names.append(ens['path_ensemble'].ensemble_name)
+    status = 0
     for i in range(len(ensembles)):
         if i == 0:
             get_swap_parent(path_info[i], None, i+1, None, path_acc[i+1])
-            print_to_screen(
-                f'\nChecking {names[i]} <- {names[i + 1]} swaps...',
-                level='info'
-            )
-            check_swaps(path_info[i], path_acc[i], i, kind='right')
+            print_to_screen(f'\nChecking {names[i]} <- {names[i+1]} swaps...',
+                            level='info')
+            status += check_swaps(path_info[i], path_acc[i], i, kind='right')
         elif i == len(ensembles) - 1:
             get_swap_parent(path_info[i], i-1, None, path_acc[i-1], None)
-            print_to_screen(
-                f'\nChecking {names[i]} <- {names[i - 1]} swaps...',
-                level='info'
-            )
-            check_swaps(path_info[i], path_acc[i], i, kind='left')
+            print_to_screen(f'\nChecking {names[i]} <- {names[i-1]} swaps...',
+                            level='info')
+            status += check_swaps(path_info[i], path_acc[i], i, kind='left')
         else:
             get_swap_parent(path_info[i], i-1, i+1,
                             path_acc[i-1], path_acc[i+1])
-            print_to_screen(
-                f'\nChecking {names[i]} -> {names[i + 1]} swaps...',
-                level='info'
-            )
-            check_swaps(path_info[i], path_acc[i], i, kind='right')
-            print_to_screen(
-                f'Checking {names[i]} <- {names[i - 1]} swaps...',
-                level='info'
-            )
-            check_swaps(path_info[i], path_acc[i], i, kind='left')
-    return 0
+            print_to_screen(f'\nChecking {names[i]} -> {names[i+1]} swaps...',
+                            level='info')
+            status += check_swaps(path_info[i], path_acc[i], i, kind='right')
+            print_to_screen(f'Checking {names[i]} <- {names[i-1]} swaps...',
+                            level='info')
+            status += check_swaps(path_info[i], path_acc[i], i, kind='left')
+    return status
 
 
-def compare_ens_files(settings, string):
-    """Compare comare ensemble text files."""
+def compare_ens_files(settings, fname, ftype=None):
+    """Compare ensemble text files using centralized logic."""
     inter = settings['simulation']['interfaces']
     retval = 0
     for i in range(len(inter)):
         ens_dir = generate_ensemble_name(i)
-        fil1 = os.path.join(ens_dir, string)
-        fil2 = os.path.join(RESULTS, ens_dir, string)
-        ret = compare_files(fil1, fil2)
-        retval += ret
+        fil1 = os.path.join(ens_dir, fname)
+        fil2 = os.path.join(RESULTS, ens_dir, fname)
+        if fname == 'pathensemble.txt':
+            equal, msg = compare_path_ensemble_data(fil1, fil2)
+        elif ftype == 'energy':
+            equal, msg = compare_data_by_columns(fil1, fil2, ftype)
+        else:
+            equal, msg = compare_numerical_data(fil1, fil2)
+        if not equal:
+            print_to_screen(f'Mismatch in {fil1}: {msg}', level='error')
+            retval += 1
+        else:
+            print_to_screen(f'Files are equal: {fil1}', level='success')
     return retval
 
 
@@ -371,17 +291,17 @@ def main():
     ret3 = run_check_path_file(sets)
     print_to_screen('\nComparing energy.txt files', level='message')
     print_to_screen('================================', level='message')
-    ret4 = compare_ens_files(sets, 'energy.txt')
+    ret4 = compare_ens_files(sets, 'energy.txt', 'energy')
     print_to_screen('\nComparing order.txt files', level='message')
     print_to_screen('================================', level='message')
-    ret5 = compare_ens_files(sets, 'order.txt')
+    ret5 = compare_ens_files(sets, 'order.txt', 'order')
 
     retval = ret1 + ret2 + ret3 + ret4 + ret5
     if retval == 0:
         print_to_screen('\nComparison is successful!', level='success')
     else:
         print_to_screen('\nComparison failed!', level='error')
-    return ret1 + ret2 + ret3 + ret4 + ret5
+    return retval
 
 
 if __name__ == '__main__':

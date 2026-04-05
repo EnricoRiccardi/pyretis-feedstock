@@ -829,7 +829,7 @@ def create_random_generator(settings=None):
 
     rgen = settings.get('rgen', 'rgen')
     seed = settings.get('seed', 0)
-    logger.debug('Seed for random generator: %s %d', rgen, seed)
+    logger.debug('Seed for random generator: %s %s', rgen, seed)
 
     class_map = {
         'rgen': RandomGenerator,

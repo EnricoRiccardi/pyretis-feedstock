@@ -220,9 +220,6 @@ def write_version_py(version):
     return full_version
 
 
-# Removed write_version_in_setup_py as it's no longer needed with pyproject.toml.
-
-
 def update_logo(released):
     """Update the logo according to this being a released version or not.
 

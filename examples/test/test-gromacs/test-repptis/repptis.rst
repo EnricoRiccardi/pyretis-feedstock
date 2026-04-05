@@ -18,8 +18,8 @@ Engine
 class = GromacsEngine2R
 module = gromacs.py
 gmx = GMXCOMMAND
-mdrun = GMXCOMMAND mdrun
-input_path = ../gmx/gromacs_input
+mdrun = GMXCOMMAND mdrun -ntmpi 1 -ntomp 1
+input_path = ../../shared_input/gromacs
 timestep = 0.002
 subcycles = 10
 gmx_format = gro

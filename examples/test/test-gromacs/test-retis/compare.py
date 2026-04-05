@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""Simple script to compare the outcome of two simulations.
+"""Result comparison for GROMACS RETIS simulation.
 
-Here we compare a RETIS simulation of 250 steps to known results.
+Here we compare a RETIS simulation of 250 steps to known results
+stored in a gzipped tar archive.
 """
 import os
 import sys
@@ -20,155 +21,161 @@ RESULTS_TGZ = {
 }
 
 
-def read_tarfile(tar_file, file_to_extract):
-    """Extract and read the requested file from a .tgz archive.
+def read_tarfile_content(tar_path, inner_path):
+    """Extract and read a file's content from a .tgz archive.
 
     Parameters
     ----------
-    tar_file : string
-        Path to the .tgz file to open,
-    file_to_extract : string
-        The file we are going to extract.
+    tar_path : string
+        Path to the .tgz file.
+    inner_path : string
+        The internal path of the file to extract.
 
     Returns
     -------
-    out : list of strings
-        The file we read.
-
-    Note
-    ----
-    This will read the contents of the requested file into memory.
-
+    content : bytes
+        The raw content of the extracted file, or None if not found.
     """
-    data = None
-    with tarfile.open(tar_file, 'r:gz') as tar:
+    with tarfile.open(tar_path, 'r:gz') as tar:
         for member in tar.getmembers():
-            if member.isreg() and member.name == file_to_extract:
-                tfile = tar.extractfile(member)
-                data = tfile.read()
-    return data
+            if member.isreg() and member.name == inner_path:
+                with tar.extractfile(member) as tfile:
+                    return tfile.read()
+    return None
 
 
-def find_traj_txt(rootdir):
-    """Find all traj.txt files in the given rootdir.
+def find_sorted_traj_files(rootdir):
+    """Find and sort all traj.txt files in a directory tree.
 
-    Here, we also sort these files according to the cycle number
-    they claim to be produced at.
+    Parameters
+    ----------
+    rootdir : string
+        The root directory to search in.
 
+    Returns
+    -------
+    sorted_files : list of tuples
+        A list of (filepath, cycle_number) sorted by cycle.
     """
-    # Find all traj.txt files:
-    files = []
-    for root, _, filei in os.walk(rootdir):
-        for i in filei:
-            if i == 'traj.txt':
-                filename = os.path.join(root, i)
-                cycle = None
-                with open(filename, 'r', encoding='utf-8') as infile:
-                    line = infile.readline()
-                    cycle = int(line.strip().split(':')[1].split(',')[0])
-                if cycle is None:
-                    raise ValueError('Could not find cyle for traj.txt')
-                files.append([os.path.join(root, i), cycle])
-    return sorted(files, key=lambda i: i[1])
+    found_files = []
+    for root, _, files in os.walk(rootdir):
+        if 'traj.txt' in files:
+            filepath = os.path.join(root, 'traj.txt')
+            with open(filepath, 'r', encoding='utf-8') as infile:
+                line = infile.readline()
+                # Expected format: "# Cycle:1, Name: ..."
+                try:
+                    cycle = int(line.split(':')[1].split(',')[0])
+                    found_files.append((filepath, cycle))
+                except (IndexError, ValueError):
+                    continue
+    return sorted(found_files, key=lambda x: x[1])
 
 
-def make_traj_file(root, ensemble):
-    """Make a traj.txt file with paths.
-
-    Here, we do not have the complete traj.txt file available and we thus
-    recreate it using the stored accepted and rejected trajectories.
+def recreate_traj_txt(root, ensemble):
+    """Recreate a consolidated traj.txt from individual step files.
 
     Parameters
     ----------
     root : string
-        The path to the directory containing the output.
-    ensemble : integer
-        The ensemble we are comparing for (0, 1, 2, ...)
-
+        Root directory of the run.
+    ensemble : int
+        The ensemble index.
     """
-    ensemble_dir = generate_ensemble_name(ensemble)
-    traj_dir = os.path.join(root, ensemble_dir, 'traj')
-    files = find_traj_txt(traj_dir)
-    target_traj = os.path.join(root, ensemble_dir, 'traj.txt')
-    with open(target_traj, 'w', encoding='utf-8') as outfile:
-        for (filename, _) in files:
-            with open(filename, 'r', encoding='utf-8') as infile:
+    ens_name = generate_ensemble_name(ensemble)
+    traj_dir = os.path.join(root, ens_name, 'traj')
+    sorted_trajs = find_sorted_traj_files(traj_dir)
+    target_path = os.path.join(root, ens_name, 'traj.txt')
+    with open(target_path, 'w', encoding='utf-8') as outfile:
+        for filepath, _ in sorted_trajs:
+            with open(filepath, 'r', encoding='utf-8') as infile:
                 outfile.write(infile.read())
 
 
-def compare_files(settings, root, results_tgz):
-    """Compare ouput files."""
+def compare_ensemble_results(settings, root, results_tgz):
+    """Compare all expected output files for a simulation.
+
+    Parameters
+    ----------
+    settings : dict
+        Simulation settings.
+    root : string
+        The directory containing current results.
+    results_tgz : string
+        The archive containing reference results.
+
+    Returns
+    -------
+    status : bool
+        True if all files match, False otherwise.
+    """
     inter = settings['simulation']['interfaces']
     for i in range(len(inter)):
-        for files in ('pathensemble.txt', 'order.txt', 'traj.txt'):
-            if files == 'traj.txt':
-                make_traj_file(root, i)
-            result = compare_file_contents(root, i, files, results_tgz)
-            if not result:
-                print_to_screen('\t-> *Files differ!*', level='error')
+        ens_name = generate_ensemble_name(i)
+        for fname in ('pathensemble.txt', 'order.txt', 'traj.txt'):
+            if fname == 'traj.txt':
+                recreate_traj_txt(root, i)
+
+            # Compare against the reference in the tarball
+            ref_path = os.path.join(RESULTS, ens_name, fname)
+            tar_path = os.path.join(root, results_tgz)
+            reference_data = read_tarfile_content(tar_path, ref_path)
+
+            current_path = os.path.join(root, ens_name, fname)
+            print_to_screen(f'Comparing: {current_path}')
+
+            if reference_data is None:
+                print_to_screen(f'\t-> *Reference missing: {ref_path}*',
+                                level='error')
                 return False
+
+            with open(current_path, 'rb') as current_file:
+                if current_file.read() != reference_data:
+                    print_to_screen('\t-> *Files differ!*', level='error')
+                    return False
+            print_to_screen('\t-> Files are equal!', level='success')
+
     print_to_screen('All files are equal!', level='success')
     return True
 
 
-def compare_file_contents(root, ensemble, file_name, results_tgz):
-    """Compare files for a given ensemble inside a given directory.
+def main(argv):
+    """Parse GROMACS version and run comparisons.
 
     Parameters
     ----------
-    root : string
-        The directory where we will do the comparison.
-    ensemble : integer
-        The ensemble we are comparing for (0, 1, 2, ...)
-    file_name : string
-        The file we will compare.
-    results_tgz : string
-        The file containing the correct results we compare to.
-        This is a tgz-archive.
-
-    Returns
-    -------
-    result : boolean
-        True if the files are equal, False otherwise.
-
+    argv : list
+        Command line arguments.
     """
-    tgz_file = os.path.join(root, results_tgz)
-    ensemble_dir = generate_ensemble_name(ensemble)
-    file2 = os.path.join(RESULTS, ensemble_dir, file_name)
-    data2 = read_tarfile(tgz_file, file2)
-    file1 = os.path.join(root, ensemble_dir, file_name)
-    print_to_screen(f'Comparing for: {file1}')
-    return open(file1, 'rb').read() == data2
-
-
-def main(args):
-    """Run the comparison."""
     try:
-        gmx_version = args[1].split()[-1]
-    except IndexError:
+        gmx_version = argv[1].split()[-1]
+    except (IndexError, AttributeError):
         gmx_version = '5.1.4'
-    print_to_screen(f'GROMACS version family: {gmx_version}',
-                    level='info')
-    correct = RESULTS_TGZ.get(gmx_version, None)
-    if correct is None:
+
+    print_to_screen(f'GROMACS version family: {gmx_version}', level='info')
+    correct_tgz = RESULTS_TGZ.get(gmx_version)
+
+    if not correct_tgz:
         print_to_screen(
-            f'GROMACS version {gmx_version} is not supported ' +
+            f'GROMACS version {gmx_version} is not supported '
             'for result comparison.'
         )
-        print_to_screen('The supported GROMACS versions are:')
-        for key in RESULTS_TGZ:
-            print_to_screen(f'- {key}')
+        print_to_screen('Supported versions:')
+        for ver in RESULTS_TGZ:
+            print_to_screen(f'- {ver}')
         sys.exit(0)
 
-    print_to_screen(f'Using results from: {correct}', level='info')
+    print_to_screen(f'Using results from: {correct_tgz}', level='info')
 
     for dirname in ('gromacs1', 'gromacs2'):
+        if not os.path.isdir(dirname):
+            continue
         sets = parse_settings_file(os.path.join(dirname, 'retis.rst'))
-        head = f'Comparing files for: {dirname}'
-        print_to_screen(f'\n{head}', level='message')
-        print_to_screen('=' * len(head), level='message')
-        compare_ok = compare_files(sets, dirname, correct)
-        if not compare_ok:
+        header = f'Comparing files for: {dirname}'
+        print_to_screen(f'\n{header}', level='message')
+        print_to_screen('=' * len(header), level='message')
+
+        if not compare_ensemble_results(sets, dirname, correct_tgz):
             sys.exit(1)
 
 

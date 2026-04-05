@@ -9,7 +9,7 @@ Engine settings
 ---------------
 gmx = GMXCOMMAND
 mdrun = GMXCOMMAND mdrun
-input_path = ../gmx/gromacs_input
+input_path = ../../shared_input/gromacs
 timestep = 0.002
 subcycles = 5
 gmx_format = g96

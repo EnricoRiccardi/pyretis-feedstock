@@ -206,7 +206,8 @@ def main(plot=False):
         engine_settings['input_path'],
         engine_settings['timestep'],
         engine_settings['subcycles'],
-        extra_files=engine_settings.get('extra_files', [])
+        extra_files=engine_settings.get('extra_files', []),
+        conf=engine_settings.get('conf', 'h2.xyz')
     )
     print_to_screen(f'Testing engine: {engine}', level='info')
     print_to_screen(f'Time step: {engine.timestep}')

@@ -1,33 +1,44 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""Simple script to compare the outcome of two simulations.
+"""Result comparison for MD restart simulation.
 
 Here we compare a full simulation with one where we have stopped
 and restarted after 10 steps.
 """
-import itertools
 import os
 import sys
-import fileinput
+import itertools
 import colorama
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from pyretis.inout import print_to_screen
 from pyretis.inout.formats.snapshot import SnapshotFile
+from pyretis.testing.simulation_comparison import (
+    compare_restarted_text_files
+)
+
 plt.style.use('seaborn-v0_8')
 
 
-def remove_comments(filename):
-    """Remove commented lines if present."""
-    for line in fileinput.input(filename, inplace=1):
-        if '#' not in line:
-            sys.stdout.write(line)
-
-
 def snapshot_difference(snap1, snap2):
-    """Calculate difference between two snapshots."""
+    """Calculate difference between two snapshots.
+
+    Parameters
+    ----------
+    snap1 : dict
+        A dictionary containing snapshot data (x, y, z, vx, vy, vz).
+    snap2 : dict
+        Identical to snap1, for comparison.
+
+    Returns
+    -------
+    pos_diff : float
+        Sum of squared differences in positions.
+    vel_diff : float
+        Sum of squared differences in velocities.
+    """
     xyz1 = np.column_stack((snap1['x'], snap1['y'], snap1['z']))
     xyz2 = np.column_stack((snap2['x'], snap2['y'], snap2['z']))
     diff = (xyz1 - xyz2)**2
@@ -58,15 +69,16 @@ def compare_traj(traj11, traj12, traj2, tol=1e-12):
 
     Returns
     -------
-    None, just prints out the result of the comparison.
-
+    status : int
+        0 if comparison matches, 1 otherwise.
     """
-    remove_comments(traj12)
     print_to_screen('Comparing trajectories', level='info')
     print_to_screen('Checking mean squared error...')
     file11 = SnapshotFile(traj11, 'r').load()
     file12 = SnapshotFile(traj12, 'r').load()
-    next(file12)  # skip the first config
+    # Skip the first configuration in the restart file
+    # (it's the last configuration of part 1).
+    next(file12, None)
     file1 = itertools.chain(file11, file12)
     file2 = SnapshotFile(traj2, 'r').load()
     error, error_v = [], []
@@ -83,84 +95,23 @@ def compare_traj(traj11, traj12, traj2, tol=1e-12):
     return val1 + val2
 
 
-def compare_step_output(file11, file12, file2):
-    """Compare step-wise output from PyRETIS.
-
-    Here, we assume that the output in file2 is obtained
-    by concatenating file11 and file12. file11 and file12
-    should have one line in common: the final line in file11
-    should be identical to the first line in file12.
+def print_error_assessment(error, what, tol):
+    """Print out some error info.
 
     Parameters
     ----------
-    file11 : string
-        A file to open, part 1.
-    file12 : string
-        A file to open, part 2.
-    file2 : string
-        A file to open, we will check if this one is
-        equal (line-by-line) to file11+file12.
+    error : float
+        The calculated error.
+    what : string
+        Description of what was checked.
+    tol : float
+        The tolerance.
 
     Returns
     -------
-    None, just prints out the result of the comparison.
-
+    status : int
+        0 if within tolerance, 1 otherwise.
     """
-    remove_comments(file12)
-    print_to_screen('\nComparing files:', level='info')
-    names = [os.path.split(i)[1] for i in (file11, file12, file2)]
-    print_to_screen('{} + {} == {}?'.format(*names))
-    file11_h = open(file11, 'r')
-    file12_h = open(file12, 'r')
-    file2_h = open(file2, 'r')
-    first_line = next(file12_h)
-    error = False
-    for i, (data1, data2) in enumerate(zip(itertools.chain(file11_h, file12_h),
-                                           file2_h)):
-        if not data1 == data2:
-            print_to_screen(f'Error for line no: {i}', level='error')
-            print_to_screen('Lines were:', level='error')
-            print_to_screen(data1.strip(), level='error')
-            print_to_screen(data2.strip(), level='error')
-            error = True
-            break
-    file11_h.close()
-    file12_h.close()
-    file2_h.close()
-    if not error:
-        print_to_screen('Joined files contain same data!')
-        last_line, len11 = read_last_line(file11)
-        if last_line == first_line:
-            print_to_screen('First in {} = last in {}'.format(*names[:2]))
-            _, len12 = read_last_line(file12)
-            _, len2 = read_last_line(file2)
-            if len11 + len12 == len2 + 1:
-                print_to_screen('Number of lines are correct.')
-                print_to_screen('Files are equal!', level='success')
-                return 0
-            print_to_screen(('Number of lines are incorrect ',
-                             f'{len11 + len12} != {len2 + 1}'),
-                            level='error')
-            return 1
-        print_to_screen('First in {} != last in {}'.format(*names[:2]),
-                        level='error')
-        return 1
-    return 1
-
-
-def read_last_line(filename):
-    """Read the last line from a file + count number of lines in the file."""
-    i = 0
-    last_line = None
-    with open(filename, 'r') as infile:
-        for lines in infile:
-            last_line = lines
-            i += 1
-    return last_line, i
-
-
-def print_error_assessment(error, what, tol):
-    """Print out some error info."""
     if abs(error) < tol:
         lev = 'success'
         val = 0
@@ -172,8 +123,8 @@ def print_error_assessment(error, what, tol):
     return val
 
 
-def make_fig():
-    """Plot for comparison."""
+def make_plots():
+    """Just plot some energies for comparison."""
     fig1 = plt.figure(figsize=(12, 6))
     grid = gridspec.GridSpec(2, 2)
     ax1 = fig1.add_subplot(grid[:, 0])
@@ -188,34 +139,6 @@ def make_fig():
     ax3.set_xlabel('Step no.')
     ax3.set_ylabel('Pressure')
     axes = (ax1, ax2, ax3)
-    return fig1, axes
-
-
-def plot_in_ax(axes, infile, lab, fat=False, colors=None, style='-'):
-    """Just do some plotting."""
-    ax1, ax2, ax3 = axes
-    data = np.loadtxt(infile)
-    if fat:
-        width = 7
-    else:
-        width = 3
-    lines = []
-    for i, idx in enumerate((2, 3, 4)):
-        if colors is None:
-            line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8)
-        else:
-            line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
-                             ls=style, lw=width, alpha=0.8, color=colors[i])
-        lines.append(line)
-    ax2.plot(data[:, 0], data[:, 1], label=lab, ls=style, lw=width, alpha=0.9)
-    ax3.plot(data[:, 0], data[:, 5], label=lab, ls=style, lw=width, alpha=0.9)
-    return lines
-
-
-def make_plots():
-    """Just plot some energies for comparison."""
-    figure, axes = make_fig()
 
     plot_in_ax(
         axes,
@@ -239,34 +162,87 @@ def make_plots():
     axes[0].legend(prop={'size': 'medium'}, ncol=4)
     axes[1].legend(prop={'size': 'medium'})
     axes[2].legend(prop={'size': 'medium'})
-    figure.subplots_adjust(bottom=0.12, right=0.95, top=0.95,
-                           left=0.08, wspace=0.2)
-    return figure
+    fig1.subplots_adjust(bottom=0.12, right=0.95, top=0.95,
+                         left=0.08, wspace=0.2)
+    return fig1
+
+
+def plot_in_ax(axes, infile, lab, fat=False, colors=None, style='-'):
+    """Just do some plotting.
+
+    Parameters
+    ----------
+    axes : tuple
+        The axes to plot in.
+    infile : string
+        The file to load data from.
+    lab : string
+        The label for the plot.
+    fat : bool, optional
+        True for thicker lines.
+    colors : list, optional
+        Colors for the lines.
+    style : string, optional
+        Line style.
+
+    Returns
+    -------
+    lines : list
+        The plotted lines.
+    """
+    ax1, ax2, ax3 = axes
+    data = np.loadtxt(infile)
+    width = 7 if fat else 3
+    lines = []
+    for i, idx in enumerate((2, 3, 4)):
+        color = colors[i] if colors else None
+        line, = ax1.plot(data[:, 0], data[:, idx], label=lab,
+                         ls=style, lw=width, alpha=0.8, color=color)
+        lines.append(line)
+    ax2.plot(data[:, 0], data[:, 1], label=lab, ls=style, lw=width, alpha=0.9)
+    ax3.plot(data[:, 0], data[:, 5], label=lab, ls=style, lw=width, alpha=0.9)
+    return lines
 
 
 def main(args):
-    """Run the comparison."""
+    """Run the comparison.
+
+    Parameters
+    ----------
+    args : list
+        Command line arguments.
+    """
     val1 = compare_traj(
         os.path.join('run-10', 'md-10-traj.xyz'),
         os.path.join('run-10-100', 'md-10-100-traj.xyz'),
         os.path.join('run-full', 'md-full-traj.xyz'),
         tol=1e-12
     )
-    val2 = compare_step_output(
-        os.path.join('run-10', 'md-10-thermo.txt'),
-        os.path.join('run-10-100', 'md-10-100-thermo.txt'),
-        os.path.join('run-full', 'md-full-thermo.txt'),
-    )
-    val3 = compare_step_output(
-        os.path.join('run-10', 'md-10-energy.txt'),
-        os.path.join('run-10-100', 'md-10-100-energy.txt'),
-        os.path.join('run-full', 'md-full-energy.txt'),
-    )
+
+    pairs = [
+        ('md-10-thermo.txt', 'md-10-100-thermo.txt', 'md-full-thermo.txt'),
+        ('md-10-energy.txt', 'md-10-100-energy.txt', 'md-full-energy.txt'),
+    ]
+
+    val2 = 0
+    for p1, p2, pf in pairs:
+        equal, msg = compare_restarted_text_files(
+            os.path.join('run-10', p1),
+            os.path.join('run-10-100', p2),
+            os.path.join('run-full', pf)
+        )
+        if not equal:
+            print_to_screen(f'Restarted files mismatch ({p1}): {msg}',
+                            level='error')
+            val2 += 1
+        else:
+            print_to_screen(f'Restarted files match ({pf})', level='success')
+
     if 'make_plot' in args:
         fig = make_plots()
         fig.savefig('compare.png')
         plt.show()
-    return val1 + val2 + val3
+    return val1 + val2
 
 
 if __name__ == '__main__':

@@ -169,9 +169,11 @@ class TestGromacsEngine:
     def test_propagate_forward(self):
         """Test the propagate method forward in time."""
         with tempfile.TemporaryDirectory() as tempdir:
+            inputdir = os.path.join(tempdir, 'gmx_input')
+            shutil.copytree(GMX_DIR, inputdir)
             eng = GromacsEngine(gmx=GMX,
                                 mdrun=MDRUN,
-                                input_path=GMX_DIR,
+                                input_path=inputdir,
                                 timestep=0.002,
                                 subcycles=7,
                                 maxwarn=1,
