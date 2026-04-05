@@ -175,7 +175,8 @@ def compare_data_by_columns(file1, file2, file_type, skip=None):
     data2 = reader(file2, 'r').load()
     for block1, block2 in zip(data1, data2):
         if block1['comment'] != block2['comment']:
-            if not _compare_block_comments(block1['comment'], block2['comment']):
+            if not _compare_block_comments(block1['comment'],
+                                           block2['comment']):
                 return False, 'Block comment differs'
         if sorted(block1['data'].keys()) != sorted(block2['data'].keys()):
             return False, 'Different items in block data'
@@ -293,7 +294,8 @@ def compare_restarted_text_files(file11, file12, file2):
     combined = f11_lines + f12_lines[idx12 + 1:]
 
     if len(combined) != len(f2_lines):
-        return False, f'Line count mismatch: {len(combined)} != {len(f2_lines)}'
+        return (False,
+                f'Line count mismatch: {len(combined)} != {len(f2_lines)}')
 
     for i, (l1, l2) in enumerate(zip(combined, f2_lines)):
         if l1 != l2:

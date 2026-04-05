@@ -927,6 +927,30 @@ def prepare_shooting_point(path, ensemble, tis_settings):
         The change in kinetic energy when modifying the velocities.
 
     """
+    if path.length < 3:
+        ens_name = ensemble['path_ensemble'].ensemble_name
+        if path.get_move() == 'ld':
+            msg = (
+                f'Path of length {path.length} was loaded for ensemble '
+                f'{ens_name} but contains no interior frames to shoot from. '
+                'The loaded file does not provide a suitable initial path for '
+                'this ensemble.\n'
+                'Suggestion: add "load_and_kick = True" in the [initial-path] '
+                'section of the input file so PyRETIS will kick a frame from '
+                'the loaded path to generate a valid initial path.'
+            )
+        else:
+            msg = (
+                f'Path of length {path.length} was generated for ensemble '
+                f'{ens_name} but contains no interior frames to shoot from. '
+                'A shootable path requires at least 3 frames.\n'
+                'Suggestions to resolve this:\n'
+                '  - Reduce the timestep\n'
+                '  - Decrease the number of subcycles\n'
+                '  - Move the interfaces further apart'
+            )
+        raise ValueError(msg)
+
     shooting_point, idx = path.get_shooting_point(
         criteria=tis_settings.get('shooting_move', 'rnd'),
         interfaces=ensemble.get('interfaces'))
