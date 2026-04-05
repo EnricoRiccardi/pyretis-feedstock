@@ -43,7 +43,6 @@ find_data  (:py:func: `.find_data`)
 
 """
 import os
-import subprocess
 import timeit
 
 import scipy
@@ -337,9 +336,9 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
                                    cycles.get('header', 'Recalculated data'))
 
             if ens.get('main_o') is not None:
-                with open(main_order, 'ab') as out_fh:
-                    subprocess.run(['cat', local_order], stdout=out_fh,
-                                   check=True)
+                with open(local_order, 'rb') as src, \
+                        open(main_order, 'ab') as dst:
+                    dst.write(src.read())
 
     print_to_screen('# Data successfully recomputed!', level='success')
     print_to_screen(f'# Time spent: {timeit.default_timer() - tic:.2f}s',
