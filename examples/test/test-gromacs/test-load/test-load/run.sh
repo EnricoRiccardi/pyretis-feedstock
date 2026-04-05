@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -e
-basedir=$(pwd)
 # Disable HWLOC hardware detection components that may hang on some systems
 # when X11 display sockets are in a broken state (e.g. full accept queue).
 export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
@@ -44,7 +43,7 @@ cd ..
 # python compare.py run-10 merged --traj_skip --path_skip 1 2
 # rm compare.py
 
-rm */retis-run.rst
-rm */gromacs.py
-rm */orderp.py
+rm -- */retis-run.rst
+rm -- */gromacs.py
+rm -- */orderp.py
 make clean

@@ -5,6 +5,7 @@
 import colorama
 import os
 import logging
+import subprocess
 import pytest
 import numpy as np
 import tempfile
@@ -150,7 +151,8 @@ class TestMethods:
             with mock.patch('sys.stdout', new=StringIO()):
                 assert not recalculate_all(tmp_dir, 'input.rst')
                 file_new = os.path.join(tmp_dir, 'input.rst')
-                os.system(f"sed -i s/'class = Position'/' '/ {file_new}")
+                subprocess.run(['sed', '-i', "s/class = Position/ /",
+                                file_new], check=True)
                 assert recalculate_all(tmp_dir, 'input.rst')
                 assert not recalculate_all(tmp_dir, 'input.rst',
                                            ensemble_names=[])

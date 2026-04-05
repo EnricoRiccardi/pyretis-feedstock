@@ -44,7 +44,7 @@ pylint:
   - apt-get install git -y
   - pip install -r requirements.txt
   - pip install pylint
-  - python devtools/run_linting.py --input pyretis --white-list numpy PyQt5 mdtraj
+  - python devtools/run_linting.py --input pyretis --white-list numpy PyQt5 mdtraj graphviz sklearn
   needs: []
 
 pystyle:

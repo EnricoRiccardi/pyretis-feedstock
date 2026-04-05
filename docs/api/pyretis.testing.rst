@@ -13,16 +13,16 @@ pyretis.testing package
 List of submodules
 ------------------
 
-* :ref:`pyretis.testing.compare <api-testing-compare>`
 * :ref:`pyretis.testing.helpers <api-testing-helpers>`
+* :ref:`pyretis.testing.simulation_comparison <api-testing-simulation-comparison>`
 * :ref:`pyretis.testing.systemhelp <api-testing-systemhelp>`
 
-.. _api-testing-compare:
+.. _api-testing-simulation-comparison:
 
-pyretis.testing.compare module
-------------------------------
+pyretis.testing.simulation_comparison module
+--------------------------------------------
 
-.. automodule:: pyretis.testing.compare
+.. automodule:: pyretis.testing.simulation_comparison
     :members:
     :undoc-members:
     :show-inheritance:

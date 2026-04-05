@@ -10,7 +10,6 @@ path ensembles.
 import math
 import os
 import filecmp
-import itertools
 import numpy as np
 from pyretis.testing.helpers import search_for_files
 from pyretis.inout.formats.energy import EnergyPathFile
@@ -85,7 +84,8 @@ def compare_text_line_by_line(file1, file2, skip=None, skip_keys=None):
         A descriptive message of the result of the comparison.
     """
     all_data = read_files(file1, file2, read_comments=True)
-    assert len(all_data) == 2
+    if len(all_data) != 2:
+        raise ValueError(f'Expected 2 files, got {len(all_data)}')
     if skip_keys:
         def keep(line):
             """Return True if line should be kept."""
@@ -104,6 +104,43 @@ def compare_text_line_by_line(file1, file2, skip=None, skip_keys=None):
             return False, f'Line {i} differs: {lini.strip()} != {linj.strip()}'
 
     return True, 'Files are equal'
+
+
+def _compare_block_comments(comment1, comment2):
+    """Compare two block comment lists, tolerating 1-ULP float differences.
+
+    Parameters
+    ----------
+    comment1 : list of str
+        Comment lines from the first file block.
+    comment2 : list of str
+        Comment lines from the second file block.
+
+    Returns
+    -------
+    bool
+        True if the comments are considered equal.
+    """
+    if len(comment1) != len(comment2):
+        return False
+    for c1, c2 in zip(comment1, comment2):
+        if c1 == c2:
+            continue
+        t1, t2 = c1.split(), c2.split()
+        if len(t1) != len(t2):
+            return False
+        for tok1, tok2 in zip(t1, t2):
+            if tok1 == tok2:
+                continue
+            stripped1 = tok1.strip("(),';")
+            stripped2 = tok2.strip("(),';")
+            try:
+                if not math.isclose(float(stripped1), float(stripped2),
+                                    rel_tol=1e-9):
+                    return False
+            except ValueError:
+                return False
+    return True
 
 
 def compare_data_by_columns(file1, file2, file_type, skip=None):
@@ -136,37 +173,12 @@ def compare_data_by_columns(file1, file2, file_type, skip=None):
     reader = READERS[file_type]
     data1 = reader(file1, 'r').load()
     data2 = reader(file2, 'r').load()
-    # Compare the files by compare the block found in the file:
     for block1, block2 in zip(data1, data2):
-        # Compare block comments, tolerating last-digit float differences.
-        # Comments may embed order-parameter floats that differ by 1 ULP
-        # between Python/numpy versions.
         if block1['comment'] != block2['comment']:
-            if len(block1['comment']) != len(block2['comment']):
+            if not _compare_block_comments(block1['comment'], block2['comment']):
                 return False, 'Block comment differs'
-            for c1, c2 in zip(block1['comment'], block2['comment']):
-                if c1 == c2:
-                    continue
-                # Try token-by-token float comparison
-                t1, t2 = c1.split(), c2.split()
-                if len(t1) != len(t2):
-                    return False, 'Block comment differs'
-                for tok1, tok2 in zip(t1, t2):
-                    if tok1 == tok2:
-                        continue
-                    # Strip surrounding punctuation before float parse
-                    stripped1 = tok1.strip("(),';")
-                    stripped2 = tok2.strip("(),';")
-                    try:
-                        if not math.isclose(float(stripped1), float(stripped2),
-                                            rel_tol=1e-12):
-                            return False, 'Block comment differs'
-                    except ValueError:
-                        return False, 'Block comment differs'
-        # Compare terms found in the blocks:
         if sorted(block1['data'].keys()) != sorted(block2['data'].keys()):
             return False, 'Different items in block data'
-        # Compare numerical data:
         for key, val in block1['data'].items():
             if skip and key in skip:
                 continue
@@ -233,6 +245,12 @@ def compare_numerical_mse(file1, file2, tol=1e-12):
     return True, f'MSE {mse} is within tolerance'
 
 
+def _read_file_lines(filepath):
+    """Read all lines from a file."""
+    with open(filepath, 'r', encoding='utf-8') as fhandle:
+        return fhandle.readlines()
+
+
 def compare_restarted_text_files(file11, file12, file2):
     """Check if file2 is equal to file11 + file12 minus one overlapping line.
 
@@ -255,42 +273,31 @@ def compare_restarted_text_files(file11, file12, file2):
     msg : str
         A descriptive message of the result.
     """
-    with open(file11, 'r', encoding='utf-8') as f11, \
-         open(file12, 'r', encoding='utf-8') as f12, \
-         open(file2, 'r', encoding='utf-8') as f2:
+    f11_lines = _read_file_lines(file11)
+    f12_lines = _read_file_lines(file12)
+    f2_lines = _read_file_lines(file2)
 
-        f11_lines = f11.readlines()
-        f12_lines = f12.readlines()
-        f2_lines = f2.readlines()
+    # Find first non-comment line in f12
+    idx12 = 0
+    while idx12 < len(f12_lines) and f12_lines[idx12].startswith('#'):
+        idx12 += 1
 
-        # Find first non-comment line in f12
-        idx12 = 0
-        while idx12 < len(f12_lines) and f12_lines[idx12].startswith('#'):
-            idx12 += 1
+    if idx12 >= len(f12_lines):
+        return False, 'Part 2 of restarted file contains no data'
 
-        if idx12 >= len(f12_lines):
-            return False, 'Part 2 of restarted file contains no data'
+    # Check overlap: last line of part 1 must match first data line of part 2
+    if (f11_lines[-1] if f11_lines else None) != f12_lines[idx12]:
+        return False, 'Overlapping lines differ between part 1 and part 2'
 
-        # Check overlap
-        line11_last = f11_lines[-1] if f11_lines else None
-        line12_first_data = f12_lines[idx12]
+    # Combined = Part 1 + Part 2 (skipping header and overlapping data line)
+    combined = f11_lines + f12_lines[idx12 + 1:]
 
-        if line11_last != line12_first_data:
-            msg = ('Overlapping lines differ between part 1 and '
-                   'part 2')
-            return False, msg
+    if len(combined) != len(f2_lines):
+        return False, f'Line count mismatch: {len(combined)} != {len(f2_lines)}'
 
-        # Combined = Part 1 + Part 2
-        # (skipping its header and its first data line)
-        combined = f11_lines + f12_lines[idx12 + 1:]
-
-        if len(combined) != len(f2_lines):
-            msg = f'Line count mismatch: {len(combined)} != {len(f2_lines)}'
-            return False, msg
-
-        for i, (l1, l2) in enumerate(zip(combined, f2_lines)):
-            if l1 != l2:
-                return False, f'Mismatch at line {i}'
+    for i, (l1, l2) in enumerate(zip(combined, f2_lines)):
+        if l1 != l2:
+            return False, f'Mismatch at line {i}'
 
     return True, 'Restarted files match the full simulation'
 

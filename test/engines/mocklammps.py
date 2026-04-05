@@ -9,6 +9,7 @@ create some LAMMPS-like output.
 """
 import sys
 import os
+import tempfile
 from pyretis.engines.lammps import read_lammps_input
 
 
@@ -139,8 +140,10 @@ if __name__ == '__main__':
     try:
         main(sys.argv)
     except BaseException as err:
-        with open('/tmp/mocklammps_error.log', 'w') as f:
+        import traceback
+        tmpdir = tempfile.gettempdir()
+        errlog = os.path.join(tmpdir, 'mocklammps_error.log')
+        with open(errlog, 'w') as f:
             f.write(f"ERROR in mocklammps.py: {err}\n")
-            import traceback
             traceback.print_exc(file=f)
         sys.exit(1)

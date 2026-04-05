@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 shopt -s extglob
 set -e
-basedir=$(pwd)
 # Disable HWLOC hardware detection components that may hang on some systems
 # when X11 display sockets are in a broken state (e.g. full accept queue).
 export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
@@ -37,6 +36,6 @@ cd ..
 cp ../gmx/compare.py .
 python compare.py run-gromacs1 run-gromacs2 --energy_skip 'vpot'
 rm compare.py
-rm */gromacs.py
-rm */orderp.py
+rm -- */gromacs.py
+rm -- */orderp.py
 make clean

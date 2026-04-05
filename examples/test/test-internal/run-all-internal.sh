@@ -22,12 +22,12 @@ declare -a tests=(
 
 for i in "${tests[@]}"
 do
-    start=`date +%s`
+    start=$(date +%s)
     echo "Running in: $i"
     cd "$i"
     ./run.sh
     cd "$basedir"
-    end=`date +%s`
+    end=$(date +%s)
     runtime=$((end-start))
     echo "$runtime $i" >> time_spent.txt
 done
