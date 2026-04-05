@@ -11,6 +11,9 @@ from pyretis.pyvisa import HAS_PYVISA_REQ
 if HAS_PYVISA_REQ:
     from pyretis.pyvisa import statistical_methods
 
+pytest.importorskip('tables', exc_type=ImportError)
+pytestmark = pytest.mark.skipif(not HAS_PYVISA_REQ,
+                                reason="PyVisA reqs not installed")
 Dataframe = pandas.DataFrame(np.random.rand(40, 2))
 TRUE_FALSE = pandas.DataFrame(np.random.randint(0, 2, 40))
 cluster_data = np.column_stack([Dataframe[0], Dataframe[1]])
@@ -18,7 +21,6 @@ settings = {'op1': 'op1', 'op2': 'op2', 'fol': '000'}
 colormap = 'viridis'
 
 
-@unittest.skipIf(HAS_PYVISA_REQ is False, "PyVisA reqs not installed")
 class TestMethods:
     """Testing class of pyretis.pyvisa.statistical_methods."""
 

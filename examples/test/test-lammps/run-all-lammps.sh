@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+export MPLBACKEND=Agg
 basedir=$(pwd)
 # declare -a tofix=(
 #                   "test-dump-phasepoint"

@@ -16,6 +16,7 @@ from pyretis.pyvisa.orderparam_density import (PathDensity,
                                                pyvisa_compress)
 from unittest import mock
 
+pytest.importorskip('tables', exc_type=ImportError)
 logging.disable(logging.CRITICAL)
 warnings.filterwarnings('ignore', category=pd.io.pytables.PerformanceWarning)
 
