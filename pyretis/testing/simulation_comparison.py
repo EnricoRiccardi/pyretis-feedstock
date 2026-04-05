@@ -400,7 +400,8 @@ def compare_path_ensemble_data(file1, file2, rel_tol=1e-5, skip=None):
         A message describing the result of the comparison.
     """
     all_data = read_files(file1, file2, read_comments=False)
-    assert len(all_data) == 2
+    if len(all_data) != 2:
+        raise ValueError(f'Expected 2 files, got {len(all_data)}')
     if not len(all_data[0]) == len(all_data[1]):
         return False, 'The number of lines in the files differ'
     # Define the expected data types for the columns in the path
