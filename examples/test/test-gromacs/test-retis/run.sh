@@ -9,7 +9,7 @@ echo "Using gmx=$gmx"
 replace="s/GMXCOMMAND/$gmx/g"
 
 cd gromacs1
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../gmx/gromacs.py .
 cp ../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p -l DEBUG
@@ -19,7 +19,7 @@ rm orderp.py
 cd ..
 
 cd gromacs2
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../gmx/gromacs.py .
 cp ../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p -l DEBUG

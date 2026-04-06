@@ -12,20 +12,20 @@ gmxversion=$($gmx --version | grep -i "gromacs version")
 echo "$gmxversion"
 
 cd run-10
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p
 cd ..
 
 cd run-5
-sed -e $replace retis.rst > retis-run.rst
-sed -e $replace retis-restart.rst > retis-restart-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
+sed -e "$replace" retis-restart.rst > retis-restart-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p
 pyretis_gmx_rnd_state=$(realpath rnd.state)
-cp $pyretis_gmx_rnd_state pyretis_gmx_rnd.state
+cp "$pyretis_gmx_rnd_state" pyretis_gmx_rnd.state
 pyretisrun -i retis-restart-run.rst -p
 cd ..
 

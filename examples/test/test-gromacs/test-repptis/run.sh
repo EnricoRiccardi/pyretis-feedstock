@@ -10,7 +10,7 @@ gmx=${1:-gmx_d}
 echo "Using gmx=$gmx"
 replace="s/GMXCOMMAND/$gmx/g"
 
-sed -e $replace repptis.rst > repptis-run.rst
+sed -e "$replace" repptis.rst > repptis-run.rst
 cp ../gmx/gromacs.py .
 cp ../gmx/orderp.py .
 pyretisrun -i repptis-run.rst -l DEBUG

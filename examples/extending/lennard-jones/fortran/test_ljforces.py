@@ -13,7 +13,6 @@ potential:
 3) The FORTRAN implementation.
 """
 # pylint: disable=invalid-name
-import unittest
 import numpy as np
 from pyretis.core import System, create_box, Particles
 from pyretis.core.units import create_conversion_factors
@@ -46,7 +45,7 @@ def run_calculations(system, parameters):
     """Evaluate the LJ potential."""
     # Calculate with FORTRAN:
     potential_ext = PairLennardJonesCutF(dim=3, shift=True,
-                                         mixing='geometric')
+                                        mixing='geometric')
     forcefield_ext = ForceField('Python with external FORTRAN force field',
                                 potential=[potential_ext],
                                 params=[parameters])
@@ -77,7 +76,23 @@ def run_calculations(system, parameters):
             (vpot_ext, forces_ext, virial_ext))
 
 
-class LennardJonesTest(unittest.TestCase):
+def _assert_results_close(result, keys):
+    """Assert that all implementations give the same result."""
+    for i, keyi in enumerate(keys[:-1]):
+        for j, key2 in enumerate(keys[i+1:]):
+            print(f'\nCompare {keyi} and {key2}')
+            force = np.allclose(result[i][1], result[i+j+1][1])
+            print(f' -> Forces close: {force}')
+            assert force
+            virial = np.allclose(result[i][2], result[i+j+1][2])
+            print(f' -> Virial close: {virial}')
+            assert virial
+            assert abs(result[i][0] - result[i+j+1][0]) < 1e-7
+            vdiff = np.abs(result[i][0] - result[i+j+1][0])
+            print(f' -> Difference in pot. energy: {vdiff:.15e}')
+
+
+class TestLennardJonesFortran:
     """Run the tests for the FORTRAN potential class."""
 
     def test_lj(self):
@@ -88,21 +103,9 @@ class LennardJonesTest(unittest.TestCase):
         maxcut = 0.5 * min(system.box.length)
         for key in param:
             if 'rcut' in param[key]:
-                self.assertGreaterEqual(maxcut, param[key]['rcut'])
+                assert maxcut >= param[key]['rcut']
         result = run_calculations(system, param)
-        keys = ['python', 'python-numpy', 'fortran']
-        for i, keyi in enumerate(keys[:-1]):
-            for j, key2 in enumerate(keys[i+1:]):
-                print(f'\nCompare {keyi} and {key2}')
-                force = np.allclose(result[i][1], result[i+j+1][1])
-                print(f' -> Forces close: {force}')
-                self.assertTrue(force)
-                virial = np.allclose(result[i][2], result[i+j+1][2])
-                print(f' -> Virial close: {virial}')
-                self.assertTrue(virial)
-                self.assertAlmostEqual(result[i][0], result[i+j+1][0], 7)
-                vdiff = np.abs(result[i][0] - result[i+j+1][0])
-                print(f' -> Difference in pot. energy: {vdiff:.15e}')
+        _assert_results_close(result, ['python', 'python-numpy', 'fortran'])
 
     def test_lj_mix(self):
         """Test for mixture."""
@@ -110,30 +113,18 @@ class LennardJonesTest(unittest.TestCase):
         system = set_up_initial_state()
         param = {0: {'sigma': 1.0, 'epsilon': 1.0, 'rcut': 2.5},
                  1: {'sigma': 2.0, 'epsilon': 1.2, 'rcut': 3.5}}
-        idx = [i for i in range(system.particles.npart)]
-        idx2 = np.random.choice(idx, size=int(system.particles.npart * 0.5),
+        idx2 = np.random.choice(list(range(system.particles.npart)),
+                                size=int(system.particles.npart * 0.5),
                                 replace=False)
         maxcut = 0.5 * min(system.box.length)
         for key in param:
             if 'rcut' in param[key]:
-                self.assertGreaterEqual(maxcut, param[key]['rcut'])
+                assert maxcut >= param[key]['rcut']
         print(f'Mutating {len(idx2)} particles')
         for i in idx2:
             system.particles.ptype[i] = 1
         result = run_calculations(system, param)
-        keys = ['python', 'python-numpy', 'fortran']
-        for i, keyi in enumerate(keys[:-1]):
-            for j, key2 in enumerate(keys[i+1:]):
-                print(f'\nCompare {keyi} and {key2}')
-                force = np.allclose(result[i][1], result[i+j+1][1])
-                print(f' -> Forces close: {force}')
-                self.assertTrue(force)
-                virial = np.allclose(result[i][2], result[i+j+1][2])
-                print(f' -> Virial close: {virial}')
-                self.assertTrue(virial)
-                self.assertAlmostEqual(result[i][0], result[i+j+1][0], 7)
-                vdiff = np.abs(result[i][0] - result[i+j+1][0])
-                print(f' -> Difference in pot. energy: {vdiff:.15e}')
+        _assert_results_close(result, ['python', 'python-numpy', 'fortran'])
 
     def test_lj_multi_mix(self):
         """Test for multi-mixture."""
@@ -142,10 +133,8 @@ class LennardJonesTest(unittest.TestCase):
         system = set_up_initial_state()
         param = {0: {'sigma': 1.0, 'epsilon': 1.0, 'rcut': 2.5}}
         maxcut = 0.5 * min(system.box.length)
-        self.assertGreaterEqual(maxcut, param[0]['rcut'])
-
-        idx = np.array([i for i in range(system.particles.npart)],
-                       dtype='i4')
+        assert maxcut >= param[0]['rcut']
+        idx = np.array(list(range(system.particles.npart)), dtype='i4')
         np.random.shuffle(idx)
         for i, idx2 in enumerate(np.array_split(idx, ncomp)):
             system.particles.ptype[idx2] = i
@@ -162,20 +151,4 @@ class LennardJonesTest(unittest.TestCase):
         for atom in natoms:
             print(f'{natoms[atom]} atoms of type {atom}')
         result = run_calculations(system, param)
-        keys = ['python', 'python-numpy', 'fortran']
-        for i, keyi in enumerate(keys[:-1]):
-            for j, key2 in enumerate(keys[i+1:]):
-                print(f'\nCompare {keyi} and {key2}')
-                force = np.allclose(result[i][1], result[i+j+1][1])
-                print(f' -> Forces close: {force}')
-                self.assertTrue(force)
-                virial = np.allclose(result[i][2], result[i+j+1][2])
-                print(f' -> Virial close: {virial}')
-                self.assertTrue(virial)
-                self.assertAlmostEqual(result[i][0], result[i+j+1][0], 7)
-                vdiff = np.abs(result[i][0] - result[i+j+1][0])
-                print(f' -> Difference in pot. energy: {vdiff:.15e}')
-
-
-if __name__ == '__main__':
-    unittest.main()
+        _assert_results_close(result, ['python', 'python-numpy', 'fortran'])

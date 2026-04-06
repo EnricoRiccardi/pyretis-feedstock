@@ -115,7 +115,7 @@ def prepare_test_system():
     return system
 
 
-class EngineTest:
+class TestEngine:
     """Run the tests for the different Engines."""
 
     def test_restart_internal_engine_langevin(self):

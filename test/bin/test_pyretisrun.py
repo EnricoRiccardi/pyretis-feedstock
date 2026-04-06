@@ -27,7 +27,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class test_pyretis_main_runner:
+class TestPyretisMainRunner:
     """Test Main."""
 
     def test_pyretisrun(self):

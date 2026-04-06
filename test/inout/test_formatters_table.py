@@ -106,7 +106,7 @@ class TestTxtTableFormatter:
                 assert line == correct[i]
 
 
-class TableFMTTest:
+class TestTableFMT:
     """Test that table writers work as intended."""
 
     def test_thermo_table(self, caplog):

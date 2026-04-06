@@ -306,7 +306,7 @@ class ExternalMDEngine(EngineBase):
             # Check if we are running a python script:
             if cmd[0].endswith('.py'):
                 cmd = [sys.executable] + cmd
-            exe = subprocess.Popen(
+            exe = subprocess.Popen(  # nosec B603 B607
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=fout,

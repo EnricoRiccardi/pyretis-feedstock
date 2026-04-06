@@ -84,8 +84,6 @@ def compare_text_line_by_line(file1, file2, skip=None, skip_keys=None):
         A descriptive message of the result of the comparison.
     """
     all_data = read_files(file1, file2, read_comments=True)
-    if len(all_data) != 2:
-        raise ValueError(f'Expected 2 files, got {len(all_data)}')
     if skip_keys:
         def keep(line):
             """Return True if line should be kept."""
@@ -402,8 +400,6 @@ def compare_path_ensemble_data(file1, file2, rel_tol=1e-5, skip=None):
         A message describing the result of the comparison.
     """
     all_data = read_files(file1, file2, read_comments=False)
-    if len(all_data) != 2:
-        raise ValueError(f'Expected 2 files, got {len(all_data)}')
     if not len(all_data[0]) == len(all_data[1]):
         return False, 'The number of lines in the files differ'
     # Define the expected data types for the columns in the path

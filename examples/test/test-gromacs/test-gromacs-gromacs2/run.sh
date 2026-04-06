@@ -13,7 +13,7 @@ cd run-gromacs-ini
 cp ../../gmx/gromacs.py .
 cp ../../gmx/orderp.py .
 cp ../../../shared_input/gromacs gromacs_input_ini -r
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 
@@ -25,11 +25,11 @@ cp -r run-gromacs-ini/!(*.rst) run-gromacs2
 
 
 cd run-gromacs1
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 cd run-gromacs2
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 

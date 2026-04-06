@@ -9,17 +9,17 @@ echo "Using gmx=$gmx"
 replace="s/GMXCOMMAND/$gmx/g"
 
 gmxversion=$($gmx --version | grep -i "gromacs version")
-echo $gmxversion
+echo "$gmxversion"
 
 cd run-5
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p
 cd ..
 
 cd run-initialise
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p
@@ -31,7 +31,7 @@ python copy_restart_files.py run-initialise run-restart
 rm copy_restart_files.py
 
 cd run-restart
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 cp "$pyretis_gmx_rnd_state" pyretis_gmx_rnd.state

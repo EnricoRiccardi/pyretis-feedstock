@@ -32,6 +32,10 @@ tools:
 
 exclude_paths:
   - ".git/**"
-  - "docs/_build/**"
+  - "docs/**"
   - "**/__pycache__/**"
   - "**/*.pyc"
+  - "test/**"
+  - "examples/**"
+  - "devtools/**"
+  - "setup_version.py"

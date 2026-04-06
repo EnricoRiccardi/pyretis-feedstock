@@ -344,3 +344,19 @@ class TestMethods:
         not_bad = [0, 1, 1]
         remove_nan([bad])
         assert bad == not_bad
+
+    def test_remove_nan_dict(self):
+        """Test remove_nan with a plain dict (non-DataFrame).
+
+        This exercises the else branch in remove_nan where data is a
+        plain dict, so each value is processed recursively.
+        """
+        data = {
+            'op1': [float('nan'), 1.0, 2.0],
+            'op2': [0.0, float('nan'), 1.0],
+        }
+        remove_nan(data)
+        # Leading NaN in op1 should be replaced by the next value.
+        assert data['op1'][0] == 1.0
+        # NaN in the middle of op2 should be replaced by the next value.
+        assert data['op2'][1] == 1.0

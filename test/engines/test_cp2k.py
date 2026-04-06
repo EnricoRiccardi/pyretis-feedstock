@@ -38,7 +38,7 @@ def make_test_system(conf):
     return system
 
 
-class CP2KEngineTest:
+class TestCP2KEngine:
     """Run the tests for the CP2KEngine."""
 
     def test_init(self):

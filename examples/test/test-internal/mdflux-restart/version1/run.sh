@@ -7,6 +7,7 @@ cd run-full
 # todo -p by using the progress bar, the test fails.
 # a smaller number of cycles get printed out.
 pyretisrun -i flux.rst # -p
+pyretisanalyse -i flux.rst
 cd ..
 cd run-step1
 pyretisrun -i flux.rst # -p

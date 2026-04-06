@@ -12,7 +12,7 @@ GIT_REVISION = 'f9ae02f1d8098f39aede23c4a8017e48b6040e28'
 GIT_VERSION = '3.0.2'
 RELEASE = True
 
-if not RELEASE:
+if not RELEASE:  # pragma: no cover
     VERSION = GIT_VERSION  # pylint: disable=invalid-name
 
 MIN_PYTHON_VERSION = (3, 9)

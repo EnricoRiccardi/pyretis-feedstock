@@ -8,7 +8,7 @@ make clean
 gmx=${1:-gmx_d}
 echo "Using gmx=$gmx"
 replace="s/GMXCOMMAND/$gmx/g"
-sed -e $replace gromacs.rst > gromacs-run.rst
+sed -e "$replace" gromacs.rst > gromacs-run.rst
 
 pyretisrun -i gromacs-run.rst # -p
 

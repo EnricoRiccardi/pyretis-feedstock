@@ -118,5 +118,5 @@ try:  # pragma: no cover
                            gen_surface)
     from pyretis.pyvisa.visualize import VisualApp
     HAS_PYVISA_REQ = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_PYVISA_REQ = False

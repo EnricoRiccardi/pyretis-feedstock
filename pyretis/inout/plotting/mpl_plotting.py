@@ -910,7 +910,8 @@ def mpl_plot_pppath(results, path_ensemble):
         figset = {'xlabel': r'intf',
                   'ylabel': r'$P_a(\lambda_i/\lambda_A)$',
                   'title': r''}
-        canvas[out['pp_Pc']] = mpl_simple_plot(series, fig_settings=figset)
+        canvas[f'{ens_simplified}_pp_Pc'] = mpl_simple_plot(
+            series, fig_settings=figset)
     if 'pcross' in results:
         L, M, R, lmlpercs, lmllambs, rmrpercs, rmrlambs = results['repptis']
         # First plot `pcross` vs `lambda` with the `detect` surface:
@@ -1410,11 +1411,8 @@ def get_color_map(ncolors):
     elif 10 < ncolors <= 20:
         name = 'tab20'
     else:
-        name = None
-    if name is None:
-        logger.info('Using default color map.')
-    else:
-        logger.info('Using color map %s', name)
+        name = 'tab20'
+    logger.info('Using color map %s', name)
     cmap = matplotlib.colormaps[name]
     return cmap(np.linspace(0, 1, ncolors))
 
@@ -1520,10 +1518,7 @@ def mpl_plot_matched(path_ensembles, detect, matched, reptis=False):
 
     # color_cycle was deprecated in matplotlib 1.5, but to support old
     # versions:
-    if 'axes.prop_cycle' in matplotlib.rcParams:
-        ckey = 'axes.prop_cycle'
-    else:
-        ckey = 'axes.color_cycle'
+    ckey = 'axes.prop_cycle'
     # Check if we need to have more colors:
     if len(matplotlib.rcParams[ckey]) < len(path_ensembles):
         logger.info('Overriding color cycle.')

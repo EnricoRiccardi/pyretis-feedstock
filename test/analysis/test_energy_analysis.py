@@ -15,7 +15,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class EnergyTest:
+class TestEnergy:
     """Test that we can analyse energies."""
 
     def test_energy_analysis(self):

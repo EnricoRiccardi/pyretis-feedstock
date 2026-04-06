@@ -56,7 +56,7 @@ def add_some_paths(ensemble, raw_data):
         ensemble.add_path_data(dummy_path, path['status'])
 
 
-class AnalysePathEnsembleTest:
+class TestAnalysePathEnsemble:
     """Test that we run the analysis for PathEnsemble results."""
 
     def test_no_accept_ens_1(self):
@@ -187,7 +187,7 @@ class AnalysePathEnsembleTest:
         with pytest.raises(AssertionError, match="No accepted paths"):
             analyse_path_ensemble(raw_data, settings)
 
-    def test_permeability_path_analysis_interfaces(self):
+    def test_permeability_path_analysis_interfaces(self, caplog):
         """Test the permeability calculations."""
         ens = {
             'ensemble_number': 0,
@@ -239,9 +239,10 @@ class AnalysePathEnsembleTest:
         os.rename(*mis[::-1])
         raw_data2 = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
         with turn_on_logging():
-            with self.assertLogs('pyretis.analysis.path_analysis',
-                                 level=logging.WARNING):
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.analysis.path_analysis'):
                 result2 = analyse_path_ensemble(raw_data2, settings)
+        assert any('align' in r.message.lower() for r in caplog.records)
 
         # Move files back
         os.rename(*mis)
