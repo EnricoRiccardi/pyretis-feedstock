@@ -45,7 +45,7 @@ def run_calculations(system, parameters):
     """Evaluate the LJ potential."""
     # Calculate with FORTRAN:
     potential_ext = PairLennardJonesCutF(dim=3, shift=True,
-                                        mixing='geometric')
+                                         mixing='geometric')
     forcefield_ext = ForceField('Python with external FORTRAN force field',
                                 potential=[potential_ext],
                                 params=[parameters])
