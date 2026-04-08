@@ -9,10 +9,10 @@ import colorama
 from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
-from pyretis.testing.compare import (
-    compare_files,
-    compare_files_columns,
-    compare_pathensemble_files,
+from pyretis.testing.simulation_comparison import (
+    compare_simulation_files,
+    compare_data_by_columns,
+    compare_path_ensemble_data,
     compare_traj_archive,
 )
 
@@ -25,7 +25,7 @@ def soft_archive_comparison(dir1, dir2):
     """Compare two archives. Here we accept a difference in energies.
 
     For GROMACS1 and 2, the potential energy output is different.
-    This is due to a difference in the way GROMACS add dispersion
+    This is due to a difference in the way GROMACS adds dispersion
     corrections when continuing a simulation. So, here we expect
     a failure for the energy files. We check these energy files
     manually, by skipping the potential energy terms.
@@ -39,17 +39,24 @@ def soft_archive_comparison(dir1, dir2):
 
     Returns
     -------
-    out : tuple of strings
+    errors : list of tuples
         These are the files which were found to be different.
-
     """
     errors = []
-    for (file1, file2) in compare_traj_archive(dir1, dir2):
-        equal, _ = compare_files_columns(
-            file1, file2, file_type='energy', skip=['vpot'],
-        )
-        if not equal:
-            errors.append(file1, file2)
+    archive_diffs = compare_traj_archive(dir1, dir2)
+    for (file1, file2) in archive_diffs:
+        # Check if it is an energy file:
+        if os.path.basename(file1) == 'energy.txt':
+            equal, _ = compare_data_by_columns(
+                file1, file2, file_type='energy', skip=['vpot']
+            )
+            if not equal:
+                errors.append((file1, file2))
+        else:
+            # For other files in archive, they must match exactly:
+            equal, _ = compare_simulation_files(file1, file2, mode='cmp')
+            if not equal:
+                errors.append((file1, file2))
     return errors
 
 
@@ -68,15 +75,16 @@ def compare_ensemble(run1, run2, ensemble,
         000, 001, or similar.
     path_skip : list of integers, optional
         This selects columns to skip when comparing path ensemble
-        data. For instance, when loading trajectories, we essentially
-        start a new simulation and not all columns in the path ensemble
-        files can then be compared.
+        data.
     energy_skip : list of strings, optional
-        This selects columns to skip in the energy file. This is useful
-        when comparing potential energies from GROMACS runs, where these
-        don't match due to the way GROMACS handles dispersion
-        corrections.
+        This selects columns to skip in the energy file.
+    traj_skip : bool, optional
+        If True, we skip comparison of trajectory archives.
 
+    Returns
+    -------
+    status : bool
+        True if the comparison was successful, False otherwise.
     """
     print_to_screen(f'Comparing for "{ensemble}"', level='info')
     for filei in ('energy.txt', 'order.txt', 'pathensemble.txt'):
@@ -84,34 +92,37 @@ def compare_ensemble(run1, run2, ensemble,
         file1 = os.path.join(run1, ensemble, filei)
         file2 = os.path.join(run2, ensemble, filei)
         if filei == 'pathensemble.txt':
-            equal, msg = compare_pathensemble_files(
+            equal, msg = compare_path_ensemble_data(
                 file1, file2, skip=path_skip
             )
         elif filei == 'energy.txt' and energy_skip:
-            equal, msg = compare_files_columns(
-                file1, file2, file_type='energy', skip=energy_skip,
+            equal, msg = compare_data_by_columns(
+                file1, file2, file_type='energy', skip=energy_skip
             )
         else:
-            equal, msg = compare_files(
-                file1, file2, skip=None, mode='numerical'
+            equal, msg = compare_simulation_files(
+                file1, file2, mode='numerical'
             )
         lvl = 'success' if equal else 'error'
         print_to_screen(f'\t\t-> {msg}', level=lvl)
         if not equal:
             return False
-        if not traj_skip:
-            print_to_screen('\tComparing for trajectory archive:')
-            for i in {'0_', '1_'}:
-                archive_errors = soft_archive_comparison(
-                    os.path.join(run1, ensemble, i + TRAJ),
-                    os.path.join(run2, ensemble, i + TRAJ),
-                )
-                if archive_errors:
-                    print_to_screen('\t\t-> Archives differ', level='error')
-                    return False
-            print_to_screen('\t\t-> Archives are equal', level='success')
-        else:
-            print_to_screen('\tSkipping comparison for trajectory archive.')
+
+    if not traj_skip:
+        print_to_screen('\tComparing for trajectory archive:')
+        # Check folders like 0_traj and 1_traj
+        for i in {'0_', '1_'}:
+            archive_errors = soft_archive_comparison(
+                os.path.join(run1, ensemble, i + TRAJ),
+                os.path.join(run2, ensemble, i + TRAJ),
+            )
+            if archive_errors:
+                print_to_screen('\t\t-> Archives differ', level='error')
+                return False
+        print_to_screen('\t\t-> Archives are equal', level='success')
+    else:
+        print_to_screen('\tSkipping comparison for trajectory archive.')
+
     return True
 
 
@@ -122,7 +133,6 @@ def main():
     -------
     out : int
         0 if the comparison was successful, 1 otherwise.
-
     """
     colorama.init(autoreset=True)
     parser = argparse.ArgumentParser()
@@ -134,10 +144,10 @@ def main():
                         help='Columns to skip for energy.txt')
     parser.add_argument('--traj_skip', action='store_true',
                         help='Skip comparison for trajectory archives')
-    args_dict = vars(parser.parse_args())
+    args = parser.parse_args()
 
-    run1 = args_dict['directories'][0]
-    run2 = args_dict['directories'][1]
+    run1 = args.directories[0]
+    run2 = args.directories[1]
 
     settings = parse_settings_file(os.path.join(run1, RETIS_RST))
     inter = settings['simulation']['interfaces']
@@ -145,9 +155,9 @@ def main():
         ensemble_dir = generate_ensemble_name(i)
         result = compare_ensemble(
             run1, run2, ensemble_dir,
-            path_skip=args_dict['path_skip'],
-            energy_skip=args_dict['energy_skip'],
-            traj_skip=args_dict['traj_skip'],
+            path_skip=args.path_skip,
+            energy_skip=args.energy_skip,
+            traj_skip=args.traj_skip,
         )
         if not result:
             print_to_screen(

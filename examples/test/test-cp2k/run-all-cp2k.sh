@@ -10,9 +10,9 @@ declare -a tests=("test-cp2k"
 for i in "${tests[@]}"
 do
     echo "Running in: $i"
-    cd $i
+    cd "$i"
     ./run.sh
     make clean
-    cd $basedir
+    cd "$basedir"
 done
 

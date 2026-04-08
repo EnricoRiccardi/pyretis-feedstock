@@ -437,7 +437,7 @@ class System:
         ekin, _ = calculate_kinetic_energy(self.particles)
         ekin_new = energy - vpot
         if ekin_new < 0:
-            logger.warning(('Can not re-scale velocities. '
+            logger.warning(('Cannot rescale velocities. '
                             'Target energy: %f, Potential: %f'), energy, vpot)
         else:
             logger.debug('Re-scaled energies to ekin: %f', ekin_new)

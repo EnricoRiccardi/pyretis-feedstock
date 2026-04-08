@@ -12,8 +12,8 @@ Here, we make a distinction between two types of engines:
   which directly interact with the underlying numpy.arrays
   representing positions, velocities and forces (see :numref:`fig-engine`-left)
 
-* :ref:`External engines <user-guide-engine-external>` which is used by |pyretis|
-  to control the execution of external programs.  In this case, the state of the
+* :ref:`External engines <user-guide-engine-external>` which are used by |pyretis|
+  to control the execution of external programs. In this case, the state of the
   particles is represented by a **file containing the positions and velocities**.
   As shown in the illustration below (:numref:`fig-engine`-right) , this can be accessed using
   :py:attr:`.ParticlesExt.config` which is a tuple containing a file name and
@@ -240,8 +240,8 @@ This method is used by the |pyretis| engine in the following way:
 
    conf = self.step(system, 'output-file')
 
-That is the method take in two parameters: a system object and a *string*
-and return a single parameter. This single parameter is just a string
+That is, the method takes in two parameters: a system object and a *string*
+and returns a single parameter. This single parameter is just a string
 which contains the output configuration created after executing the
 external program. Here is a short template for the ``step`` method:
 

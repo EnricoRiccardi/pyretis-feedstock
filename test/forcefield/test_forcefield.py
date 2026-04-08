@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the ForceField and PotentialFunction classes."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.system import System
 from pyretis.core.particles import Particles
@@ -11,7 +11,7 @@ from pyretis.forcefield import ForceField, PotentialFunction
 logging.disable(logging.CRITICAL)
 
 
-class TestPotential(PotentialFunction):
+class PotentialTest(PotentialFunction):
     """A potential function to use in tests."""
 
     def __init__(self, desc='Test potential'):
@@ -35,50 +35,50 @@ class TestPotential(PotentialFunction):
         return pot, force, virial
 
 
-class TestForceField(unittest.TestCase):
+class TestForceField:
     """Test set-up of force fields."""
 
-    def test_forcefield_class(self):
+    def test_forcefield_class(self, caplog):
         """Test functionality of the ForceField class."""
         system = System()
         system.particles = Particles(dim=system.get_dim())
         system.add_particle(1.0)
         forcefield = ForceField('Generic testing force field')
         param1 = {'a': 1.0}
-        pot1 = TestPotential()
+        pot1 = PotentialTest()
         forcefield.add_potential(pot1, parameters=param1)
 
         force, virial = forcefield.evaluate_force(system)
-        self.assertAlmostEqual(1.0, force)
-        self.assertAlmostEqual(2.0, virial)
+        assert 1.0 == force
+        assert 2.0 == virial
 
         vpot = forcefield.evaluate_potential(system)
-        self.assertAlmostEqual(1.0, vpot)
+        assert 1.0 == vpot
 
         vpot, force, virial = forcefield.evaluate_potential_and_force(system)
-        self.assertAlmostEqual(1.0, force)
-        self.assertAlmostEqual(2.0, virial)
-        self.assertAlmostEqual(1.0, vpot)
+        assert 1.0 == force
+        assert 2.0 == virial
+        assert 1.0 == vpot
 
         param2 = {'a': 2.0}
         forcefield.update_potential_parameters(pot1, param2)
 
         vpot, force, virial = forcefield.evaluate_potential_and_force(system)
-        self.assertAlmostEqual(2.0, force)
-        self.assertAlmostEqual(2.0, virial)
-        self.assertAlmostEqual(2.0, vpot)
+        assert 2.0 == force
+        assert 2.0 == virial
+        assert 2.0 == vpot
 
         potr, paramr = forcefield.remove_potential(pot1)
-        self.assertIs(pot1, potr)
-        self.assertIs(param2, paramr)
+        assert pot1 is potr
+        assert param2 is paramr
 
-        pot2 = TestPotential()
+        pot2 = PotentialTest()
         potr, paramr = forcefield.remove_potential(pot2)
-        self.assertTrue(potr is None)
-        self.assertTrue(paramr is None)
+        assert potr is None
+        assert paramr is None
         logging.disable(logging.INFO)
-        with self.assertLogs('pyretis.forcefield.forcefield',
-                             level='WARNING'):
+        with caplog.at_level(logging.WARNING,
+                             logger='pyretis.forcefield.forcefield'):
             forcefield.update_potential_parameters(pot2, param2)
         logging.disable(logging.CRITICAL)
 
@@ -86,19 +86,19 @@ class TestForceField(unittest.TestCase):
         """Test the forcefield add potential method in more detail."""
         forcefield = ForceField('Generic testing force field')
         param1 = {'a': 1.0}
-        pot1 = TestPotential()
+        pot1 = PotentialTest()
         ret = forcefield.add_potential(pot1, parameters=param1)
-        self.assertTrue(ret)
+        assert ret
         ret = forcefield.add_potential(None, parameters=param1)
-        self.assertFalse(ret)
-        pot2 = TestPotential()
+        assert not ret
+        pot2 = PotentialTest()
         forcefield = ForceField('Generic testing force field',
                                 potential=[pot1, pot2],
                                 params=[param1])
-        self.assertTrue(pot1 in forcefield.potential)
-        self.assertTrue(pot2 in forcefield.potential)
-        self.assertEqual(param1, forcefield.params[0])
-        self.assertTrue(forcefield.params[1] is None)
+        assert pot1 in forcefield.potential
+        assert pot2 in forcefield.potential
+        assert param1 == forcefield.params[0]
+        assert forcefield.params[1] is None
 
     def test_evaluation(self):
         """Test evaluation of the force field."""
@@ -106,27 +106,27 @@ class TestForceField(unittest.TestCase):
         system.particles = Particles(dim=system.get_dim())
         system.add_particle(1.0)
         param1 = {'a': 1.0}
-        pot1 = TestPotential()
+        pot1 = PotentialTest()
         param2 = {'a': 2.0}
-        pot2 = TestPotential()
+        pot2 = PotentialTest()
         forcefield = ForceField('Generic testing force field',
                                 potential=[pot1, pot2],
                                 params=[param1, param2])
         vpot = forcefield.evaluate_potential(system)
-        self.assertAlmostEqual(vpot, 3.0)
+        assert vpot == 3.0
         _, force, virial = forcefield.evaluate_potential_and_force(system)
-        self.assertTrue(np.allclose(force, np.array([[3.0]])))
-        self.assertTrue(np.allclose(virial, np.array([[4.0]])))
+        assert np.allclose(force, np.array([[3.0]]))
+        assert np.allclose(virial, np.array([[4.0]]))
         force, virial = forcefield.evaluate_force(system)
-        self.assertTrue(np.allclose(force, np.array([[3.0]])))
-        self.assertTrue(np.allclose(virial, np.array([[4.0]])))
+        assert np.allclose(force, np.array([[3.0]]))
+        assert np.allclose(virial, np.array([[4.0]]))
 
     def test_print_potentials(self):
         """Test the printing of force field information."""
         param1 = {'a': 1.0}
-        pot1 = TestPotential()
+        pot1 = PotentialTest()
         param2 = {'a': 2.0}
-        pot2 = TestPotential()
+        pot2 = PotentialTest()
         forcefield = ForceField('Generic testing force field',
                                 potential=[pot1, pot2],
                                 params=[param1, param2])
@@ -134,8 +134,4 @@ class TestForceField(unittest.TestCase):
         correct_txt = ['Force field: Generic testing force field',
                        '1: Test potential', '2: Test potential']
         for i, j in zip(txt.split('\n'), correct_txt):
-            self.assertEqual(i.strip(), j.strip())
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert i.strip() == j.strip()

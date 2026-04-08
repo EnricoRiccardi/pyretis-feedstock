@@ -18,7 +18,7 @@ write_ensemble_restart (:py:func:`.write_ensemble_restart`)
 import logging
 import copy
 import os
-import pickle
+import pickle  # nosec B403
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
@@ -97,5 +97,5 @@ def read_restart_file(filename):
 
     """
     with open(filename, 'rb') as infile:
-        info = pickle.load(infile)
+        info = pickle.load(infile)  # nosec B301
     return info

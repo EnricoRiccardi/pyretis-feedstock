@@ -103,18 +103,20 @@ try_data_shift(:py:func:`pyretis.pyvisa.common.try_data_shift`)
     A function that attempts a shift of the data values to increase linear
     correlation.
 """
-from .common import (try_data_shift, shift_data)
-from .orderparam_density import (PathDensity, PathVisualize)
-from .plotting import (plot_regline,
-                       _grid_it_up,
-                       plot_int_plane,
-                       gen_surface)
 # Check if PyVisA requirements are installed
 try:  # pragma: no cover
     import PyQt5
     import mdtraj
     import sklearn
+    import pandas
+    # The following imports depend on pandas/mdtraj/sklearn:
+    from .common import (try_data_shift, shift_data)
+    from .orderparam_density import (PathDensity, PathVisualize)
+    from .plotting import (plot_regline,
+                           _grid_it_up,
+                           plot_int_plane,
+                           gen_surface)
     from pyretis.pyvisa.visualize import VisualApp
     HAS_PYVISA_REQ = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_PYVISA_REQ = False

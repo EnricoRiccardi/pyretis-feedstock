@@ -5,7 +5,7 @@
 from io import StringIO
 import os
 import logging
-import unittest
+import pytest
 import tempfile
 import pathlib
 import numpy as np
@@ -23,7 +23,7 @@ from .help import turn_on_logging, TEST_SETTINGS, TxtWriter
 logging.disable(logging.CRITICAL)
 
 
-class TestSimulation(unittest.TestCase):
+class TestSimulation:
     """Run the tests for Simulation class."""
 
     def test_add_task(self):
@@ -38,15 +38,15 @@ class TestSimulation(unittest.TestCase):
 
         task = {'func': task1, 'result': 'hello'}
         add = simulation.add_task(task)
-        self.assertTrue(add)
+        assert add
 
         task = {'func': task0, 'result': 'first'}
         add = simulation.add_task(task, position=0)
-        self.assertTrue(add)
+        assert add
 
         task = {'func': 100, 'result': 'should-not-be-added'}
         add = simulation.add_task(task, position=0)
-        self.assertFalse(add)
+        assert not add
 
     def test_run_extend(self):
         """Test that we can run and extend a simulation."""
@@ -58,7 +58,7 @@ class TestSimulation(unittest.TestCase):
 
         task = {'func': task1, 'result': 'hello', 'args': (simulation,)}
         add = simulation.add_task(task)
-        self.assertTrue(add)
+        assert add
 
         writer = ScreenOutput(
             TxtWriter(
@@ -74,22 +74,22 @@ class TestSimulation(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as stdout:
             for i, step in enumerate(simulation.run()):
                 if i == 0:
-                    self.assertFalse('hello' in step)
+                    assert 'hello' not in step
                 else:
-                    self.assertTrue('hello' in step)
+                    assert 'hello' in step
             simulation.extend_cycles(5)
             for i, step in enumerate(simulation.run()):
-                self.assertEqual(i + 1 + 10, step['cycle']['step'])
+                assert i + 1 + 10 == step['cycle']['step']
             for linei in stdout.getvalue().strip().split('\n'):
                 if linei:
                     lines.append(linei)
         for i, linei in enumerate(lines):
             if i == 0:
-                self.assertEqual('#    Step              Message', linei)
+                assert '#    Step              Message' == linei
             else:
                 msg = f'Hello there {i:03d}'
                 correct = f'{i:>10d} {msg:>20s}'
-                self.assertEqual(correct, linei)
+                assert correct == linei
 
     def test_restart_simple(self):
         """Test restart methods."""
@@ -98,16 +98,14 @@ class TestSimulation(unittest.TestCase):
             pass
         restart = simulation.restart_info()
         simulation2 = Simulation(settings={}, controls={'steps': 0})
-        self.assertEqual(simulation2.cycle['steps'], 0)
+        assert simulation2.cycle['steps'] == 0
         simulation2.load_restart_info(restart)
-        self.assertEqual(simulation2.cycle['stepno'], 10)
+        assert simulation2.cycle['stepno'] == 10
         sr1 = simulation.restart_info()
         sr2 = simulation2.restart_info()
         # Steps and end are not copied
-        self.assertNotEqual(sr1['simulation']['cycle'],
-                            sr2['simulation']['cycle'])
-        self.assertEqual(sr1['simulation']['type'],
-                         sr2['simulation']['type'])
+        assert sr1['simulation']['cycle'] != sr2['simulation']['cycle']
+        assert sr1['simulation']['type'] == sr2['simulation']['type']
         # Add random generator and try again:
         rgen = RandomGenerator(seed=101)
         simulation2.load_restart_info(restart)
@@ -117,7 +115,7 @@ class TestSimulation(unittest.TestCase):
 
         # Try setting fail system:
         simulation2.system = 'bumpy'
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             simulation2.restart_info()
 
         # Add and try again:
@@ -142,10 +140,10 @@ class TestSimulation(unittest.TestCase):
         rs1 = simulation.restart_info()
         simulation2.load_restart_info(rs1)
 
-        self.assertTrue(np.allclose(simulation.system.particles.vpot,
-                                    simulation2.system.particles.vpot))
+        assert np.allclose(simulation.system.particles.vpot,
+                           simulation2.system.particles.vpot)
 
-    def test_set_up_output(self):
+    def test_set_up_output(self, caplog):
         """Test the set_up_output things."""
         settings = {}
         add_default_settings(settings)
@@ -153,14 +151,14 @@ class TestSimulation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             settings['simulation']['exe_path'] = tempdir
             simulation.set_up_output(settings)
-            self.assertEqual(simulation.restart_freq,
-                             settings['output']['restart-file'])
+            assert (simulation.restart_freq ==
+                    settings['output']['restart-file'])
             settings['output']['restart-file'] = -1
             with turn_on_logging():
-                with self.assertLogs('pyretis.simulation.simulation',
-                                     level='WARNING'):
+                with caplog.at_level(logging.WARNING,
+                                     logger='pyretis.simulation.simulation'):
                     simulation.set_up_output(settings)
-                    self.assertIsNone(simulation.restart_freq)
+                    assert simulation.restart_freq is None
 
     def test_soft_exit(self):
         """Test the soft exit method."""
@@ -173,22 +171,18 @@ class TestSimulation(unittest.TestCase):
             simulation.system = system
             settings['simulation']['exe_path'] = tempdir
             simulation.set_up_output(settings)
-            self.assertEqual(tempdir, simulation.exe_dir)
+            assert tempdir == simulation.exe_dir
             for i, _ in enumerate(simulation.run()):
                 if i > simulation.restart_freq:
                     break
             files = [i.name for i in os.scandir(tempdir)]
-            self.assertEqual(1, len(files))
-            self.assertIn('pyretis.restart', files)
+            assert 1 == len(files)
+            assert 'pyretis.restart' in files
             exit_file = os.path.join(tempdir, 'EXIT')
             pathlib.Path(exit_file).touch()
             with patch('sys.stdout', new=StringIO()) as stdout:
                 for _ in enumerate(simulation.run()):
                     pass
-                self.assertIn('soft exit', stdout.getvalue().strip())
-            self.assertEqual(simulation.cycle['step'],
-                             simulation.restart_freq + 2)
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert 'soft exit' in stdout.getvalue().strip()
+            assert (simulation.cycle['step'] ==
+                    simulation.restart_freq + 2)

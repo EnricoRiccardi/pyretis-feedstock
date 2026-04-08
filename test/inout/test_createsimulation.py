@@ -4,7 +4,7 @@
 """Test the methods in pyretis.setup.createsimulation"""
 import os
 import logging
-import unittest
+import pytest
 import numpy as np
 from io import StringIO
 from unittest.mock import patch
@@ -108,21 +108,21 @@ def create_test_system():
     return system
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods from .createsimulation."""
     def test_create_path_ensemble(self):
         """Test create_path_ensemble."""
         path_ensemble = PathEnsemble(ensemble_number=2, interfaces=[-1., 0, 1])
-        self.assertEqual(path_ensemble.ensemble_number, 2)
-        self.assertIsInstance(path_ensemble, PathEnsemble)
+        assert path_ensemble.ensemble_number == 2
+        assert isinstance(path_ensemble, PathEnsemble)
         path_ensemble = PathEnsembleExt(ensemble_number=2,
                                         interfaces=[-1., 0, 1])
-        self.assertIsInstance(path_ensemble, PathEnsembleExt)
-        self.assertEqual(path_ensemble.ensemble_number, 2)
+        assert isinstance(path_ensemble, PathEnsembleExt)
+        assert path_ensemble.ensemble_number == 2
         # Test with some "missing" settings:
         settings = {'simulation': {'interfaces': [-1., 0.]}}
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(KeyError):
+            with pytest.raises(KeyError):
                 create_ensemble(settings)
 
     def test_create_ensemble(self):
@@ -135,8 +135,8 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         for i_ens, ensemble in enumerate(ensembles):
             path_ensemble = ensemble['path_ensemble']
-            self.assertEqual(path_ensemble.ensemble_number, i_ens)
-            self.assertIsInstance(path_ensemble, PathEnsemble)
+            assert path_ensemble.ensemble_number == i_ens
+            assert isinstance(path_ensemble, PathEnsemble)
 
         for i_ens in range(len(ensembles)):
             settings['ensemble'][i_ens]['particles']['type'] = 'external'
@@ -145,8 +145,8 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         for i_ens, ensemble in enumerate(ensembles):
             path_ensemble = ensemble['path_ensemble']
-            self.assertIsInstance(path_ensemble, PathEnsembleExt)
-            self.assertEqual(path_ensemble.ensemble_number, i_ens)
+            assert isinstance(path_ensemble, PathEnsembleExt)
+            assert path_ensemble.ensemble_number == i_ens
 
     def test_create_ensemble_permeability(self):
         """Test create_ensemble."""
@@ -163,8 +163,8 @@ class TestMethods(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()):
             ensembles = create_ensembles(settings)
         ens = ensembles[0]
-        self.assertEqual((-2, -1.5, -1), ens['path_ensemble'].interfaces)
-        self.assertEqual(["R", "L"], ens['path_ensemble'].start_condition)
+        assert ens['path_ensemble'].interfaces == (-2, -1.5, -1)
+        assert ["R", "L"] == ens['path_ensemble'].start_condition
 
     def test_create_ensemble_pptis(self):
         """Test create_ensemble for pptis."""
@@ -183,13 +183,12 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         n_ens = len(ensembles)
         for i in range(n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         hoped = [(-1., -1., 0.), (-1., 0., 1.),
                  (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_pptis_1(self):
         """Test create_ensemble for pptis."""
@@ -208,16 +207,15 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         n_ens = len(ensembles)
         # start condition
-        self.assertEqual(ensembles[0]['path_ensemble'].start_condition, 'R')
+        assert ensembles[0]['path_ensemble'].start_condition == 'R'
         for i in range(1, n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         # interfaces
         hoped = [(-np.inf, -1., -1.), (-1., -1., 0.), (-1., 0., 1.),
                  (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_pptis_2(self):
         """Test create_ensemble for repptis."""
@@ -237,13 +235,12 @@ class TestMethods(unittest.TestCase):
         n_ens = len(ensembles)
         # start condition
         for i in range(n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         # interfaces
         hoped = [(-1., 0., 1.), (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_pptis_3(self):
         """Test create_ensemble for pptis."""
@@ -262,16 +259,15 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         n_ens = len(ensembles)
         # start condition
-        self.assertEqual(ensembles[0]['path_ensemble'].start_condition, 'R')
+        assert ensembles[0]['path_ensemble'].start_condition == 'R'
         for i in range(1, n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         # interfaces
         hoped = [(-np.inf, -1., -1.), (-1., 0., 1.),
                  (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_repptis_0(self):
         """Test create_ensemble for repptis."""
@@ -287,12 +283,11 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         n_ens = len(ensembles)
         for i in range(n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         hoped = [(-1., 0., 1.), (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_repptis_1(self):
         """Test create_ensemble for repptis."""
@@ -312,16 +307,14 @@ class TestMethods(unittest.TestCase):
             ensembles = create_ensembles(settings)
         # start_condition for paths
         n_ens = len(ensembles)
-        self.assertEqual(ensembles[0]['path_ensemble'].start_condition,
-                         ['R', 'L'])
+        assert ensembles[0]['path_ensemble'].start_condition == ['R', 'L']
         for i in range(1, n_ens):
-            self.assertEqual(ensembles[i]['path_ensemble'].start_condition,
-                             ['R', 'L'])
+            assert ensembles[i]['path_ensemble'].start_condition == ['R', 'L']
         hoped = [(-2, -1.5, -1), (-1., -1., 0.), (-1., 0., 1.),
                  (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), n_ens)
+        assert len(hoped) == n_ens
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_create_ensemble_repptis_2(self):
         """Test create_ensemble for repptis."""
@@ -336,13 +329,12 @@ class TestMethods(unittest.TestCase):
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
             ensembles = create_ensembles(settings)
-        self.assertEqual(ensembles[-1]['path_ensemble'].start_condition,
-                         ['R', 'L'])
+        assert ensembles[-1]['path_ensemble'].start_condition == ['R', 'L']
         hoped = [(-1., -1., 0.), (-1., 0., 1.),
                  (0., 1., 2.), (1., 2., 3.)]
-        self.assertEqual(len(hoped), len(ensembles))
+        assert len(hoped) == len(ensembles)
         for ensemble, hope in zip(ensembles, hoped):
-            self.assertEqual(ensemble['path_ensemble'].interfaces, hope)
+            assert ensemble['path_ensemble'].interfaces == hope
 
     def test_raise_on_wrong_mirror(self):
         """Test bad mirror."""
@@ -360,7 +352,7 @@ class TestMethods(unittest.TestCase):
                                       'mirror_pos': 0}
 
         fill_up_tis_and_retis_settings(settings)
-        with self.assertRaisesRegex(ValueError, "have a mirror at -1.5"):
+        with pytest.raises(ValueError, match="have a mirror at -1.5"):
             with patch('sys.stdout', new=StringIO()):
                 create_ensembles(settings)
 
@@ -377,19 +369,18 @@ class TestMethods(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()):
             ensembles = create_ensembles(settings)
         detects = [1.0, 2.0]
-        self.assertEqual(len(ensembles), 2)
+        assert len(ensembles) == 2
         for iens, ens in enumerate(ensembles):
-            self.assertIsInstance(ens['path_ensemble'], PathEnsemble)
+            assert isinstance(ens['path_ensemble'], PathEnsemble)
         for iens, ens in enumerate(settings['ensemble']):
-            self.assertEqual(detects[iens], ens['tis']['detect'])
+            assert detects[iens] == ens['tis']['detect']
 
     def test_fail_simulation(self):
         """Test fail simulation."""
         settings = {'simulation': {'task': 'fake'}}
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_simulation(settings)
-        self.assertEqual('Unknown simulation task fake',
-                         str(err.exception))
+        assert 'Unknown simulation task fake' in str(err.value)
 
     def test_load_simulation(self):
         """Test cycle counter."""
@@ -398,8 +389,8 @@ class TestMethods(unittest.TestCase):
         restart = {'simulation': {'cycle': {'steps': 30,
                                             'endcycle': 30}}}
         sim.load_restart_info(restart)
-        self.assertTrue(sim.cycle['steps'] == 16)
-        self.assertTrue(sim.cycle['step'] == 0)
+        assert sim.cycle['steps'] == 16
+        assert sim.cycle['step'] == 0
 
     def test_create_nve_simulation(self):
         """Test create_nve_simulation."""
@@ -407,13 +398,12 @@ class TestMethods(unittest.TestCase):
                     'system': {'obj': create_test_system()},
                     'engine': {'obj': VelocityVerlet(0.002)}}
         sim = create_nve_simulation(settings)
-        self.assertIsInstance(sim, SimulationNVE)
-        self.assertEqual(sim.simulation_type,
-                         SimulationNVE.simulation_type)
+        assert isinstance(sim, SimulationNVE)
+        assert sim.simulation_type == SimulationNVE.simulation_type
         del settings['simulation']['steps']
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_nve_simulation(settings)
-        self.assertEqual(MISSING_STEPS_ERROR_MSG, str(err.exception))
+        assert MISSING_STEPS_ERROR_MSG == str(err.value)
 
     def test_create_md_simulation(self):
         """Test create_nve_simulation."""
@@ -421,13 +411,12 @@ class TestMethods(unittest.TestCase):
                     'system': {'obj': create_test_system()},
                     'engine': {'obj': VelocityVerlet(0.002)}}
         sim = create_md_simulation(settings)
-        self.assertIsInstance(sim, SimulationMD)
-        self.assertEqual(sim.simulation_type,
-                         SimulationMD.simulation_type)
+        assert isinstance(sim, SimulationMD)
+        assert sim.simulation_type == SimulationMD.simulation_type
         del settings['simulation']['steps']
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_md_simulation(settings)
-        self.assertEqual(MISSING_STEPS_ERROR_MSG, str(err.exception))
+        assert MISSING_STEPS_ERROR_MSG == str(err.value)
 
     def test_create_mdflux_simulation(self):
         """Test create_mdflux_simulation."""
@@ -435,62 +424,58 @@ class TestMethods(unittest.TestCase):
                     'system': {'obj': create_test_system()},
                     'engine': {'obj': VelocityVerlet(0.002)}}
 
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_mdflux_simulation(settings)
-        self.assertEqual(ORDER_ERROR_MSG, str(err.exception))
+        assert ORDER_ERROR_MSG == str(err.value)
         settings['orderparameter'] = {'class': 'Position',
                                       'dim': 'x', 'index': 0,
                                       'periodic': False}
         # Test that we fail because required setting "steps" are missing:
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_mdflux_simulation(settings)
-        self.assertEqual(MISSING_STEPS_ERROR_MSG, str(err.exception))
+        assert MISSING_STEPS_ERROR_MSG == str(err.value)
         settings['simulation']['steps'] = 10
         # Test that we fail because required setting "interfaces" are
         # missing:
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_mdflux_simulation(settings)
-        self.assertEqual(MISSING_INTERFACES_ERROR_MSG, str(err.exception))
+        assert MISSING_INTERFACES_ERROR_MSG in str(err.value)
         settings['simulation']['interfaces'] = [0, 1]
         sim = create_mdflux_simulation(settings)
-        self.assertIsInstance(sim, SimulationMDFlux)
+        assert isinstance(sim, SimulationMDFlux)
 
     def test_create_umbrellawsimulation(self):
         """Test create_umbrellaw_simulation."""
         settings = {'simulation': {'task': 'umbrellawindow', 'seed': 3},
                     'system': {'obj': create_test_system}}
 
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_umbrellaw_simulation(settings)
-        self.assertEqual('Simulation setting "umbrella" is missing!',
-                         str(err.exception))
+        assert 'Simulation setting "umbrella" is missing!' == str(err.value)
 
         settings['simulation']['umbrella'] = [-1.0, 0.0]
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_umbrellaw_simulation(settings)
-        self.assertEqual('Simulation setting "overlap" is missing!',
-                         str(err.exception))
+        assert 'Simulation setting "overlap" is missing!' == str(err.value)
 
         settings['simulation']['overlap'] = -0.5
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_umbrellaw_simulation(settings)
-        self.assertEqual('Simulation setting "maxdx" is missing!',
-                         str(err.exception))
+        assert 'Simulation setting "maxdx" is missing!' in str(err.value)
 
         settings['simulation']['maxdx'] = 1.0
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_umbrellaw_simulation(settings)
-        self.assertEqual('Simulation setting "mincycle" is missing!',
-                         str(err.exception))
+        assert 'Simulation setting "mincycle" is missing!' == str(err.value)
         settings['simulation']['mincycle'] = 10
         sim = create_umbrellaw_simulation(settings)
-        self.assertIsInstance(sim, UmbrellaWindowSimulation)
+        assert isinstance(sim, UmbrellaWindowSimulation)
 
         del settings['system']
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(KeyError) as err:
+            with pytest.raises(KeyError) as err:
                 create_umbrellaw_simulation(settings)
-        self.assertEqual("'system'", str(err.exception))
+        assert "'system'" == str(err.value)
 
     def test_create_tis_simulation(self):
         """Test create_tis_simulation."""
@@ -509,9 +494,9 @@ class TestMethods(unittest.TestCase):
         # Test that the set up fails, when we did not define an
         # order parameter and the engine wants it:
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_tis_simulation(settings)
-        self.assertEqual(ORDER_ERROR_MSG, str(err.exception))
+        assert ORDER_ERROR_MSG == str(err.value)
         # Continue testing with an order parameter defined:
         settings['orderparameter'] = {'class': 'Position',
                                       'dim': 'x', 'index': 0,
@@ -519,22 +504,22 @@ class TestMethods(unittest.TestCase):
         # Test that we fail when we are missing some settings:
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_tis_simulation(settings)
         # it should raise also missing steps
-        self.assertEqual(MISSING_STEPS_ERROR_MSG, str(err.exception))
+        assert MISSING_STEPS_ERROR_MSG == str(err.value)
         settings['simulation']['steps'] = 10
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
             sim = create_tis_simulation(settings)
-        self.assertIsInstance(sim, SimulationTIS)
+        assert isinstance(sim, SimulationTIS)
         del settings['ensemble']
         del settings['system']
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(KeyError) as err:
+            with pytest.raises(KeyError) as err:
                 create_tis_simulation(settings)
-        self.assertEqual("'system'", str(err.exception))
+        assert "'system'" == str(err.value)
 
     def test_create_tis_simulations(self):
         """Test create_tis_simulations."""
@@ -549,15 +534,14 @@ class TestMethods(unittest.TestCase):
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
             simulations = create_tis_simulation(settings)
-        self.assertIsInstance(simulations, SimulationTIS)
+        assert isinstance(simulations, SimulationTIS)
         del settings['ensemble']
         del settings['engine']
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_tis_simulation(settings)
-        self.assertEqual("Could not create engine from settings!",
-                         str(err.exception))
+        assert "Could not create engine from settings!" == str(err.value)
 
     def test_create_retis_simulation(self):
         """Test create_retis_simulation."""
@@ -579,9 +563,9 @@ class TestMethods(unittest.TestCase):
 
         # Test that we fail without an order parameter defined:
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_retis_simulation(settings)
-        self.assertEqual(ORDER_ERROR_MSG, str(err.exception))
+        assert ORDER_ERROR_MSG == str(err.value)
         settings['orderparameter'] = {'class': 'Position',
                                       'dim': 'x', 'index': 0,
                                       'periodic': False}
@@ -589,21 +573,20 @@ class TestMethods(unittest.TestCase):
         fill_up_tis_and_retis_settings(settings)
         # Test that we fail when we are missing some settings:
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_retis_simulation(settings)
-        self.assertEqual(MISSING_STEPS_ERROR_MSG, str(err.exception))
+        assert MISSING_STEPS_ERROR_MSG == str(err.value)
         settings['simulation']['steps'] = 10
         with patch('sys.stdout', new=StringIO()):
             sim = create_retis_simulation(settings)
-        self.assertIsInstance(sim, SimulationRETIS)
+        assert isinstance(sim, SimulationRETIS)
         del settings['ensemble']
         del settings['engine']
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError) as err:
+            with pytest.raises(ValueError) as err:
                 create_tis_simulation(settings)
-        self.assertEqual("Could not create engine from settings!",
-                         str(err.exception))
+        assert "Could not create engine from settings!" == str(err.value)
 
     def test_create_retis_simulation2(self):
         """Test create_simulation for SimulationRETIS."""
@@ -614,22 +597,21 @@ class TestMethods(unittest.TestCase):
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
             sim = create_retis_simulation(settings)
-        self.assertIsInstance(sim, SimulationRETIS)
+        assert isinstance(sim, SimulationRETIS)
         del settings['ensemble']
         del settings['system']
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(KeyError) as err:
+            with pytest.raises(KeyError) as err:
                 create_tis_simulation(settings)
-        self.assertEqual("'system'", str(err.exception))
+        assert "'system'" == str(err.value)
 
     def test_create_simulation(self):
         """Test create_simulation."""
         settings = {'simulation': {'task': 'does-not-exist'}}
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             create_simulation(settings)
-        self.assertEqual('Unknown simulation task does-not-exist',
-                         str(err.exception))
+        assert 'Unknown simulation task does-not-exist' in str(err.value)
 
     def test_create_simulationnve(self):
         """Test create_simulation for NVE"""
@@ -637,7 +619,7 @@ class TestMethods(unittest.TestCase):
                     'system': {'obj': create_test_system()},
                     'engine': {'obj': VelocityVerlet(0.002)}}
         sim = create_simulation(settings)
-        self.assertIsInstance(sim, SimulationNVE)
+        assert isinstance(sim, SimulationNVE)
 
     def test_create_simulationmdflux(self):
         """Test create_simulation for MD-Flux"""
@@ -646,7 +628,7 @@ class TestMethods(unittest.TestCase):
                                   'task': 'md-flux',
                                   'interfaces': [-1.0]}
         sim = create_mdflux_simulation(settings)
-        self.assertIsInstance(sim, SimulationMDFlux)
+        assert isinstance(sim, SimulationMDFlux)
 
     def test_create_simulationumb(self):
         """Test create_simulation for UmbrellaWindow"""
@@ -657,7 +639,7 @@ class TestMethods(unittest.TestCase):
                                   'maxdx': 1.0,
                                   'mincycle': 10}
         sim = create_umbrellaw_simulation(settings)
-        self.assertIsInstance(sim, UmbrellaWindowSimulation)
+        assert isinstance(sim, UmbrellaWindowSimulation)
 
     def test_create_simulationtis2(self):
         """Test create_simulation for SimulationTIS multiple."""
@@ -673,8 +655,4 @@ class TestMethods(unittest.TestCase):
         fill_up_tis_and_retis_settings(settings)
         with patch('sys.stdout', new=StringIO()):
             simulations = create_tis_simulation(settings)
-        self.assertIsInstance(simulations, SimulationTIS)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert isinstance(simulations, SimulationTIS)

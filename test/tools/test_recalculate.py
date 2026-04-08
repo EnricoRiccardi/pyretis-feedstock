@@ -8,7 +8,7 @@ import logging
 import os
 import tarfile
 from tempfile import NamedTemporaryFile
-import unittest
+import pytest
 from unittest.mock import patch
 import numpy as np
 from pyretis.tools.recalculate_order import (
@@ -103,7 +103,7 @@ class Velocity(OrderParameter):
         return system.particles.vel.sum(axis=0)
 
 
-class TestRecalculateOrder(unittest.TestCase):
+class TestRecalculateOrder:
     """Test the calculation of order parameters from trajectory files."""
 
     def test_rectangular_box(self):
@@ -113,18 +113,20 @@ class TestRecalculateOrder(unittest.TestCase):
         trr = os.path.join(HERE, '4water.trr')
         with patch('sys.stdout', new=StringIO()):
             for i in recalculate_order(orderf, trr, {}):
-                self.assertTrue(np.allclose(i, box))
+                assert np.allclose(i, box)
 
-    def test_novel(self):
+    def test_novel(self, caplog):
         """Test recalculate for a rectangular box."""
         trr = os.path.join(HERE, 'traj-novel.trr')
         with turn_on_logging(), patch('sys.stdout', new=StringIO()):
-            with self.assertLogs('pyretis.tools.recalculate_order',
-                                 level='WARNING'):
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.tools.recalculate_order'):
 
                 for order in recalculate_order(Velocity(), trr, {}):
                     for i in order:
-                        self.assertAlmostEqual(i, 0.0)
+                        assert i == pytest.approx(0.0)
+                assert any("No velocities found in" in rec.message
+                           for rec in caplog.records)
 
     def test_tri_box(self):
         """Test recalculate for a triclinic box."""
@@ -134,12 +136,12 @@ class TestRecalculateOrder(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()):
             for i, j in zip(recalculate_order(orderf, trr, {}), CORRECT_TRI):
                 orderp.append(i)
-                self.assertTrue(np.allclose(i, j))
-            self.assertEqual(len(orderp), len(CORRECT_TRI))
+                assert np.allclose(i, j)
+            assert len(orderp) == len(CORRECT_TRI)
             for i, j in zip(
                     recalculate_order(orderf, trr, {'reverse': True}),
                     orderp[::-1]):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(i, j)
 
     def test_sub_selection(self):
         """Test when we specify a min/max index to consider."""
@@ -150,12 +152,12 @@ class TestRecalculateOrder(unittest.TestCase):
             orderp = [i for i in recalculate_order(orderf, trr,
                                                    {'maxidx': idx})]
             for i, j in zip(orderp, CORRECT_TRI[:idx+1]):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(i, j)
         with patch('sys.stdout', new=StringIO()):
             orderp = [i for i in recalculate_order(orderf, trr,
                                                    {'minidx': idx})]
             for i, j in zip(orderp, CORRECT_TRI[idx:]):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(i, j)
 
     def test_recalculate_gro(self):
         """Recalculate from .gro file."""
@@ -174,7 +176,7 @@ class TestRecalculateOrder(unittest.TestCase):
                         output.write(gro.read())
                     box = recalculate_order(orderf, grofile.name, {})
                     for j, k in zip(box[0], CORRECT_TRI[i]):
-                        self.assertAlmostEqual(j, k, places=5)
+                        assert j == pytest.approx(k, abs=10**-(5))
                     i += 1
         # Do some additional tests:
         with patch('sys.stdout', new=StringIO()):
@@ -186,9 +188,9 @@ class TestRecalculateOrder(unittest.TestCase):
                                            {'ext': '.gro', 'reverse': False})
             vel2, = recalculate_from_frame(Velocity(), grofile.name,
                                            {'ext': '.gro', 'reverse': True})
-            self.assertTrue(np.allclose(vel1, -vel2))
+            assert np.allclose(vel1, -vel2)
         with patch('sys.stdout', new=StringIO()):
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 recalculate_from_frame(Velocity(), 'something.txt',
                                        {'ext': '.txt'})
 
@@ -209,7 +211,7 @@ class TestRecalculateOrder(unittest.TestCase):
                         output.write(g96.read())
                     box = recalculate_order(orderf, g96file.name, {})
                     for j, k in zip(box[0], CORRECT_TRI[i]):
-                        self.assertAlmostEqual(j, k, places=5)
+                        assert j == pytest.approx(k, abs=10**-(5))
                     i += 1
 
     def test_recalculate_xyz(self):
@@ -223,12 +225,12 @@ class TestRecalculateOrder(unittest.TestCase):
                     orderf, filename, {'reverse': True}
                 )
             ]
-            self.assertEqual(len(order), len(CORRECT_XYZ))
-            self.assertEqual(len(order), len(order_r))
+            assert len(order) == len(CORRECT_XYZ)
+            assert len(order) == len(order_r)
             for vel1, vel2, vel3 in zip(order, order_r[::-1], CORRECT_XYZ):
                 for i, j, k in zip(vel1, vel2, vel3):
-                    self.assertAlmostEqual(i, -j, places=7)
-                    self.assertAlmostEqual(i, k, places=7)
+                    assert i == pytest.approx(-j, abs=10**-(7))
+                    assert i == pytest.approx(k, abs=10**-(7))
         # Test with subsection:
         idx = 2
         with patch('sys.stdout', new=StringIO()):
@@ -236,13 +238,13 @@ class TestRecalculateOrder(unittest.TestCase):
                 i for i in recalculate_order(orderf, filename, {'maxidx': idx})
             ]
             for i, j in zip(order, CORRECT_XYZ[:idx+1]):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(i, j)
         with patch('sys.stdout', new=StringIO()):
             order = [
                 i for i in recalculate_order(orderf, filename, {'minidx': idx})
             ]
             for i, j in zip(order, CORRECT_XYZ[idx:]):
-                self.assertTrue(np.allclose(i, j))
+                assert np.allclose(i, j)
         # Test with missing box:
         filename = os.path.join(HERE, 'traj-no-box.xyz')
         orderf = OrderBox()
@@ -252,9 +254,9 @@ class TestRecalculateOrder(unittest.TestCase):
                                              {'box': [6., 6., 6.]})
             ]
             for orderi in order:
-                self.assertEqual(len(orderi), 3)
+                assert len(orderi) == 3
                 for i in orderi:
-                    self.assertAlmostEqual(i, 6.)
+                    assert i == pytest.approx(6.)
 
     def test_get_traj_files(self):
         """Test the method for getting traj files."""
@@ -265,8 +267,8 @@ class TestRecalculateOrder(unittest.TestCase):
         }
         files = get_traj_files(traj)
         for key, val in correct.items():
-            self.assertIn(key, files)
-            self.assertEqual(val, files[key])
+            assert key in files
+            assert val == files[key]
 
     def test_use_exteral(self):
         """Test the method for load and recalculate op from ext trjs."""
@@ -282,7 +284,7 @@ class TestRecalculateOrder(unittest.TestCase):
                 options={'top': sim_file+'.gro'})]
 
         for orderi, orderj in zip(order, ordercheck):
-            self.assertAlmostEqual(orderi, orderj, 3, 0.1)
+            assert orderi == pytest.approx(orderj, 3, 0.1)
 
         with patch('sys.stdout', new=StringIO()):
             order = [i for i in recalculate_from_trj(
@@ -290,15 +292,11 @@ class TestRecalculateOrder(unittest.TestCase):
                 {'top': sim_file + '.gro'})]
 
         for orderi, orderj in zip(order, ordercheck):
-            self.assertAlmostEqual(orderi, orderj, 3, 0.1)
+            assert orderi == pytest.approx(orderj, 3, 0.1)
 
         one_op = recalculate_from_trj(orderf, sim_file + '.trr',
                                       {'top': sim_file + '.gro',
                                        'idx': 3})
 
         with patch('sys.stdout', new=StringIO()):
-            self.assertAlmostEqual(next(one_op), ordercheck[3], 3, 0.1)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert next(one_op) == pytest.approx(ordercheck[3], 3, 0.1)

@@ -336,9 +336,13 @@ CONVERT['length']['A', 'm'] = 1.0e-10
 
 UNITS['mass'] = {'g/mol', 'g', 'kg'}
 CONVERT['mass']['g', 'kg'] = 1.e-3
+CONVERT['mass']['kg', 'g'] = 1.e3
 CONVERT['mass']['g/mol', 'g'] = 1.0 / CONSTANTS['NA']['1/mol']
+CONVERT['mass']['g', 'g/mol'] = CONSTANTS['NA']['1/mol']
 CONVERT['mass']['g/mol', 'kg'] = (CONVERT['mass']['g', 'kg'] /
                                   CONSTANTS['NA']['1/mol'])
+CONVERT['mass']['kg', 'g/mol'] = (CONSTANTS['NA']['1/mol'] /
+                                  CONVERT['mass']['g', 'kg'])
 
 UNITS['time'] = {'s', 'ps', 'fs', 'ns', 'us', 'ms'}
 CONVERT['time']['s', 'ps'] = 1.0e12

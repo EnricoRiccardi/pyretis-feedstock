@@ -5,7 +5,7 @@
 import collections
 from io import StringIO
 import logging
-import unittest
+import pytest
 from unittest.mock import patch
 import os
 import numpy as np
@@ -26,18 +26,24 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class TestGenericMethods(unittest.TestCase):
+class MockLog:
+    """A mock log object for testing."""
+    def __init__(self, caplog):
+        self.output = caplog.messages
+
+
+class TestGenericMethods:
     """Run tests for generic methods defined in the module."""
 
     def test_get_help(self):
         """Testing the get_help method."""
         interfaces = [-1, 0, 1]
         # Test what happens for unknown start conditions:
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _get_help('r', interfaces)
         # Test what happens for incorrect number of interfaces:
         for i in (0, 1, 2, 4):
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 _get_help('R', [1]*i)
         # For correct input we expect to be given two methods back.
         imp_r, done_r = _get_help('R', interfaces)
@@ -62,8 +68,8 @@ class TestGenericMethods(unittest.TestCase):
 
         for case, res in zip(cases, results):
             newp = fake_order_value(case[0], case[1])
-            self.assertEqual(imp_r(newp, current), res)
-            self.assertEqual(done_r(newp), res)
+            assert imp_r(newp, current) == res
+            assert done_r(newp) == res
 
         imp_l, done_l = _get_help('L', interfaces)
         # Cases are:
@@ -81,8 +87,8 @@ class TestGenericMethods(unittest.TestCase):
         results = [True, False, False, False]
         for case, res in zip(cases, results):
             newp = fake_order_value(case[0], case[1])
-            self.assertEqual(imp_l(newp, current), res)
-            self.assertEqual(done_l(newp), res)
+            assert imp_l(newp, current) == res
+            assert done_l(newp) == res
 
 
 def _get_kick_initial(log):
@@ -102,14 +108,14 @@ def _run_generate_initial(simulation):
             yield attempt
 
 
-class TestInitiateKick(unittest.TestCase):
+class TestInitiateKick:
     """Run tests for the initiate kick methods."""
 
     def _compare_generator_functions(self, gen1, gen2):
         """Might be over-the-top, but let's compare generator functions."""
-        self.assertEqual(gen1.__name__, gen2.__name__)
+        assert gen1.__name__ == gen2.__name__
         # Sure, let's us just compare the compiled bytecode:
-        self.assertEqual(gen1.gi_code.co_code, gen2.gi_code.co_code)
+        assert gen1.gi_code.co_code == gen2.gi_code.co_code
 
     def test_initiate_kick(self):
         """Test the initiate_kick selector method."""
@@ -126,37 +132,38 @@ class TestInitiateKick(unittest.TestCase):
         settings = {
             'initial-path': {'kick-from': 'Ekki-Ekki-Ekki-Ekki-Ptang'}
         }
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             initiate_kick(None, settings, cycle=0)
 
-    def _help_with_initiation(self, simulation, method, correct_kick):
+    def _help_with_initiation(self, simulation, method, correct_kick, caplog):
         """Run initiation and return points for kicking."""
         kick = []
         results = []
         with turn_on_logging():
             with patch('sys.stdout', new=StringIO()):
-                with self.assertLogs() as log:
-                    for result in method(simulation,
-                                         simulation.settings,
-                                         cycle=0):
-                        results.append(result)
-                    kick = _get_kick_initial(log)
-        self.assertEqual(len(kick), len(correct_kick))
+                caplog.clear()
+                caplog.set_level(logging.INFO)
+                for result in method(simulation,
+                                     simulation.settings,
+                                     cycle=0):
+                    results.append(result)
+                kick = _get_kick_initial(MockLog(caplog))
+        assert len(kick) == len(correct_kick)
         for i, j in zip(kick, correct_kick):
-            self.assertAlmostEqual(i, j)
+            assert i == pytest.approx(j)
         return results
 
-    def test_initiate_kick_max(self):
+    def test_initiate_kick_max(self, caplog):
         """Test the initiate_kick_max method."""
         simulation = create_test_retis_simulation()
         correct_kick = [-1.0, -0.9016, -0.7663]
         results = self._help_with_initiation(simulation, initiate_kick_max,
-                                             correct_kick)
+                                             correct_kick, caplog)
         kick_re = [correct_kick[0]]
         for result in results:
             path = result[1]
             interfaces = result[-1].interfaces
-            self.assertTrue(result[0])
+            assert result[0]
             # Re-calculate the kicking point:
             order = np.array([i.order[0] for i in path.phasepoints])
             diff = order - interfaces[2]
@@ -165,16 +172,16 @@ class TestInitiateKick(unittest.TestCase):
             kick_re.append(order[diff_neg[small_neg]])
         # The last one is not used:
         kick_re.pop()
-        self.assertEqual(len(kick_re), len(correct_kick))
+        assert len(kick_re) == len(correct_kick)
         for i, j in zip(correct_kick, kick_re):
-            self.assertAlmostEqual(i, j)
+            assert i == pytest.approx(j)
         # Check that is gets the right interface for ensemble 0
         simulation.ensembles[0]['path_ensemble'].ensemble_number = 0
         correct_kick = [-0.8893, -0.9016, -0.5203]
         self._help_with_initiation(simulation, initiate_kick_max,
-                                   correct_kick)
+                                   correct_kick, caplog)
 
-    def test_initiate_kicki(self):
+    def test_initiate_kicki(self, caplog):
         """Test the initiate_kicki method."""
         simulation = create_test_retis_simulation()
         correct_kick = [-1.0, -1.0, -1.0]
@@ -183,11 +190,11 @@ class TestInitiateKick(unittest.TestCase):
             simulation.settings['ensemble'][i]['tis']['high_accept'] = True
             simulation.settings['ensemble'][i]['tis']['shooting_move'] = 'wf'
         results = self._help_with_initiation(simulation, initiate_kicki,
-                                             correct_kick)
+                                             correct_kick, caplog)
         path_weights = [0.0, 5.0, 88.0]
         for i, result in enumerate(results):
-            self.assertTrue(result[0])
-            self.assertEqual(result[1].weight, path_weights[i])
+            assert result[0]
+            assert result[1].weight == path_weights[i]
 
     def test_no_0L_kicking(self):
         simulation = create_test_tis_simulation()
@@ -205,7 +212,7 @@ class TestInitiateKick(unittest.TestCase):
             generate_initial_path_kick(ens, simulation.settings['tis'])
         )
 
-        self.assertTrue(path[0])
+        assert path[0]
 
     def test_0L_kicking(self):
         simulation = create_test_tis_simulation()
@@ -220,7 +227,7 @@ class TestInitiateKick(unittest.TestCase):
             raise RuntimeError(middle)
         ens['engine'].kick_across_middle = f
         # Test if we see the right middle being called
-        with self.assertRaisesRegex(RuntimeError, "-0.5"):
+        with pytest.raises(RuntimeError, match="-0.5"):
             next(generate_initial_path_kick(ens, simulation.settings['tis']))
 
     def test_0R_kicking(self):
@@ -236,16 +243,16 @@ class TestInitiateKick(unittest.TestCase):
             raise RuntimeError(middle)
         ens['engine'].kick_across_middle = f
         # Test if we see the right middle being called
-        with self.assertRaisesRegex(RuntimeError, "-1.5"):
+        with pytest.raises(RuntimeError, match="-1.5"):
             next(generate_initial_path_kick(ens, simulation.settings['tis']))
 
-    def test_fix_path(self):
+    def test_fix_path(self, caplog):
         """Test fix_path_by_tis."""
         simulation = create_test_tis_simulation()
         correct_kick = [-1.0]
         results = self._help_with_initiation(simulation, initiate_kicki,
-                                             correct_kick)
-        self.assertTrue(results[0][0])
+                                             correct_kick, caplog)
+        assert results[0][0]
         initial_path = results[0][1]
         # This initial path has already been accepted, but
         # try to improve it:
@@ -257,16 +264,16 @@ class TestInitiateKick(unittest.TestCase):
         # This should trigger the "did not improve" branch,
         # but it is still accepted. Test that we did not change
         # the path we gave in:
-        self.assertIs(initial_path, new_path)
+        assert initial_path is new_path
         # Make the path start end at wrong interface:
         interfaces = simulation.ensembles[0]['path_ensemble'].interfaces
         initial_path.phasepoints[0].order = [interfaces[-1] + 0.2, 0.0]
         initial_path.phasepoints[-1].order = [interfaces[-1] + 0.2, 0.0]
         check = initial_path.check_interfaces(interfaces)
-        self.assertEqual(check[0], 'R')
-        self.assertEqual(check[1], 'R')
-        self.assertEqual(check[2], 'M')
-        self.assertEqual(check[3], [False, True, True])
+        assert check[0] == 'R'
+        assert check[1] == 'R'
+        assert check[2] == 'M'
+        assert check[3] == [False, True, True]
         # Try to improve this path:
         new_path = fix_path_by_tis(
             initial_path,
@@ -274,15 +281,15 @@ class TestInitiateKick(unittest.TestCase):
             simulation.settings['tis'],
         )
         # The new path starts at L, ends at L and crosses M:
-        self.assertIsNot(initial_path, new_path)
+        assert initial_path is not new_path
         check = new_path.check_interfaces(interfaces)
-        self.assertEqual(check[0], 'L')
-        self.assertEqual(check[1], 'L')
-        self.assertEqual(check[2], 'M')
+        assert check[0] == 'L'
+        assert check[1] == 'L'
+        assert check[2] == 'M'
         # Check that we crossed the left interface, the middle one and back.
-        self.assertEqual(check[3], [True, True, False])
+        assert check[3] == [True, True, False]
         # Check that the path is accepted:
-        self.assertEqual(new_path.status, 'ACC')
+        assert new_path.status == 'ACC'
 
     def test_generate_initial_fail_forward(self):
         """Test forward failure of the generate_initial_path_kick method.
@@ -295,9 +302,9 @@ class TestInitiateKick(unittest.TestCase):
         simulation = create_test_tis_simulation(maxlength=3)
         state = simulation.rgen.get_state()
         for i, attempt in enumerate(_run_generate_initial(simulation)):
-            self.assertFalse(attempt[0])
-            self.assertIsNone(attempt[-1])
-            self.assertTrue(attempt[1].startswith('Forward path failed:'))
+            assert not attempt[0]
+            assert attempt[-1] is None
+            assert attempt[1].startswith('Forward path failed:')
             simulation.rgen.set_state(state)
             simulation.ensembles[0]['engine'].reset()
             if i >= 1:
@@ -308,7 +315,7 @@ class TestInitiateKick(unittest.TestCase):
         # Test exp initialization
         simulation.settings['ensemble'][0]['tis']['shooting_move'] = 'exp'
         for i, attempt in enumerate(_run_generate_initial(simulation)):
-            self.assertTrue(attempt[0])
+            assert attempt[0]
             break
 
     def test_generate_initial_fail_backward(self):
@@ -325,9 +332,9 @@ class TestInitiateKick(unittest.TestCase):
         )
         state = simulation.rgen.get_state()
         for i, attempt in enumerate(_run_generate_initial(simulation)):
-            self.assertFalse(attempt[0])
-            self.assertIsNone(attempt[-1])
-            self.assertTrue(attempt[1].startswith('Backward path failed:'))
+            assert not attempt[0]
+            assert attempt[-1] is None
+            assert attempt[1].startswith('Backward path failed:')
             simulation.rgen.set_state(state)
             if i >= 1:
                 # Just do two iterations so that we catch the continue
@@ -345,9 +352,9 @@ class TestInitiateKick(unittest.TestCase):
         simulation = create_test_tis_simulation(maxlength=60)
         state = simulation.rgen.get_state()
         for i, attempt in enumerate(_run_generate_initial(simulation)):
-            self.assertFalse(attempt[0])
-            self.assertIsNone(attempt[-1])
-            self.assertEqual(attempt[1], 'Initial path was too long.')
+            assert not attempt[0]
+            assert attempt[-1] is None
+            assert attempt[1] == 'Initial path was too long.'
             simulation.rgen.set_state(state)
             simulation.ensembles[0]['engine'].reset()
             if i >= 1:
@@ -368,11 +375,9 @@ class TestInitiateKick(unittest.TestCase):
         simulation.ensembles[0]['path_ensemble'].start_condition = 'tiktok'
         state = simulation.rgen.get_state()
         for i, attempt in enumerate(_run_generate_initial(simulation)):
-            self.assertFalse(attempt[0])
-            self.assertIsNone(attempt[-1])
-            self.assertEqual(
-                attempt[1], 'Could not generate initial path will retry!'
-            )
+            assert not attempt[0]
+            assert attempt[-1] is None
+            assert attempt[1] == 'Could not generate initial path will retry!'
             # Reset rgen and the engine that we just do the same again:
             simulation.rgen.set_state(state)
             simulation.ensembles[0]['engine'].reset()
@@ -396,20 +401,16 @@ class TestInitiateKick(unittest.TestCase):
         )
         for i, attempt in enumerate(_run_generate_initial(simulation)):
             if i == 0:
-                self.assertFalse(attempt[0])
-                self.assertIsNone(attempt[-1])
-                self.assertEqual(attempt[1], 'Trying to fix path by TIS moves')
+                assert not attempt[0]
+                assert attempt[-1] is None
+                assert attempt[1] == 'Trying to fix path by TIS moves'
                 # For this to actually work, we need to allow the engine
                 # to go backwards as well:
                 simulation.ensembles[0]['engine'].timestep =\
                     -simulation.ensembles[0]['engine'].timestep
             elif i == 1:
-                self.assertTrue(attempt[0])
-                self.assertIsNotNone(attempt[-1])
+                assert attempt[0]
+                assert attempt[-1] is not None
                 # We will end here, as the fix_path_by_tis is tested elsewhere.
             else:
                 raise ValueError('Wrong number of iterations.')
-
-
-if __name__ == '__main__':
-    unittest.main()

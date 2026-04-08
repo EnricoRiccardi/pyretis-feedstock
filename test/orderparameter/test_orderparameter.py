@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the order parameter classes from pyretis.orderparameter."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.orderparameter import order_factory
 from pyretis.orderparameter import (
@@ -58,7 +58,7 @@ class SimpleOrderFaulty2:  # pylint: disable=too-few-public-methods
     calculate = 100
 
 
-class OrderGenericTest(unittest.TestCase):
+class TestOrderGeneric:
     """Test that we can create a class and define some parameters."""
 
     def test_simple_order(self):
@@ -67,12 +67,12 @@ class OrderGenericTest(unittest.TestCase):
         order = SimpleOrder()
         correct = [123.0, 'lj']
         val = order.calculate(system)
-        self.assertAlmostEqual(val[0], correct[0])
-        self.assertEqual(len(val), 1)
+        assert val[0] == pytest.approx(correct[0])
+        assert len(val) == 1
 
         vals = order.calculate(system)
-        self.assertAlmostEqual(vals[0], correct[0])
-        self.assertEqual(len(vals), 1)
+        assert vals[0] == pytest.approx(correct[0])
+        assert len(vals) == 1
 
 
 def create_system(ndim, npart, periodic=False):
@@ -90,18 +90,18 @@ def create_system(ndim, npart, periodic=False):
     return system, box
 
 
-class OrderPositionTest(unittest.TestCase):
+class TestOrderPosition:
     """Run the tests for the Position class."""
 
     def _check_order_parameter(self, orderp, correct, system, idim, ndim):
         """Verify the order parameter."""
         for orderpi, correcti in zip(orderp, correct):
             if idim > ndim - 1:
-                with self.assertRaises(IndexError):
+                with pytest.raises(IndexError):
                     orderpi.calculate(system)
             else:
                 for i, j in zip(orderpi.calculate(system), correcti):
-                    self.assertAlmostEqual(i, j)
+                    assert i == pytest.approx(j)
 
     @staticmethod
     def _get_order(index, xdim, periodic=False):
@@ -177,22 +177,22 @@ class OrderPositionTest(unittest.TestCase):
 
     def test_init_fail(self):
         """Check that the initiation fails if we supply strange input."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Position(0, dim='a')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Velocity(0, dim='pingu')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             PositionVelocity(123, dim='chonky')
 
 
-class OrderDistanceTest(unittest.TestCase):
+class TestOrderDistance:
     """Run the tests for the Distance class."""
 
     def _check_order_parameter(self, orderp, correct, system):
         """Verify the order parameter."""
         for orderpi, correcti in zip(orderp, correct):
             for i, j in zip(orderpi.calculate(system), correcti):
-                self.assertAlmostEqual(i, j)
+                assert i == pytest.approx(j)
 
     @staticmethod
     def _get_order(index, periodic=False):
@@ -276,7 +276,7 @@ class OrderDistanceTest(unittest.TestCase):
         )
         for cls in klasses:
             for i, j in zip(inputs, errors):
-                with self.assertRaises(j):
+                with pytest.raises(j):
                     cls(i)
 
 
@@ -306,7 +306,7 @@ def triangle():
     return system, angles
 
 
-class OrderAngleTest(unittest.TestCase):
+class TestOrderAngle:
     """Run the tests for the Angle class."""
 
     def test_without_pbc(self):
@@ -316,16 +316,16 @@ class OrderAngleTest(unittest.TestCase):
         # Test angle for the SPC water geometry.
         system = water_molecule(box)
         angle = orderp.calculate(system)[0]
-        self.assertAlmostEqual(np.degrees(angle), 109.984398, places=3)
+        assert np.degrees(angle) == pytest.approx(109.984398, abs=1e-3)
 
-    def test_witht_pbc(self):
+    def test_with_pbc(self):
         """Test the angle order parameter with pbc."""
         orderp = Angle((1, 0, 2), periodic=True)
         # Test angle for the SPC water geometry.
         box = create_box(periodic=[True, True, True], cell=[1., 1., 1.])
         system = water_molecule(box)
         angle = orderp.calculate(system)[0]
-        self.assertAlmostEqual(np.degrees(angle), 109.984398, places=3)
+        assert np.degrees(angle) == pytest.approx(109.984398, abs=1e-3)
 
     def test_triangle(self):
         """Test the angle order parameter for a 2D case."""
@@ -333,17 +333,17 @@ class OrderAngleTest(unittest.TestCase):
         for idx, correct in angles:
             orderp = Angle(idx, periodic=False)
             angle = orderp.calculate(system)[0]
-            self.assertAlmostEqual(np.degrees(angle), correct)
+            assert np.degrees(angle) == pytest.approx(correct)
 
     def test_initiate_fail(self):
         """Test that we fail if we give incorrect number of indices."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             Angle(0, periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Angle((0,), periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Angle((0, 1), periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Angle((0, 1, 2, 3), periodic=False)
 
     def test_special_cases(self):
@@ -370,10 +370,10 @@ class OrderAngleTest(unittest.TestCase):
         for case in test_cases:
             system.particles.pos = case['pos']
             angle = orderp.calculate(system)[0]
-            self.assertAlmostEqual(angle, case['angle'])
+            assert angle == pytest.approx(case['angle'])
 
 
-class OrderDihedralTest(unittest.TestCase):
+class TestOrderDihedral:
     """Run the tests for the Dihedral class."""
 
     test_cases = [
@@ -428,7 +428,7 @@ class OrderDihedralTest(unittest.TestCase):
             system.particles.pos = case['pos']
             angle = orderp.calculate(system)[0]
             angle_deg = np.degrees(angle)  # pylint: disable=no-member
-            self.assertAlmostEqual(angle_deg, case['angle'], places=4)
+            assert angle_deg == pytest.approx(case['angle'], abs=1e-4)
 
     def test_with_pbc(self):
         """Test the angle order parameter with pbc."""
@@ -443,7 +443,7 @@ class OrderDihedralTest(unittest.TestCase):
             system.particles.pos = case['pos'] + displace
             angle = orderp.calculate(system)[0]
             angle_deg = np.degrees(angle)  # pylint: disable=no-member
-            self.assertAlmostEqual(angle_deg, case['angle'], places=4)
+            assert angle_deg == pytest.approx(case['angle'], abs=1e-4)
 
     def test_order(self):
         """Test if we get the same angle if we reverse indices."""
@@ -454,23 +454,23 @@ class OrderDihedralTest(unittest.TestCase):
             system.particles.pos = np.random.rand(4, 3)
             angle1 = order1.calculate(system)[0]
             angle2 = order2.calculate(system)[0]
-            self.assertAlmostEqual(angle1, angle2)
+            assert angle1 == pytest.approx(angle2)
 
     def test_initiate_fail(self):
         """Test that we fail if we give incorrect number of indices."""
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             Dihedral(0, periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Dihedral((0,), periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Dihedral((0, 1), periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Dihedral((0, 1, 2), periodic=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Dihedral((0, 1, 2, 'tre'), periodic=False)
 
 
-class OrderFactoryTest(unittest.TestCase):
+class TestOrderFactory:
     """Test the order factory."""
 
     def test_factory(self):
@@ -519,10 +519,10 @@ class OrderFactoryTest(unittest.TestCase):
         ]
         for case in test_cases:
             orderp = order_factory(case['setting'])
-            self.assertIsInstance(orderp, case['class'])
+            assert isinstance(orderp, case['class'])
 
 
-class CollectionTest(unittest.TestCase):
+class TestCollection:
     """Test that we can create collections of order parameters."""
 
     def test_init(self):
@@ -536,16 +536,16 @@ class CollectionTest(unittest.TestCase):
         orderp.add_orderparameter(cv3)
         orderp2 = CompositeOrderParameter(order_parameters=[cv1, cv2, cv3])
         for i, j in zip(orderp.order_parameters, orderp2.order_parameters):
-            self.assertTrue(i is j)
+            assert i is j
         system, _ = create_system(3, 3, periodic=False)
         system.particles.pos = np.array([[0.0, 0.0, 0.0],
                                          [0.0, 0.0, 0.1],
                                          [0.0, 0.0, 0.3]])
         order = orderp.calculate(system)
         correct = [0.1, 0.2, 0.3]
-        self.assertEqual(len(order), len(correct))
+        assert len(order) == len(correct)
         for i, j in zip(order, correct):
-            self.assertAlmostEqual(i, j)
+            assert i == pytest.approx(j)
 
     def test_faulty_input(self):
         """Test if we supply faulty input."""
@@ -553,13 +553,13 @@ class CollectionTest(unittest.TestCase):
 
         cv1 = SimpleOrder()
         orderp.add_orderparameter(cv1)
-        self.assertTrue(cv1 is orderp.order_parameters[0])
+        assert cv1 is orderp.order_parameters[0]
         # Try to add some faulty order parameters.
         cv2 = SimpleOrderFaulty()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             orderp.add_orderparameter(cv2)
         cv3 = SimpleOrderFaulty2()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             orderp.add_orderparameter(cv3)
 
     def test_velocity_dependence(self):
@@ -568,42 +568,42 @@ class CollectionTest(unittest.TestCase):
 
         cv1 = SimpleOrder()
         orderp.add_orderparameter(cv1)
-        self.assertFalse(orderp.velocity_dependent)
+        assert not orderp.velocity_dependent
 
         cv2 = SimpleOrder()
         orderp.add_orderparameter(cv2)
-        self.assertFalse(orderp.velocity_dependent)
+        assert not orderp.velocity_dependent
 
         cv3 = SimpleOrderTemp()
         orderp.add_orderparameter(cv3)
-        self.assertTrue(orderp.velocity_dependent)
+        assert orderp.velocity_dependent
 
         cv4 = SimpleOrder()
         orderp.add_orderparameter(cv4)
-        self.assertTrue(orderp.velocity_dependent)
+        assert orderp.velocity_dependent
 
 
-class TestPermeability(unittest.TestCase):
-    def setUp(self):
+class TestPermeability:
+    def setup_method(self):
         self.system, self.box = create_system(2, 2, periodic=True)
         self.op = Permeability(index=0, dim='x', relative=False)
         self.x = self.system.particles.pos[0, 0]
 
     def test_non_relative_offset(self):
-        with self.assertRaisesRegex(ValueError, "offset"):
+        with pytest.raises(ValueError, match="offset"):
             Permeability(index=0, dim='x', offset=-1.01)
         # Test that we do pss if not relative
         _ = Permeability(index=0, dim='x', offset=-1.01, relative=False)
 
     def test_non_relative_mirror(self):
-        with self.assertRaisesRegex(ValueError, "mirror_pos"):
+        with pytest.raises(ValueError, match="mirror_pos"):
             Permeability(index=0, dim='x', mirror_pos=1.01)
         # Test that we do pss if not relative
         _ = Permeability(index=0, dim='x', mirror_pos=1.01, relative=False)
 
     def test_x_calculation(self):
         # Test that this is just the position
-        self.assertEqual(self.op.calculate(self.system), [self.x, 0, 1])
+        assert self.op.calculate(self.system) == [self.x, 0, 1]
 
     def test_x_wrap(self):
         # set x to a value, that +ofsett will be wrapped
@@ -611,17 +611,17 @@ class TestPermeability(unittest.TestCase):
         op2 = Permeability(index=0, dim='x', offset=0.5)
         x = 0.8
         self.system.particles.pos[0, 0] = x
-        self.assertEqual(op1.calculate(self.system)[0], x)
-        self.assertAlmostEqual(op2.calculate(self.system)[0], 0.3)
+        assert op1.calculate(self.system)[0] == x
+        assert op2.calculate(self.system)[0] == pytest.approx(0.3)
 
     def test_box_min_under_0(self):
         # set new box
         self.system.box.length[0] = 2
         self.system.box.low[0] = -1
-        self.assertAlmostEqual(self.op.calculate(self.system)[0], self.x)
+        assert self.op.calculate(self.system)[0] == pytest.approx(self.x)
         op2 = Permeability(index=0, dim='x', relative=True)
         # x should be 0.5 + x/2 (adding a box lenght to the left)
-        self.assertAlmostEqual(op2.calculate(self.system)[0], 0.5+self.x/2)
+        assert op2.calculate(self.system)[0] == pytest.approx(0.5+self.x/2)
 
     def test_broken_box(self):
         # Break box
@@ -632,89 +632,88 @@ class TestPermeability(unittest.TestCase):
         self.op.periodic = False
         op2.periodic = False
 
-        self.assertAlmostEqual(self.op.calculate(self.system)[0], self.x)
-        self.assertAlmostEqual(op2.calculate(self.system)[0], self.x-12)
+        assert self.op.calculate(self.system)[0] == pytest.approx(self.x)
+        assert op2.calculate(self.system)[0] == pytest.approx(self.x-12)
 
     def test_mirrored_function(self):
-        self.assertFalse(self.op._mirror)
-        self.assertAlmostEqual(self.op.calculate(self.system)[0], self.x)
-        self.assertAlmostEqual(self.op.calculate(self.system)[2], 1)
+        assert not self.op._mirror
+        assert self.op.calculate(self.system)[0] == pytest.approx(self.x)
+        assert self.op.calculate(self.system)[2] == pytest.approx(1)
         self.op.mirror()
-        self.assertTrue(self.op._mirror)
-        self.assertAlmostEqual(self.op.calculate(self.system)[0], 1-self.x)
-        self.assertAlmostEqual(self.op.calculate(self.system)[2], -1)
+        assert self.op._mirror
+        assert self.op.calculate(self.system)[0] == pytest.approx(1-self.x)
+        assert self.op.calculate(self.system)[2] == pytest.approx(-1)
 
     def test_mirror_composite(self):
         orderp = CompositeOrderParameter()
-        self.assertFalse(self.op._mirror)
+        assert not self.op._mirror
         orderp.add_orderparameter(self.op)
         op2 = Permeability(index=0, dim='x', relative=True)
         op2.mirror()
-        self.assertTrue(op2._mirror)
+        assert op2._mirror
         orderp.add_orderparameter(op2)
         orderp.mirror()
-        self.assertTrue(self.op._mirror)
-        self.assertFalse(op2._mirror)
+        assert self.op._mirror
+        assert not op2._mirror
 
-    def test_mirror_composite_warning(self):
+    def test_mirror_composite_warning(self, caplog):
         orderp = CompositeOrderParameter()
         op1 = Position(index=0)
         orderp.add_orderparameter(op1)
-        self.assertFalse(self.op._mirror)
+        assert not self.op._mirror
         orderp.add_orderparameter(self.op)
         op2 = Permeability(index=0, dim='x', relative=True)
         op2.mirror()
-        self.assertTrue(op2._mirror)
+        assert op2._mirror
         orderp.add_orderparameter(op2)
         ln = 'pyretis.orderparameter.orderparameter'
         logging.disable(logging.INFO)
 
-        with self.assertLogs(ln, level='INFO') as cm:
+        with caplog.at_level(logging.INFO, logger=ln):
             orderp.mirror()
         logging.disable(logging.CRITICAL)
-        self.assertIn("Attempting a mirror move, but", cm.output[0])
-        self.assertTrue(self.op._mirror)
-        self.assertFalse(op2._mirror)
+        assert "Attempting a mirror move, but" in caplog.text
+        assert self.op._mirror
+        assert not op2._mirror
 
     def test_index_get_set_composite(self):
         orderp = CompositeOrderParameter()
         op1 = Position(index=1)
         orderp.add_orderparameter(op1)
         orderp.add_orderparameter(self.op)
-        self.assertEqual(orderp.index, 1)
+        assert orderp.index == 1
         orderp.index = 12
-        self.assertEqual(op1.index, 12)
-        self.assertEqual(self.op.index, 0)
+        assert op1.index == 12
+        assert self.op.index == 0
 
     def test_permeabilityminusoffset(self):
         # Tak e offset that is bigger than the box (normally be wrapped)
         offset = 10
         opmin = PermeabilityMinusOffset(index=0, dim='x', relative=False)
         # Check that with an offset of 0, this is equal
-        self.assertEqual(self.op.calculate(self.system),
-                         opmin.calculate(self.system))
+        assert self.op.calculate(self.system) == opmin.calculate(self.system)
         self.op.offset = offset
         opmin.offset = offset
-        self.assertEqual(self.op.calculate(self.system)[0],
-                         opmin.calculate(self.system)[0] + offset)
+        assert (self.op.calculate(self.system)[0] ==
+                opmin.calculate(self.system)[0] + offset)
 
     def test_restart_cycle(self):
         # See if all the info is there
         info = self.op.restart_info()
-        self.assertEqual(info, {"index": 0, "mirror": False})
+        assert info == {"index": 0, "mirror": False}
         # See if mirror is given properly
         self.op.mirror()
         info = self.op.restart_info()
-        self.assertEqual(info, {"index": 0, "mirror": True})
+        assert info == {"index": 0, "mirror": True}
         # See if index is given properly
         self.op.index = "bla"
         info = self.op.restart_info()
-        self.assertEqual(info, {"index": 'bla', "mirror": True})
+        assert info == {"index": 'bla', "mirror": True}
         # See if the restart is done properly
         info = {"index": "blub", "mirror": "Fish"}
         self.op.load_restart_info(info)
-        self.assertEqual(self.op.index, "blub")
-        self.assertEqual(self.op._mirror, "Fish")
+        assert self.op.index == "blub"
+        assert self.op._mirror == "Fish"
 
     def test_restart_cycle_composite(self):
         orderp = CompositeOrderParameter()
@@ -723,13 +722,9 @@ class TestPermeability(unittest.TestCase):
         orderp.add_orderparameter(self.op)
         info = orderp.restart_info()
         ref_info = [None, {'index': 0, 'mirror': False}]
-        self.assertEqual(info, ref_info)
+        assert info == ref_info
         # See if we can set properly as well
         info = [None, {'index': 42, 'mirror': 'towel'}]
         orderp.load_restart_info(info)
-        self.assertEqual(self.op.index, 42)
-        self.assertEqual(self.op._mirror, 'towel')
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert self.op.index == 42
+        assert self.op._mirror == 'towel'

@@ -2,13 +2,13 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test block error analysis."""
-import unittest
+import pytest
 import numpy as np
 from pyretis.analysis import block_error
 from pyretis.inout.analysisio.analysisio import analyse_file
 
 
-class TestAnalysis(unittest.TestCase):
+class TestAnalysis:
     """Test that we can do block error analysis."""
 
     def test_block_error_weights(self):
@@ -18,8 +18,8 @@ class TestAnalysis(unittest.TestCase):
         r2 = block_error(data, weights=weights)
         r3 = block_error(np.stack([data, weights], axis=-1))
         for i, j, k in zip(r1, r2, r3):
-            self.assertTrue(np.allclose(i, j))
-            self.assertTrue(np.allclose(i, k))
+            assert np.allclose(i, j)
+            assert np.allclose(i, k)
 
     def test_block_error_zero_weights(self):
         # This has to be even to not alter the number of blocks
@@ -32,21 +32,17 @@ class TestAnalysis(unittest.TestCase):
         r1 = block_error(data, weights=weights)
         r2 = block_error(data2, weights=weights2)
         for i, j in zip(r1, r2):
-            self.assertTrue(np.allclose(i, j))
+            assert np.allclose(i, j)
 
     def test_block_error_zero_weights_start(self):
         data = np.random.random(100)
         weights = np.ones(data.shape)
         weights[0] = 0  # this would lead to nan's
         r1 = block_error(data, weights=weights)
-        self.assertFalse(np.isnan(r1[1][0]))
+        assert not np.isnan(r1[1][0])
 
     def test_analyse_file_fail(self):
         """Test the function to fail."""
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             analyse_file('no_ext', 'non_existent', {})
-        self.assertIn('Unknown file type', str(err.exception))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert 'Unknown file type' in str(err.value)

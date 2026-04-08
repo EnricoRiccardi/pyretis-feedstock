@@ -1,0 +1,41 @@
+---
+# Codacy static analysis configuration.
+# See https://docs.codacy.com/repositories-configure/codacy-configuration-file/
+
+tools:
+  # bandit: Python security linter.
+  # Exclude test files (assert, subprocess, pickle are intentional in tests)
+  # and examples/devtools (controlled, trusted inputs only).
+  - name: bandit
+    enabled: true
+    exclude_paths:
+      - "test/**"
+      - "examples/**"
+      - "devtools/**"
+      - "setup_version.py"
+
+  # cppcheck: C/C++ static analysis.
+  # Example C extension files require system headers (Python.h, numpy) that
+  # cppcheck cannot find in CI — disable to avoid spurious missing-header warnings.
+  - name: cppcheck
+    enabled: false
+
+  # stylelint: CSS linting.
+  # Documentation CSS uses verbose hex colours intentionally — not production CSS.
+  - name: stylelint
+    enabled: false
+
+  # shellcheck: Shell script linting.
+  # Most issues have been fixed in code; keep enabled.
+  - name: shellcheck
+    enabled: true
+
+exclude_paths:
+  - ".git/**"
+  - "docs/**"
+  - "**/__pycache__/**"
+  - "**/*.pyc"
+  - "test/**"
+  - "examples/**"
+  - "devtools/**"
+  - "setup_version.py"

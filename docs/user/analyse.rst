@@ -13,7 +13,7 @@ The general syntax for executing is:
 
 
 where ``INPUT`` is the input file for the analysis. It can be of two types:
-A hdf5 file, that can be used with the PyVisA tool, or the 
+An hdf5 file, that can be used with the PyVisA tool, or the 
 standard input file used by |pyretis| 
 :ref:`application <user-guide-application>` with the 
 settings for the analysis, defined via the 

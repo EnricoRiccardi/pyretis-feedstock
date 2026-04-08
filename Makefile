@@ -10,21 +10,19 @@
 	pycodestyle
 
 coverage:
-	coverage run -p -m unittest discover -s test
-	coverage html
-	coverage xml
+	pytest --cov=pyretis --cov-report=html --cov-report=xml test/
  
 tests:
-	python -m unittest discover -v -s test
+	pytest -v test/
 
 tests-silent:
-	python -m unittest discover -s test
+	pytest test/
 
 tests3:
-	python3 -m unittest discover -v -s test
+	pytest -v test/
 
 tests-silent3:
-	python3 -m unittest discover -s test
+	pytest test/
 
 pydocstyle:
 	pydocstyle --count ./pyretis

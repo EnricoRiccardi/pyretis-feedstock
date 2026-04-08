@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 import shutil
+import sys
 from pyretis.core.common import counter
 from pyretis.inout import print_to_screen
 from pyretis.inout.fileio import FileIO
@@ -302,7 +303,10 @@ class ExternalMDEngine(EngineBase):
         return_code = None
 
         with open(out_name, 'wb') as fout, open(err_name, 'wb') as ferr:
-            exe = subprocess.Popen(
+            # Check if we are running a python script:
+            if cmd[0].endswith('.py'):
+                cmd = [sys.executable] + cmd
+            exe = subprocess.Popen(  # nosec B603 B607
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=fout,

@@ -4,7 +4,7 @@
 """Test the initiate restart method."""
 import logging
 from io import StringIO
-import unittest
+import pytest
 from unittest.mock import patch
 import os
 import tempfile
@@ -94,14 +94,14 @@ def setup_for_restart(settings, target_dir, files_to_copy, restart=False):
     return simulation
 
 
-class TestInitiateRestart(unittest.TestCase):
+class TestInitiateRestart:
     """Run the tests for the initiate restart method."""
 
     def _run_simulation(self, settings, simulation):
         """Just run a simulation."""
         with patch('sys.stdout', new=StringIO()):
             init = simulation.initiate(settings)
-            self.assertTrue(init)
+            assert init
         for _ in simulation.run():
             pass
         simulation.write_restart(now=True)
@@ -116,7 +116,7 @@ class TestInitiateRestart(unittest.TestCase):
             result2 = os.path.join(dir2, file_name)
             result = compare_data_ensemble_files(result1, result2,
                                                  line_check=check)
-            self.assertTrue(result)
+            assert result
 
     def test_initiate_restart(self):
         """Test the initiate restart method."""
@@ -215,7 +215,7 @@ class TestInitiateRestart(unittest.TestCase):
             simulation2 = setup_for_restart(settings2, target_dir2,
                                             files_to_copy, restart=False)
             self._run_simulation(settings2, simulation2)
-            self.assertEqual(len(simulation2.ensembles), 5)
+            assert len(simulation2.ensembles) == 5
             del simulation2
 
             # Restart from simulation 2:
@@ -241,10 +241,6 @@ class TestInitiateRestart(unittest.TestCase):
             self._run_simulation(settings3, simulation3)
             os.chdir(startdir)
             # Check that new paths have been made.
-            self.assertEqual(
-                simulation3.ensembles[0]['path_ensemble'].nstats['npath'], 10)
-            self.assertEqual(len(simulation3.ensembles), 4)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert (simulation3.ensembles[0]['path_ensemble'].nstats['npath']
+                    == 10)
+            assert len(simulation3.ensembles) == 4

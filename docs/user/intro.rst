@@ -43,7 +43,7 @@ between two stable states, from the reactant (labeled A) to the product
 
 
 These two states are defined by a progress
-coordinate  (or order parameter), :math:`\lambda`,
+coordinate (or order parameter), :math:`\lambda`,
 where state A is for :math:`\lambda \leq \lambda_\text{A}`
 and state B for :math:`\lambda \geq \lambda_\text{B}`.
 The central quantity calculated in TIS/RETIS simulations is the
@@ -102,7 +102,7 @@ that it originated from :math:`\lambda_\text{A}`,
 ended in :math:`\lambda_\text{A}` or :math:`\lambda_\text{B}`,  and had
 at least one crossing with :math:`\lambda_i` in the past.
 
-The interfaces we have placed defines the so-called **path ensembles**.
+The interfaces we have placed define the so-called **path ensembles**.
 A path ensemble comprises all possible
 trajectories that start at the foot of reaction
 barrier from the reactant side (:math:`\lambda_\text{A}`),

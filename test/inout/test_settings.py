@@ -10,7 +10,7 @@ import logging
 import numpy as np
 import os
 import tempfile
-import unittest
+import pytest
 from io import StringIO
 from pyretis.core.common import big_fat_comparer
 from pyretis.core.units import create_conversion_factors, CONVERT
@@ -105,11 +105,11 @@ def _test_correct_parsing(test, data, correct):
     raw = _parse_sections(data.split('\n'))
     settings = _parse_all_raw_sections(raw)
     for key in settings:
-        test.assertEqual(settings[key], correct[key])
+        assert settings[key] == correct[key]
     return settings
 
 
-class KeywordParsing(unittest.TestCase):
+class TestKeywordParsing:
     """Test the parsing of input settings."""
 
     def test_parse_file(self):
@@ -147,8 +147,8 @@ class KeywordParsing(unittest.TestCase):
         del settings['simulation']['exe_path']
 
         for key in correct:
-            self.assertIn(key, settings)
-            self.assertEqual(correct[key], settings[key])
+            assert key in settings
+            assert correct[key] == settings[key]
 
     def test_keyword_format(self):
         """Test different forms of some simple keywords."""
@@ -168,13 +168,13 @@ class KeywordParsing(unittest.TestCase):
 
         for data in test_data:
             setting = _parse_raw_section(data[0], 'system')
-            self.assertEqual(setting, data[1])
+            assert setting == data[1]
 
     def test_keyword_dict(self):
         """Test some cases when reading dicts."""
         teststr = []
         correct = []
-        # First, some simple input:
+        # First == some simple input:
         teststr.append(['Engine settings',
                         '---------------',
                         'class = velocityverlet', 'timestep = 0.002'])
@@ -209,10 +209,10 @@ class KeywordParsing(unittest.TestCase):
         for tst, corr in zip(teststr, correct):
             raw = _parse_sections(tst)
             setting = _parse_raw_section(raw['engine'], 'engine')
-            self.assertEqual(setting, corr)
+            assert setting == corr
 
     def test_write_and_read(self):
-        """Test that we can parse some data, write it and read it."""
+        """Test that we can parse some data == write it and read it."""
         data = _read_raw_settings('settings-rw-test.rst')
         correct = {'engine': {'timestep': 0.002,
                               'class': 'velocityverlet'},
@@ -226,25 +226,23 @@ class KeywordParsing(unittest.TestCase):
             temp.write(txt.encode('utf-8'))
             temp.flush()
             settings_read = parse_settings_file(temp.name, add_default=False)
-        self.assertEqual(settings_read, correct)
+        assert settings_read == correct
 
     def test_ignore_section(self):
         """Test that we ignore unknown sections."""
         data = _read_raw_settings('settings-unknown-section.rst')
-        correct = {'engine': {'timestep': 0.002,
-                              'class': 'velocityverlet'}}
+        correct = {'engine': {'timestep': 0.002, 'class': 'velocityverlet'}}
         settings = _test_correct_parsing(self, data, correct)
-        self.assertNotIn('junk', settings)
+        assert 'junk' not in settings
 
 
-class KeywordEngine(unittest.TestCase):
+class TestKeywordEngine:
     """Test the parsing of input settings for engines."""
 
     def test_load_external_engine(self):
         """Test that we can load external python modules for engines."""
         data = _read_raw_settings('external-engine.rst')
-        correct = {'engine': {'class': 'FooEngine',
-                              'module': 'fooengine.py',
+        correct = {'engine': {'class': 'FooEngine', 'module': 'fooengine.py',
                               'timestep': 0.5,
                               'extra': 100}}
         settings = _test_correct_parsing(self, data, correct)
@@ -253,10 +251,9 @@ class KeywordEngine(unittest.TestCase):
         # script we want to run.
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         fooengine = create_engine(settings)
-        self.assertEqual(fooengine.timestep,
-                         correct['engine']['timestep'])
-        self.assertEqual(fooengine.extra,  # pylint: disable=no-member
-                         correct['engine']['extra'])
+        assert fooengine.timestep == correct['engine']['timestep']
+        # pylint: disable=no-member
+        assert fooengine.extra == correct['engine']['extra']
 
     def test_fail_external_engine(self):
         """Test that external loads fail in a predicable way."""
@@ -288,7 +285,7 @@ class KeywordEngine(unittest.TestCase):
         for data, corr in zip(test_data, correct):
             settings = _test_correct_parsing(self, data, corr)
             settings['simulation'] = {'exe_path': LOCAL_DIR}
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 create_engine(settings)
 
     def test_internal_engine(self):
@@ -336,17 +333,17 @@ class KeywordEngine(unittest.TestCase):
                                    'seed': 11,
                                    'high_friction': False}})
         for data, corr, cls in zip(test_data, correct, klass):
-            settings = _test_correct_parsing(self, data, corr)
+            settings = _test_correct_parsing(None, data, corr)
             engine = create_engine(settings)
-            self.assertIsInstance(engine, cls)
-            self.assertAlmostEqual(engine.timestep,
-                                   corr['engine']['timestep'])
+            assert isinstance(engine, cls)
+            assert engine.timestep == \
+                pytest.approx(corr['engine']['timestep'])
             for key, val in corr['engine'].items():
                 if hasattr(engine, key):
-                    self.assertAlmostEqual(getattr(engine, key), val)
+                    assert getattr(engine, key) == val
 
 
-class KeywordOrderPrameter(unittest.TestCase):
+class TestKeywordOrderParameter:
     """Test creation of order parameters."""
 
     def test_load_orderparameter(self):
@@ -371,10 +368,7 @@ class KeywordOrderPrameter(unittest.TestCase):
         # script we want to run.
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         orderp = create_orderparameter(settings)
-        self.assertEqual(
-            correct['orderparameter']['class'],
-            orderp.__class__.__name__,
-        )
+        assert correct['orderparameter']['class'] == orderp.__class__.__name__
 
     def test_fail_orderparameter(self):
         """Test that loading external order parameters fails."""
@@ -385,12 +379,12 @@ class KeywordOrderPrameter(unittest.TestCase):
                          'module = fooorderparameter.py')
         correct.append(
             {'orderparameter': {'class': 'BarOrderParameter',
-                                'module': 'fooorderparameter.py'}}
-        )
+                                'module': 'fooorderparameter.py'}})
+
         for data, corr in zip(test_data, correct):
-            settings = _test_correct_parsing(self, data, corr)
+            settings = _test_correct_parsing(None, data, corr)
             settings['simulation'] = {'exe_path': LOCAL_DIR}
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 create_orderparameter(settings)
 
     def test_create_orderparameter(self):
@@ -462,17 +456,17 @@ class KeywordOrderPrameter(unittest.TestCase):
         settings = _parse_all_raw_sections(raw)
         # Compare for order parameter:
         for key, val in settings['orderparameter'].items():
-            self.assertEqual(val, correct['orderparameter'][key])
+            assert val == correct['orderparameter'][key]
         for setting, corr in zip(settings['collective-variable'],
                                  correct['collective-variable']):
             for key, val in setting.items():
-                self.assertEqual(val, corr[key])
+                assert val == corr[key]
         order = create_orderparameter(settings)
         for i, j in zip(order.order_parameters, klass):
-            self.assertIsInstance(i, j)
+            assert isinstance(i, j)
 
 
-class KeywordParticles(unittest.TestCase):
+class TestKeywordParticles:
     """Test initialisation of particles."""
 
     def test_lattice(self):
@@ -488,38 +482,38 @@ class KeywordParticles(unittest.TestCase):
         correct_size = {'low': np.array([0., 0., 0.]),
                         'high': np.array([6., 6., 6.])}
         for key, val in correct_size.items():
-            self.assertTrue(np.allclose(size[key], val))
-        self.assertEqual(particles.npart, 4 * 6 * 6 * 6)
-        self.assertAlmostEqual(particles.mass[0][0], 1.0)
-        self.assertAlmostEqual(particles.imass[0][0], 1.0)
+            assert np.allclose(size[key], val)
+        assert particles.npart == 4 * 6 * 6 * 6
+        assert particles.mass[0][0] == pytest.approx(1.0)
+        assert particles.imass[0][0] == pytest.approx(1.0)
         for i in range(particles.npart):
-            self.assertEqual(particles.name[i], 'Ar')
+            assert particles.name[i] == 'Ar'
 
     def test_lattice_type(self):
         """Test initialisation on a lattice with types."""
         data = _read_raw_settings('settings-lattice-type.rst')
-        correct = {'particles': {'position': {'generate': 'fcc',
-                                              'repeat': [3, 3, 3],
-                                              'lcon': 1.0},
-                                 'ptype': [0, 1]},
-                   'system': {'units': 'lj'}}
+        correct = {'particles': {
+            'position': {'generate': 'fcc', 'repeat': [3, 3, 3], 'lcon': 1.0},
+            'ptype': [0, 1]},
+            'system': {'units': 'lj'}}
         settings = _test_correct_parsing(self, data, correct)
         particles, _, _ = create_initial_positions(settings)
         for i in range(particles.npart):
-            self.assertEqual(particles.name[i], 'Ar')
+            assert particles.name[i] == 'Ar'
         for i in range(particles.npart):
             if i == 0:
-                self.assertEqual(particles.ptype[i], 0)
+                assert particles.ptype[i] == 0
             else:
-                self.assertEqual(particles.ptype[i], 1)
+                assert particles.ptype[i] == 1
 
     def test_lattice_dens(self):
         """Test initialisation on a lattice with density set."""
         data = _read_raw_settings('settings-lattice-dens.rst')
-        correct = {'particles': {'position': {'generate': 'fcc',
-                                              'repeat': [3, 3, 3],
-                                              'density': 0.9}},
-                   'system': {'units': 'lj'}}
+        correct = {
+            'particles': {
+                'position': {'generate': 'fcc', 'repeat': [3, 3, 3],
+                             'density': 0.9}},
+            'system': {'units': 'lj'}}
         settings = _test_correct_parsing(self, data, correct)
         particles, size, _ = create_initial_positions(settings)
         correct_size = []
@@ -527,11 +521,11 @@ class KeywordParticles(unittest.TestCase):
         for _ in settings['particles']['position']['repeat']:
             correct_size.append([0.0, lcon])
         correct_size = np.array(correct_size)
-        self.assertTrue(np.allclose(size['low'], correct_size[:, 0]))
-        self.assertTrue(np.allclose(size['high'], correct_size[:, 1]))
+        assert np.allclose(size['low'], correct_size[:, 0])
+        assert np.allclose(size['high'], correct_size[:, 1])
         for i in range(particles.npart):
-            self.assertEqual(particles.name[i], 'Ar')
-            self.assertEqual(particles.ptype[i], 0)
+            assert particles.name[i] == 'Ar'
+            assert particles.ptype[i] == 0
 
     def test_lattice_dens_lcon(self):
         """Test initialisation on a lattice with density and lcon set."""
@@ -549,8 +543,8 @@ class KeywordParticles(unittest.TestCase):
         for _ in settings['particles']['position']['repeat']:
             correct_size.append([0.0, lcon])
         correct_size = np.array(correct_size)
-        self.assertTrue(np.allclose(size['low'], correct_size[:, 0]))
-        self.assertTrue(np.allclose(size['high'], correct_size[:, 1]))
+        assert np.allclose(size['low'], correct_size[:, 0])
+        assert np.allclose(size['high'], correct_size[:, 1])
 
     def test_lattice_and_mass(self):
         """Test initialisation on a lattice and setting of masses/types."""
@@ -566,13 +560,13 @@ class KeywordParticles(unittest.TestCase):
         particles, _, _ = create_initial_positions(settings)
         for i in range(particles.npart):
             if i == 0:
-                self.assertEqual(particles.ptype[i], 0)
-                self.assertEqual(particles.name[i], 'Ar')
-                self.assertAlmostEqual(particles.mass[i][0], 1.0)
+                assert particles.ptype[i] == 0
+                assert particles.name[i] == 'Ar'
+                assert particles.mass[i][0] == pytest.approx(1.0)
             else:
-                self.assertEqual(particles.ptype[i], 1)
-                self.assertEqual(particles.name[i], 'Kr')
-                self.assertAlmostEqual(particles.mass[i][0], 2.09767698)
+                assert particles.ptype[i] == 1
+                assert particles.name[i] == 'Kr'
+                assert particles.mass[i][0] == pytest.approx(2.09767698)
 
     def test_inconsistent_dimlattice(self):
         """Test initialisation on a lattice with inconsistent dimensions."""
@@ -585,7 +579,8 @@ class KeywordParticles(unittest.TestCase):
                    'system': {'units': 'lj', 'dimensions': 3}}
         settings = _test_correct_parsing(self, data, correct)
         args = [settings]
-        self.assertRaises(ValueError, create_initial_positions, *args)
+        with pytest.raises(ValueError):
+            create_initial_positions(*args)
 
     def test_file_xyz(self):
         """Test initialisation from a XYZ file."""
@@ -598,23 +593,23 @@ class KeywordParticles(unittest.TestCase):
         # Add path to the file for this test:
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         particles, size, vel_read = create_initial_positions(settings)
-        self.assertFalse(vel_read)
-        self.assertIsNone(size)
+        assert not vel_read
+        assert size is None
         pos = particles.pos * CONVERT['length'][units, 'A']
         correct_pos = np.array([[0.0, 0.0, 0.0], [0.5, 0.5, 0.5],
                                 [0.5, 0.5, 0.0], [0.5, 0.0, 0.5],
                                 [0.0, 0.5, 0.5]])
-        self.assertTrue(np.allclose(pos, correct_pos))
-        self.assertTrue(all([i == j for i, j in zip(particles.ptype,
-                                                    [0, 1, 2, 2, 2])]))
-        self.assertTrue(all([i == j for i, j in zip(particles.name,
-                                                    ['Ba', 'Hf', 'O',
-                                                     'O', 'O'])]))
+        assert np.allclose(pos, correct_pos)
+        assert all([i == j for i, j in zip(particles.ptype,
+                                           [0, 1, 2, 2, 2])])
+        assert all([i == j for i, j in zip(particles.name,
+                                           ['Ba', 'Hf', 'O',
+                                            'O', 'O'])])
         masses = []
         for i in particles.mass:
             masses.append(i[0] * CONVERT['mass'][units, 'g/mol'])
-        self.assertTrue(np.allclose(masses, [137.327, 178.49, 15.9994,
-                                             15.9994, 15.9994]))
+        assert np.allclose(masses, [137.327, 178.49, 15.9994,
+                                    15.9994, 15.9994])
 
     def test_file_gro(self):
         """Test initialisation from a GRO file."""
@@ -626,24 +621,21 @@ class KeywordParticles(unittest.TestCase):
         create_conversion_factors(settings['system']['units'])
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         particles, size, vel_read = create_initial_positions(settings)
-        self.assertTrue(vel_read)
-        self.assertTrue(np.allclose(size['cell'], [2., 2., 2.]))
+        assert vel_read
+        assert np.allclose(size['cell'], [2., 2., 2.])
         correct_pos = np.array([[0., 0., 0.], [0.05, 0.05, 0.05],
                                 [0.05, 0.05, 0.], [0.05, 0., 0.05],
                                 [0., 0.05, 0.05]])
-        self.assertTrue(np.allclose(particles.pos, correct_pos))
-        self.assertTrue(all([i == j for i, j in zip(particles.ptype,
-                                                    [0, 1, 2, 2, 2])]))
-        self.assertTrue(all([i == j for i, j in zip(particles.name,
-                                                    ['Ba', 'Hf', 'O',
-                                                     'O', 'O'])]))
-        self.assertTrue(np.allclose(particles.mass.T,
-                                    [137.327, 178.49, 15.9994,
-                                     15.9994, 15.9994]))
+        assert np.allclose(particles.pos, correct_pos)
+        assert all([i == j for i, j in zip(particles.ptype, [0, 1, 2, 2, 2])])
+        assert all([i == j for i, j in zip(particles.name,
+                                           ['Ba', 'Hf', 'O', 'O', 'O'])])
+        assert np.allclose(particles.mass.T, [137.327, 178.49, 15.9994,
+                                              15.9994, 15.9994])
         correct_vel = np.array([[1.0, 1.0, 1.0], [-1.0, -1.0, -1.0],
                                 [2.0, 0.0, -2.0], [-2.0, 1.0, 2.0],
                                 [0.0, -1.0, 0.0]])
-        self.assertTrue(np.allclose(particles.vel, correct_vel))
+        assert np.allclose(particles.vel, correct_vel)
 
     def test_file_xyztab(self):
         """Test initialisation from a XYZ file with mass dict."""
@@ -659,21 +651,20 @@ class KeywordParticles(unittest.TestCase):
         # Add path to the file for this test:
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         particles, size, vel_read = create_initial_positions(settings)
-        self.assertFalse(vel_read)
-        self.assertIsNone(size)
-        self.assertTrue(all([i == j for i, j in zip(particles.ptype,
-                                                    [0, 0, 0, 1, 1])]))
-        self.assertTrue(all([i == j for i, j in zip(particles.name,
-                                                    ['Ar', 'Ar', 'Ar',
-                                                     'Kr', 'Kr2'])]))
+        assert not vel_read
+        assert size is None
+        assert all([i == j for i, j in zip(particles.ptype,
+                                           [0, 0, 0, 1, 1])])
+        assert all([i == j for i, j in zip(particles.name,
+                                           ['Ar', 'Ar', 'Ar', 'Kr', 'Kr2'])])
         masses = []
         for i in particles.mass:
             masses.append(i[0] * CONVERT['mass'][units, 'g/mol'])
-        self.assertTrue(np.allclose(masses, [39.948, 39.948, 39.948,
-                                             83.798, 83.798]))
+        assert np.allclose(masses, [39.948, 39.948, 39.948,
+                                    83.798, 83.798])
 
 
-class KeywordForcefield(unittest.TestCase):
+class TestKeywordForcefield:
     """Test initialisation of force fields."""
 
     def test_forcefield(self):
@@ -687,9 +678,9 @@ class KeywordForcefield(unittest.TestCase):
                                                     'rcut': 2.5}}}]}
         settings = _test_correct_parsing(self, data, correct)
         forcefield = create_force_field(settings)
-        self.assertIsInstance(forcefield.potential[0], PairLennardJonesCutnp)
-        self.assertEqual(forcefield.potential[0].shift,
-                         correct['potential'][0]['shift'])
+        assert isinstance(forcefield.potential[0], PairLennardJonesCutnp)
+        assert forcefield.potential[0].shift == \
+            correct['potential'][0]['shift']
 
     def test_potential_parse(self):
         """Test creation of potentials while parsing input."""
@@ -704,30 +695,29 @@ class KeywordForcefield(unittest.TestCase):
                                                     'rcut': 2.5}}}]}
         settings = _test_correct_parsing(self, data, correct)
         potentials, pot_par = create_potentials(settings)
-        self.assertIsInstance(potentials[0], PairLennardJonesCut)
-        self.assertEqual(potentials[0].shift,
-                         correct['potential'][0]['shift'])
+        assert isinstance(potentials[0], PairLennardJonesCut)
+        assert potentials[0].shift == correct['potential'][0]['shift']
         # Test that we can assign parameters:
         for pot, params in zip(potentials, pot_par):
             pot.set_parameters(params)
         potparam = potentials[0].params
-        self.assertAlmostEqual(potparam[(0, 0)]['epsilon'], 1.0)
-        self.assertAlmostEqual(potparam[(0, 0)]['sigma'], 1.0)
-        self.assertAlmostEqual(potparam[(0, 0)]['rcut'], 2.5)
-        self.assertAlmostEqual(potparam[(1, 1)]['epsilon'], 2.0)
-        self.assertAlmostEqual(potparam[(1, 1)]['sigma'], 2.0)
-        self.assertAlmostEqual(potparam[(1, 1)]['rcut'], 2.5)
-        self.assertAlmostEqual(potparam[(0, 1)]['epsilon'], 1.4142135623730951)
-        self.assertAlmostEqual(potparam[(0, 1)]['sigma'], 1.4142135623730951)
-        self.assertAlmostEqual(potparam[(0, 1)]['rcut'], 2.5)
+        assert potparam[(0, 0)]['epsilon'] == pytest.approx(1.0)
+        assert potparam[(0, 0)]['sigma'] == pytest.approx(1.0)
+        assert potparam[(0, 0)]['rcut'] == pytest.approx(2.5)
+        assert potparam[(1, 1)]['epsilon'] == pytest.approx(2.0)
+        assert potparam[(1, 1)]['sigma'] == pytest.approx(2.0)
+        assert potparam[(1, 1)]['rcut'] == pytest.approx(2.5)
+        assert potparam[(0, 1)]['epsilon'] == pytest.approx(1.414213562373095)
+        assert potparam[(0, 1)]['sigma'] == pytest.approx(1.4142135623730951)
+        assert potparam[(0, 1)]['rcut'] == pytest.approx(2.5)
 
     def test_empty_create_potential(self):
         """Test the create potential method."""
         correct = {'potential': [{'class': 'Fake'}]}
         potentials, pot_par = create_potentials(correct)
         for i, j in zip(potentials, pot_par):
-            self.assertIsNone(i)
-            self.assertIsNone(j)
+            assert i is None
+            assert j is None
 
     def test_potential_inconsitentdim(self):
         """Test creation of potentials with inconsistent dims."""
@@ -740,7 +730,8 @@ class KeywordForcefield(unittest.TestCase):
                                                     'rcut': 2.5}}}]}
         settings = _test_correct_parsing(self, data, correct)
         args = [settings]
-        self.assertRaises(ValueError, create_potentials, *args)
+        with pytest.raises(ValueError):
+            create_potentials(*args)
 
     def test_potential_create(self):
         """Test that we can create all potentials."""
@@ -754,7 +745,7 @@ class KeywordForcefield(unittest.TestCase):
         settings = _parse_all_raw_sections(raw)
         potentials, _ = create_potentials(settings)
         for pot, pot_input in zip(potentials, all_potentials):
-            self.assertIsInstance(pot, pot_input)
+            assert isinstance(pot, pot_input)
 
     def test_ext_potential(self):
         """Test creation of potentials while parsing input from externals."""
@@ -763,15 +754,15 @@ class KeywordForcefield(unittest.TestCase):
                                   'module': 'foopotential.py',
                                   'parameter': {'a': 2.0}}]}
         settings = _test_correct_parsing(self, data, correct)
-        self.assertEqual(settings, correct)
+        assert settings == correct
         # Add path for testing:
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         potentials, pot_param = create_potentials(settings)
-        self.assertIsInstance(potentials[0], PotentialFunction)
-        self.assertAlmostEqual(potentials[0].params['a'], 0.0)
+        assert isinstance(potentials[0], PotentialFunction)
+        assert potentials[0].params['a'] == pytest.approx(0.0)
         for pot, pot_param in zip(potentials, pot_param):
             pot.set_parameters(pot_param)
-        self.assertAlmostEqual(potentials[0].params['a'], 2.0)
+        assert potentials[0].params['a'] == pytest.approx(2.0)
 
     def test_ext_potentialfail(self):
         """Test failure of external potential creation."""
@@ -780,10 +771,10 @@ class KeywordForcefield(unittest.TestCase):
                                   'module': 'foopotential.py',
                                   'parameter': {'a': 2.0}}]}
         settings = _test_correct_parsing(self, data, correct)
-        self.assertEqual(settings, correct)
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         args = [settings]
-        self.assertRaises(ValueError, create_potentials, *args)
+        with pytest.raises(ValueError):
+            create_potentials(*args)
 
     def test_complicated_input(self):
         """Test that we can read 'complex' force field input."""
@@ -797,18 +788,19 @@ class KeywordForcefield(unittest.TestCase):
                                  {'class': 'DoubleWellWCA',
                                   'parameter': {'types': [(0, 0)],
                                                 'rzero': 1. * (2.**(1./6.)),
-                                                'height': 6.0, 'width': 0.25}},
+                                                'height': 6.0,
+                                                'width': 0.25}},
                                  {'class': 'FooPotential',
                                   'module': 'foopotential.py',
                                   'parameter': {'a': 10.0}}]}
         settings = _test_correct_parsing(self, data, correct)
-        self.assertEqual(settings, correct)
+        assert settings == correct
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         forcefield = create_force_field(settings)
-        self.assertEqual(len(forcefield.potential), 3)
-        self.assertIsInstance(forcefield.potential[0], PairLennardJonesCutnp)
-        self.assertIsInstance(forcefield.potential[1], DoubleWellWCA)
-        self.assertIsInstance(forcefield.potential[2], PotentialFunction)
+        assert len(forcefield.potential) == 3
+        assert isinstance(forcefield.potential[0], PairLennardJonesCutnp)
+        assert isinstance(forcefield.potential[1], DoubleWellWCA)
+        assert isinstance(forcefield.potential[2], PotentialFunction)
 
     def test_too_many(self):
         """Test what happens when we add too many potentials."""
@@ -826,7 +818,7 @@ class KeywordForcefield(unittest.TestCase):
         raw = _parse_sections(txt.split('\n'))
         settings2 = _parse_all_raw_sections(raw)
         for i, pot in enumerate(settings2['potential']):
-            self.assertEqual(pot['parameter']['types'][0], (i, i))
+            assert pot['parameter']['types'][0] == (i, i)
 
         # Looking for troubles:
         settings['ensemble'] = []
@@ -840,7 +832,7 @@ class KeywordForcefield(unittest.TestCase):
         raw = _parse_sections(txt.split('\n'))
         settings3 = _parse_all_raw_sections(raw)
         hidden = settings3['ensemble'][10]['potential'][0]
-        self.assertEqual(hidden['parameter']['rzero'], 16)
+        assert hidden['parameter']['rzero'] == 16
 
     def test_copy_settings(self):
         """Test that the copy method works as intended."""
@@ -848,8 +840,8 @@ class KeywordForcefield(unittest.TestCase):
         settings = parse_settings_file(inputfile)
         settings2 = copy_settings(settings)
         for key, val in settings.items():
-            self.assertTrue(key in settings2)
-            self.assertEqual(val, settings2[key])
+            assert key in settings2
+            assert val == settings2[key]
 
     def test_settings_to_txt(self):
         """Test the settings to text in more detail."""
@@ -865,7 +857,7 @@ class KeywordForcefield(unittest.TestCase):
                     continue
                 if lines.startswith(key):
                     found[i] = True
-        self.assertTrue(all(found))
+        assert all(found)
 
     def test_write_settings(self):
         """Test that we can write settings to a file."""
@@ -875,89 +867,85 @@ class KeywordForcefield(unittest.TestCase):
             out_file = os.path.join(tempdir, '_pyretis_settings_temp.rst')
             # Check that we can write a file:
             write_settings_file(settings, out_file)
-            self.assertTrue(os.path.isfile(out_file))
+            assert os.path.isfile(out_file)
             # Check that we can write a file and backup:
             write_settings_file(settings, out_file, backup=True)
             out_file2 = f'{out_file}_000'
             with open(out_file, 'r', encoding='utf-8') as fileh:
                 raw_sections = _parse_sections(fileh)
             settings2 = _parse_all_raw_sections(raw_sections)
-            self.assertTrue(os.path.isfile(out_file2))
-        self.assertTrue(big_fat_comparer(settings, settings2, hard=True))
+            assert os.path.isfile(out_file2)
+            assert big_fat_comparer(settings, settings2, hard=True)
 
     def test_look_for_files(self):
         """Test that we look and find the files."""
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={},
                                            extra_files=[])
-        self.assertTrue(input_files == {})
+        assert input_files == {}
 
         with turn_on_logging(), patch('sys.stdout', new=StringIO()):
             # Check that ferrari.41 doesn't exist.
-            with self.assertLogs('pyretis.inout.settings',
-                                 level='INFO'):
-                look_for_input_files(input_path='.',
-                                     required_files={},
-                                     extra_files=['ferrari.f41'])
+            look_for_input_files(input_path='.',
+                                 required_files={},
+                                 extra_files=['ferrari.f41'])
 
         # the index key should actually have an index.ndx value, but
         # I just use the available fake.mdp file instead...
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={'mdp': 'gigi.mdp'},
                                            extra_files={'index': 'fake.mdp'})
-        self.assertTrue('fake.mdp' in input_files['index'])
+        assert 'fake.mdp' in input_files['index']
 
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={'mdp': 'gigi.mdp'},
                                            extra_files=[])
-        self.assertTrue('fake.mdp' in input_files['mdp'])
+        assert 'fake.mdp' in input_files['mdp']
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={'mdp': 'gigi.mdp'},
                                            extra_files=['traj.trr'])
-        self.assertTrue('fake.mdp' in input_files['mdp'])
+        assert 'fake.mdp' in input_files['mdp']
 
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={'mdp': 'fake.mdp'})
-        self.assertTrue('fake.mdp' in input_files['mdp'])
+        assert 'fake.mdp' in input_files['mdp']
 
         input_files = look_for_input_files(input_path=LOCAL_DIR,
                                            required_files={'mdp': 'gigi.mdp',
                                                            'g96': 'dumped.g96',
                                                            'trr': 'traj.trr'})
-        self.assertTrue('fake.mdp' in input_files['mdp'])
-        self.assertTrue('dumped.g96' in input_files['g96'])
-        self.assertTrue('traj.trr' in input_files['trr'])
+        assert 'fake.mdp' in input_files['mdp']
+        assert 'dumped.g96' in input_files['g96']
+        assert 'traj.trr' in input_files['trr']
 
         look_for_input_files(input_path=LOCAL_DIR,
                              required_files={'cf': 'config.gro'},
                              extra_files=[])
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             look_for_input_files(
                 input_path=LOCAL_DIR,
                 required_files={'lol': 'config.gRo'},
                 extra_files=[])
-        self.assertEqual('Missing input file "config.gRo" and multiple files '
-                         + 'have extension ".gro"', str(err.exception))
+        assert ('Missing input file "config.gRo" and multiple files '
+                + 'have extension ".gro"') == str(err.value)
 
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             input_files = look_for_input_files(input_path=LOCAL_DIR,
                                                required_files={'': 'ma.gro'})
-        self.assertEqual('Missing input file "ma.gro" and multiple '
-                         + 'files have extension ".gro"', str(err.exception))
+        assert ('Missing input file "ma.gro" and multiple '
+                + 'files have extension ".gro"') == str(err.value)
 
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             input_files = look_for_input_files(input_path='banana',
-                                               required_files={'': 'suka.gro'})
-        self.assertEqual('Input path folder banana not existing',
-                         str(err.exception))
+                                               required_files={'': 'suka.gr'})
+        assert 'Input path folder banana not existing' == str(err.value)
 
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             input_files = look_for_input_files(
                 input_path=LOCAL_DIR,
                 required_files={'yyy': 'config.xxx'},
                 extra_files=[])
-        self.assertEqual('Missing input file "config.xxx" ',
-                         str(err.exception))
+        assert 'Missing input file "config.xxx" ' in str(err.value)
 
     def test_clean_settings(self):
         """Test that we can clean settings."""
@@ -967,73 +955,73 @@ class KeywordForcefield(unittest.TestCase):
         settings['system']['junk'] = 'this is junk'
         settings['box'] = []
         settings_c = _clean_settings(settings)
-        self.assertFalse('junk' in settings_c)
-        self.assertFalse('junk' in settings_c['system'])
-        self.assertFalse('box' in settings_c)
+        assert 'junk' not in settings_c
+        assert 'junk' not in settings_c['system']
+        assert 'box' not in settings_c
 
 
-class AddDefaultTest(unittest.TestCase):
+class TestAddDefault:
     """Test adding default values."""
 
     def test_add_default_settings(self):
         """Test that we can add default settings."""
         settings_base = SECTIONS
         add_default_settings(settings_base)
-        self.assertTrue(big_fat_comparer(settings_base, SECTIONS))
+        assert big_fat_comparer(settings_base, SECTIONS)
 
-    def test_add_specific_default_settings(self):
+    def test_add_specific_default_settings(self, caplog):
         """Test that we can add default settings."""
         settings = {}
         add_default_settings(settings)
 
         settings['simulation']['task'] = 'tis'
         add_specific_default_settings(settings)
-        self.assertEqual(settings['system']['temperature'], 1)
-        self.assertFalse(settings['simulation']['flux'])
-        self.assertFalse(settings['simulation']['zero_ensemble'])
+        assert settings['system']['temperature'] == 1
+        assert not settings['simulation']['flux']
+        assert not settings['simulation']['zero_ensemble']
 
         settings['simulation']['task'] = 'retis'
         del settings['simulation']['flux']
         del settings['simulation']['zero_ensemble']
         add_specific_default_settings(settings)
-        self.assertTrue(settings['simulation']['flux'])
-        self.assertTrue(settings['simulation']['zero_ensemble'])
+        assert settings['simulation']['flux']
+        assert settings['simulation']['zero_ensemble']
 
-        self.assertEqual(settings['particles']['type'], 'internal')
-        self.assertEqual(settings['engine']['type'], 'internal')
+        assert settings['particles']['type'] == 'internal'
+        assert settings['engine']['type'] == 'internal'
 
         settings['engine']['class'] = 'cp2k'
         settings['engine']['exe_path'] += '/test/inout'
         add_specific_default_settings(settings)
-        self.assertEqual(settings['particles']['type'], 'external')
-        self.assertEqual(settings['engine']['type'], 'external')
+        assert settings['particles']['type'] == 'external'
+        assert settings['engine']['type'] == 'external'
         input_path = settings['engine'].get('input_path', '.')
         add_specific_default_settings(settings)
-        self.assertEqual(settings['engine']['input_files']['conf'][-11:],
-                         'initial.xyz')
-        self.assertEqual(settings['engine']['input_files']['template'][-9:],
-                         '/cp2k.inp')
-        self.assertEqual(
-            settings['engine']['input_files']['template'],
-            os.path.join(os.path.abspath('.') + '/test/inout/',
-                         input_path, 'cp2k.inp'))
-        self.assertEqual(settings['system']['temperature'], 500)
+        assert settings['engine']['input_files']['conf'][-11:] == 'initial.xyz'
+        assert (settings['engine']['input_files']['template'][-9:] ==
+                '/cp2k.inp')
+        assert settings['engine']['input_files']['template'] == \
+            os.path.join(os.path.abspath('.'), 'test/inout/',
+                         input_path, 'cp2k.inp')
+        assert settings['system']['temperature'] == 500
         del settings['system']['temperature']
         add_specific_default_settings(settings)
-        self.assertEqual(settings['system']['temperature'], 500)
-        no_temp_inp = os.path.join(os.path.abspath('.') + '/test/inout/',
-                                   input_path, 'no_temp.inp')
+        assert settings['system']['temperature'] == 500
+        no_temp_inp = os.path.join(os.path.abspath('.'),
+                                   'test/inout/',
+                                   input_path,
+                                   'no_temp.inp')
         settings['engine']['template'] = no_temp_inp
         with turn_on_logging(), patch('sys.stdout', new=StringIO()):
-            with self.assertLogs() as log:
+            with caplog.at_level(logging.INFO):
                 del settings['system']['temperature']
                 add_specific_default_settings(settings)
-                self.assertEqual(settings['system']['temperature'], 300)
-                self.assertIn('Temperature not set in CP2K', log.output[0])
+                assert settings['system']['temperature'] == 300
+                assert 'Temperature not set in CP2K' in caplog.text
                 settings['system']['temperature'] = 500
                 add_specific_default_settings(settings)
-                self.assertEqual(settings['system']['temperature'], 300)
-                self.assertIn('And temperature in input', log.output[1])
+                assert settings['system']['temperature'] == 300
+                assert 'And temperature in input' in caplog.text
 
         settings = {}
         settings['simulation'] = {'covid': 'kill_us_all'}
@@ -1042,22 +1030,19 @@ class AddDefaultTest(unittest.TestCase):
         settings['engine']['class'] = 'gromacs2'
         settings['engine']['topology'] = 'TrainToRide'
         add_specific_default_settings(settings)
-        self.assertEqual(settings['particles']['type'], 'external')
-        self.assertEqual(settings['engine']['type'], 'external')
+        assert settings['particles']['type'] == 'external'
+        assert settings['engine']['type'] == 'external'
         input_path = settings['engine'].get('input_path', '.')
-        self.assertEqual(settings['engine']['input_files']['topology'],
-                         'TrainToRide')
-        self.assertEqual(settings['engine']['input_files']['conf'][-8:],
-                         'conf.gro')
-        self.assertEqual(settings['engine']['input_files']['input_o'][-11:],
-                         '/grompp.mdp')
-        self.assertEqual(settings['engine']['input_files']['index'],
-                         os.path.join(os.path.abspath('.'),
-                                      input_path, 'index.ndx'))
-        self.assertEqual(settings['simulation']['restart'], 'pyretis.restart')
+        assert settings['engine']['input_files']['topology'] == 'TrainToRide'
+        assert settings['engine']['input_files']['conf'][-8:] == 'conf.gro'
+        assert settings['engine']['input_files']['input_o'][-11:] == \
+            '/grompp.mdp'
+        assert settings['engine']['input_files']['index'] == \
+            os.path.join(os.path.abspath('.'), input_path, 'index.ndx')
+        assert settings['simulation']['restart'] == 'pyretis.restart'
 
 
-class KeywordEnsemble(unittest.TestCase):
+class TestKeywordEnsemble:
     """Test ensemble and setting keywords."""
 
     def test_fill_up_tis_and_retis_settings(self):
@@ -1065,27 +1050,21 @@ class KeywordEnsemble(unittest.TestCase):
         inputfile = os.path.join(LOCAL_DIR, 'settings-retis.rst')
         settings = parse_settings_file(inputfile)
 
-        self.assertEqual(settings['ensemble'][2]
-                         ['collective-variable'][3]['something']
-                         ['unexpected'], [1, 2, 3])
-        self.assertEqual(settings['ensemble'][6]['particles']
-                         ['velocity']['fantasy'], 'game')
-        self.assertEqual(settings['ensemble'][6]['particles']['velocity']
-                         ['generate'], 'Priapo')
-        self.assertEqual(settings['ensemble'][5]['retis'], settings['retis'])
-        self.assertEqual(settings['ensemble'][2]['box'], settings['box'])
-        self.assertTrue(settings['ensemble'][0]['tis']['ensemble_number'] !=
-                        settings['ensemble'][1]['tis']['ensemble_number'])
-        self.assertEqual(settings['ensemble'][2]
-                         ['collective-variable'][5]['name'], 'Bugno')
-        self.assertEqual(settings['ensemble'][2]
-                         ['collective-variable'][1]
-                         ['position']['nonsense'], 'pineapple_on_pizza')
-        self.assertEqual(settings['ensemble'][1]['particles']
-                         ['velocity']['generate'], 'maxwell')
-        self.assertEqual(len(settings['ensemble']), 8)
-        self.assertEqual(settings['simulation']['zero_left'], -99)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert (settings['ensemble'][2]['collective-variable'][3]['something']
+                ['unexpected'] == [1, 2, 3])
+        assert (settings['ensemble'][6]['particles']
+                ['velocity']['fantasy'] == 'game')
+        assert (settings['ensemble'][6]['particles']['velocity']
+                ['generate'] == 'Priapo')
+        assert settings['ensemble'][5]['retis'] == settings['retis']
+        assert settings['ensemble'][2]['box'] == settings['box']
+        assert (settings['ensemble'][0]['tis']['ensemble_number'] !=
+                settings['ensemble'][1]['tis']['ensemble_number'])
+        assert (settings['ensemble'][2]
+                ['collective-variable'][5]['name'] == 'Bugno')
+        assert (settings['ensemble'][2]['collective-variable'][1]
+                ['position']['nonsense'] == 'pineapple_on_pizza')
+        assert (settings['ensemble'][1]['particles']
+                ['velocity']['generate'] == 'maxwell')
+        assert len(settings['ensemble']) == 8
+        assert settings['simulation']['zero_left'] == -99

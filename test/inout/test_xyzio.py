@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test module for the xyz in/out module."""
 import logging
-import unittest
+import pytest
 import tempfile
 import filecmp
 import os
@@ -25,7 +25,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class XYZIOTest(unittest.TestCase):
+class TestXYZIO:
     """Test the xyz format reading & writing."""
 
     def test_format_data(self):
@@ -67,7 +67,7 @@ class XYZIOTest(unittest.TestCase):
                 fmt=case.get('fmt', None),
             )
             for i, j in zip(formatted, correct):
-                self.assertEqual(i, j)
+                assert i == j
 
     def test_read_file(self):
         """Test that we can read a single snapshot."""
@@ -90,9 +90,9 @@ class XYZIOTest(unittest.TestCase):
             data = (box, xyz, vel)
             var = ('box', 'xyz', 'vel')
             for i, j in zip(data, var):
-                self.assertTrue(np.allclose(i, correct[j]))
+                assert np.allclose(i, correct[j])
             for i, j in zip(names, correct['names']):
-                self.assertEqual(i, j)
+                assert i == j
 
     def test_xyz_file(self):
         """Test that we can write an xyz-file."""
@@ -105,7 +105,7 @@ class XYZIOTest(unittest.TestCase):
                            header=header)
             temp.flush()
             compare = filecmp.cmp(temp.name, infile)
-            self.assertTrue(compare)
+            assert compare
 
     def test_write_trajectory(self):
         """Test that we can write a xyz-trajectory."""
@@ -127,12 +127,12 @@ class XYZIOTest(unittest.TestCase):
             temp.flush()
             for i, snapshot in enumerate(read_xyz_file(temp.name)):
                 box, xyz, vel, names = convert_snapshot(snapshot)
-                self.assertTrue(np.allclose(xyz, posin[i]))
-                self.assertTrue(np.allclose(vel, velin[i]))
-                self.assertTrue(np.allclose(box, boxin[i]))
-                self.assertEqual(snapshot['header'], headers[i])
+                assert np.allclose(xyz, posin[i])
+                assert np.allclose(vel, velin[i])
+                assert np.allclose(box, boxin[i])
+                assert snapshot['header'] == headers[i]
                 for j, k in zip(namesin, names):
-                    self.assertEqual(j, k)
+                    assert j == k
 
     def test_reverse_xyz_file(self):
         """Test that we can reverse an xyz-file."""
@@ -142,12 +142,12 @@ class XYZIOTest(unittest.TestCase):
             temp.flush()
             correct = reversed([snap for snap in read_xyz_file(infile)])
             for snapshot, corr in zip(read_xyz_file(temp.name), correct):
-                self.assertEqual(snapshot['header'], corr['header'])
+                assert snapshot['header'] == corr['header']
                 for key, val in snapshot.items():
                     if key in ('header', 'atomname'):
-                        self.assertEqual(val, corr[key])
+                        assert val == corr[key]
                     else:
-                        self.assertTrue(np.allclose(val, corr[key]))
+                        assert np.allclose(val, corr[key])
 
     def test_reverse_larger_file(self):
         """Test that we can reverse a larger xyz-file."""
@@ -157,9 +157,9 @@ class XYZIOTest(unittest.TestCase):
             temp.flush()
             for i, snapshot in enumerate(read_xyz_file(temp.name)):
                 step = int(snapshot['header'].split()[2])
-                self.assertEqual(i, step-1)
+                assert i == step - 1
                 posx = np.ones(3) * (i + 1)
-                self.assertTrue(np.allclose(snapshot['x'], posx))
+                assert np.allclose(snapshot['x'], posx)
 
     def test_merge(self):
         """Test that we can merge forward and backward xyz-files."""
@@ -170,7 +170,7 @@ class XYZIOTest(unittest.TestCase):
             xyz_merge(backward, forward, temp.name)
             temp.flush()
             compare = filecmp.cmp(temp.name, merged_correct)
-            self.assertTrue(compare)
+            assert compare
 
     def test_txt_convert(self):
         """Test that we can convert from the internal txt format."""
@@ -193,9 +193,5 @@ class XYZIOTest(unittest.TestCase):
                         output.write(gfile.read())
                 temp.flush()
                 compare = filecmp.cmp(temp.name, files)
-                self.assertTrue(compare)
+                assert compare
             os.remove(files)
-
-
-if __name__ == '__main__':
-    unittest.main()

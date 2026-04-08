@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the UmbrellaWindowSimulation class."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.units import create_conversion_factors
 from pyretis.core.box import create_box
@@ -33,7 +33,7 @@ def create_test_system():
     return system
 
 
-class TestUmbrellaWindow(unittest.TestCase):
+class TestUmbrellaWindow:
     """Run the tests for UmbrellaWindow Simulation class."""
 
     def test_umbrellawindow(self):
@@ -52,16 +52,16 @@ class TestUmbrellaWindow(unittest.TestCase):
         simulation = UmbrellaWindowSimulation(ensemble, settings, controls)
         for _ in simulation.run():
             pass
-        self.assertTrue(system.particles.pos[0][0] > -0.5)
+        assert system.particles.pos[0][0] > -0.5
         # Test restart features:
         restart = simulation.restart_info()
-        self.assertEqual(restart['type'], simulation.simulation_type)
+        assert restart['type'] == simulation.simulation_type
         settings['restart'] = restart
         settings['restart']['overlap'] = 'NonSense'
         simulation.cycle['step'] = 999
         simulation = UmbrellaWindowSimulation(ensemble, settings, controls)
-        self.assertEqual(simulation.overlap, 'NonSense')
-        self.assertEqual(simulation.cycle['step'], 17)
+        assert simulation.overlap == 'NonSense'
+        assert simulation.cycle['step'] == 17
         # Test the creation when the random generator is not given:
         ensemble = {'system': system}
         simulation = UmbrellaWindowSimulation(
@@ -70,13 +70,9 @@ class TestUmbrellaWindow(unittest.TestCase):
                                      'overlap': -0.5,
                                      'maxdx': 0.1}},
             controls={})
-        self.assertIsInstance(simulation.rgen, type(rgen))
+        assert isinstance(simulation.rgen, type(rgen))
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             simulation = UmbrellaWindowSimulation(ensemble,
                                                   settings=None,
                                                   controls={})
-
-
-if __name__ == '__main__':
-    unittest.main()

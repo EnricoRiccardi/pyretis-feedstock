@@ -4,7 +4,7 @@
 """Test the bin."""
 import logging
 import os
-import unittest
+import pytest
 import shutil
 import tempfile
 import subprocess
@@ -18,7 +18,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class test_pyretis_main_analyse(unittest.TestCase):
+class TestPyretisMainAnalyse:
     """Test Main."""
 
     def test_pyretisanalyse(self):
@@ -29,7 +29,7 @@ class test_pyretis_main_analyse(unittest.TestCase):
                                       stderr=subprocess.DEVNULL,
                                       stdout=subprocess.PIPE) as ex:
                     asd = ex.stdout.read().split()
-                self.assertTrue(b'PyRETIS' in asd)
+                assert b'PyRETIS' in asd
 
             with patch('sys.stdout', new=StringIO()) as stdout:
                 with subprocess.Popen(['pyretisanalyse'],
@@ -37,16 +37,16 @@ class test_pyretis_main_analyse(unittest.TestCase):
                                       stdout=subprocess.PIPE,
                                       cwd=tempdir) as ex:
                     asd = ex.stdout.read().strip()
-                self.assertIn(b'Input file required', asd)
+                assert b'Input file required' in asd
 
             inputfile = 'a_non_existent_input.rst'
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(inputfile, tempdir, tempdir)
-            self.assertIn('NOT found!', stdout.getvalue().strip())
+            assert 'NOT found!' in stdout.getvalue().strip()
 
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(None, tempdir, tempdir)
-            self.assertIn('Input file required', stdout.getvalue().strip())
+            assert 'Input file required' in stdout.getvalue().strip()
 
     def test_hello_world(self):
         """Test that we are polite."""
@@ -54,13 +54,13 @@ class test_pyretis_main_analyse(unittest.TestCase):
             hello_world(infile='I_can_read_your_soul.rst',
                         run_dir='You_are_wasting_your_life_here',
                         report_dir='go_out_and_enjoy')
-        self.assertIn('Start', stdout.getvalue().strip())
+        assert 'Start' in stdout.getvalue().strip()
 
     def test_bye_world(self):
         """Test that we can die."""
         with patch('sys.stdout', new=StringIO()) as stdout:
             bye_bye_world()
-        self.assertIn('reference', stdout.getvalue().strip())
+        assert 'reference' in stdout.getvalue().strip()
 
     def test_main_an(self):
         """Test that we know how to set up a report."""
@@ -82,7 +82,7 @@ class test_pyretis_main_analyse(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(os.path.join(tempdir, input_file), tempdir,
                      os.path.join(tempdir, 'report'))
-            self.assertIn('traceback', stdout.getvalue().strip())
+            assert 'traceback' in stdout.getvalue().strip()
 
             with patch('sys.stdout', new=StringIO()) as stdout:
                 for i in ['000', '001', '002']:
@@ -100,15 +100,15 @@ class test_pyretis_main_analyse(unittest.TestCase):
                 main(os.path.join(tempdir, input_file), tempdir,
                      os.path.join(tempdir, 'report'))
 
-            self.assertIn('ssing probability: 1.00', stdout.getvalue().strip())
-            self.assertIn('2.577319588', stdout.getvalue().strip())
+            assert 'ssing probability: 1.00' in stdout.getvalue().strip()
+            assert '2.577319588' in stdout.getvalue().strip()
             input_file = 'dummy_input.rst'  # TIS
             shutil.copyfile(os.path.join(HERE, input_file),
                             os.path.join(tempdir, input_file))
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(os.path.join(tempdir, input_file), tempdir,
                      os.path.join(tempdir, 'report'))
-            self.assertIn('report/002_tis_report.', stdout.getvalue().strip())
+            assert 'report/002_tis_report.' in stdout.getvalue().strip()
 
     def test_main_repptis(self):
         """Test pyretisanalyse (main) for a REPPTIS simulation.
@@ -133,11 +133,7 @@ class test_pyretis_main_analyse(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(os.path.join(tempdir, "retis.rst"), tempdir,
                      os.path.join(tempdir, 'report'))
-            self.assertIn('ssing probability: 5.166013535e-04',
-                          stdout.getvalue().strip())
-            self.assertIn('reduced): 0.734638269', stdout.getvalue().strip())
-            self.assertIn('Xi: 0.46000', stdout.getvalue().strip())
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert ('ssing probability: 5.166013535e-04' in
+                    stdout.getvalue().strip())
+            assert 'reduced): 0.734638269' in stdout.getvalue().strip()
+            assert 'Xi: 0.46000' in stdout.getvalue().strip()

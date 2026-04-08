@@ -5,7 +5,7 @@
 from io import StringIO
 import logging
 import os
-import unittest
+import pytest
 import tempfile
 import numpy as np
 from unittest.mock import patch
@@ -66,7 +66,7 @@ def create_test_system():
     return system
 
 
-class TestRestartMethods(unittest.TestCase):
+class TestRestartMethods:
     """Test methods defined in the module."""
 
     def test_write_and_read(self):
@@ -106,8 +106,8 @@ class TestRestartMethods(unittest.TestCase):
             tmp.flush()
             read = read_restart_file(tmp.name)
             for key in ['simulation', 'system']:
-                self.assertTrue(key in read)
-            self.assertTrue(big_fat_comparer(read, simulation.restart_info()))
+                assert key in read
+            assert big_fat_comparer(read, simulation.restart_info())
 
     def test_read_write_ensemble(self):
         """Test read/write for path ensemble restart files."""
@@ -138,7 +138,7 @@ class TestRestartMethods(unittest.TestCase):
             filename = os.path.join(tempdir, 'devil.rst')
 
             write_restart_file(filename, simulation)
-            self.assertEqual(os.path.exists(filename), 1)
+            assert os.path.exists(filename)
 
             info = simulation.restart_info()
             info_file = read_restart_file(filename)
@@ -166,8 +166,4 @@ class TestRestartMethods(unittest.TestCase):
                               }
                            }
 
-                self.assertTrue(big_fat_comparer(read, restart, hard=True))
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert big_fat_comparer(read, restart, hard=True)

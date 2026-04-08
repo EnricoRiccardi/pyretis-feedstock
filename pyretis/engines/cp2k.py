@@ -358,7 +358,8 @@ class CP2KEngine(ExternalMDEngine):
     """
 
     def __init__(self, cp2k, input_path, timestep, subcycles,
-                 extra_files=None, exe_path=os.path.abspath('.'),  seed=0):
+                 extra_files=None, exe_path=os.path.abspath('.'), seed=0,
+                 conf='initial.xyz', template='cp2k.inp'):
         """Set up the CP2K engine.
 
         Parameters
@@ -373,26 +374,28 @@ class CP2KEngine(ExternalMDEngine):
             The number of steps each CP2K run is composed of.
         extra_files : list
             List of extra files which may be required to run CP2K.
+        exe_path: string, optional
+            The path on which the engine is executed.
         seed : integer, optional
             A seed for the random number generator.
-        extra_files : list
-            List of extra files which may be required to run CP2K.
-        exe_path: string, optional
-            The path on which the engine is executed
+        conf : string, optional
+            The default configuration file (default is 'initial.xyz').
+        template : string, optional
+            The CP2K input template (default is 'cp2k.inp').
 
         """
         super().__init__('CP2K external engine', timestep,
                          subcycles)
         self.rgen = create_random_generator({'seed': seed})
-        self.ext = 'xyz'
+        self.ext = os.path.splitext(conf)[1][1:]
         self.cp2k = shlex.split(cp2k)
         logger.info('Command for execution of CP2K: %s', ' '.join(self.cp2k))
         # Store input path:
         self.input_path = os.path.join(exe_path, input_path)
         # Set the defaults input files:
         default_files = {
-            'conf': f'initial.{self.ext}',
-            'template': 'cp2k.inp',
+            'conf': conf,
+            'template': template,
         }
         # Check the presence of the defaults input files or, if absent,
         # try to find then by extension.

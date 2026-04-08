@@ -8,6 +8,8 @@ This script is inteneded to be used as an external engine and will
 create some LAMMPS-like output.
 """
 import sys
+import os
+import tempfile
 from pyretis.engines.lammps import read_lammps_input
 
 
@@ -96,7 +98,7 @@ def make_fake_output_files(settings, steps):
         if key == 'dump':
             # Assume that the setting is: dump ID group-ID style N filename
             filename = val.split()[4].strip()
-            freq = int(val.split()[3].strip())
+            freq = int(val.split()[3])
             print(f'Dumping to: "{filename}"')
             make_dump_file(filename, steps, freq)
         elif key == 'write_restart':
@@ -135,4 +137,13 @@ def main(lammps_args):
 
 if __name__ == '__main__':
     print('This is the mock LAMMPS command')
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except BaseException as err:
+        import traceback
+        tmpdir = tempfile.gettempdir()
+        errlog = os.path.join(tmpdir, 'mocklammps_error.log')
+        with open(errlog, 'w') as f:
+            f.write(f"ERROR in mocklammps.py: {err}\n")
+            traceback.print_exc(file=f)
+        sys.exit(1)

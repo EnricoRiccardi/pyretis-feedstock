@@ -11,9 +11,11 @@ Engine
 ------
 class = cp2k
 cp2k = cp2k
-input_path = cp2k_input
+input_path = ../../shared_input/cp2k
 timestep = 0.5
 subcycles = 3
+conf = h2.xyz
+cp2k_format = xyz
 
 System settings
 ---------------

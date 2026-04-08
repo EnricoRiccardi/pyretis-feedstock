@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test for the simple potentials."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.system import System
 from pyretis.core.particles import Particles
@@ -33,7 +33,7 @@ def evaluate_potential(positions, system, function):
     return out
 
 
-class TestDoubleWell(unittest.TestCase):
+class TestDoubleWell:
     """Test the double well potential."""
 
     def test_doublewell_potential(self):
@@ -48,13 +48,13 @@ class TestDoubleWell(unittest.TestCase):
         out = evaluate_potential(pos, system, function)
         all_pot2 = (params['a'] * pos2**4 -
                     params['b'] * (pos2 - params['c'])**2)
-        self.assertTrue(np.allclose(out[0], out[1]))
-        self.assertTrue(np.allclose(out[2], out[3]))
-        self.assertTrue(np.allclose(out[4], out[5]))
-        self.assertTrue(np.allclose(out[0], all_pot2))
+        assert np.allclose(out[0], out[1])
+        assert np.allclose(out[2], out[3])
+        assert np.allclose(out[4], out[5])
+        assert np.allclose(out[0], all_pot2)
         all_force2 = (-4.0 * params['a'] * pos**3 +
                       2.0 * params['b'] * (pos - params['c']))
-        self.assertTrue(np.allclose(out[2], all_force2))
+        assert np.allclose(out[2], all_force2)
 
     def test_more_particles(self):
         """Test what happens if we have more particles."""
@@ -74,20 +74,22 @@ class TestDoubleWell(unittest.TestCase):
             all_pot.append(pot)
         all_pot = np.array(all_pot)
         all_pot2 = params['a'] * pos**4 - params['b'] * (pos - params['c'])**2
-        self.assertTrue(np.allclose(all_pot, all_pot2 * npart))
+        assert np.allclose(all_pot, all_pot2 * npart)
 
 
-class TestRectangularWell(unittest.TestCase):
+class TestRectangularWell:
     """Test the rectangular well potential."""
 
-    def test_initiation(self):
+    def test_initiation(self, caplog):
         """Test the way we give input."""
         params = {'left': -1.0, 'right': 1.0}
         RectangularWell(**params)
         params = {'left': 1.0, 'right': -1.0}
         logging.disable(logging.INFO)
-        with self.assertLogs('pyretis.forcefield.potentials.potentials',
-                             level='WARNING'):
+        with caplog.at_level(
+                logging.WARNING,
+                logger='pyretis.forcefield.potentials.potentials'
+        ):
             RectangularWell(**params)
         logging.disable(logging.CRITICAL)
 
@@ -103,14 +105,10 @@ class TestRectangularWell(unittest.TestCase):
             system.particles.pos[0][0] = i
             pot = function.potential(system)
             if params['left'] < i < params['right']:
-                self.assertEqual(pot, 0.0)
+                assert pot == 0.0
             else:
-                self.assertEqual(pot, float('inf'))
+                assert pot == float('inf')
         for i in (params['left'], params['right']):
             system.particles.pos[0][0] = i
             pot = function.potential(system)
-            self.assertEqual(pot, float('inf'))
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert pot == float('inf')

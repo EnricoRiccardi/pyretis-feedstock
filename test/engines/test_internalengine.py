@@ -2,7 +2,7 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test some methods for the internal engine."""
-import unittest
+import pytest
 import numpy as np
 from pyretis.engines.internal import MDEngine, VelocityVerlet, Langevin
 from pyretis.core.random_gen import MockRandomGenerator
@@ -34,7 +34,7 @@ class MockEngine(MDEngine):
         self.counter += 1
 
 
-class TestKick(unittest.TestCase):
+class TestKick:
     """Test Kicking methods."""
 
     def test_kick_across_middle(self):
@@ -60,12 +60,12 @@ class TestKick(unittest.TestCase):
                                                tis_settings)
         order_curr1 = engine.calculate_order(ensemble)[0]
         order_curr2 = curr.particles.get_pos()[0][0]
-        self.assertEqual(order_curr1, order_curr2)
+        assert order_curr1 == order_curr2
         order_prev1 = prev.order
         order_prev2 = prev.particles.get_pos()[0][0]
-        self.assertEqual(order_prev1, order_prev2)
-        self.assertTrue(order_prev1 <= interface < order_curr1 or
-                        order_curr1 < interface <= order_prev1)
+        assert order_prev1 == order_prev2
+        assert (order_prev1 <= interface < order_curr1 or
+                order_curr1 < interface <= order_prev1)
         # Test with the Langevin engine:
         interface = -0.54321
         engine = Langevin(0.002, 0.3, rgen='mock', seed=1,
@@ -76,12 +76,12 @@ class TestKick(unittest.TestCase):
                                                tis_settings)
         order_curr1 = engine.calculate_order(ensemble)[0]
         order_curr2 = curr.particles.get_pos()[0][0]
-        self.assertEqual(order_curr1, order_curr2)
+        assert order_curr1 == order_curr2
         order_prev1 = prev.order
         order_prev2 = prev.particles.get_pos()[0][0]
-        self.assertEqual(order_prev1, order_prev2)
-        self.assertTrue(order_prev1 <= interface < order_curr1 or
-                        order_curr1 < interface <= order_prev1)
+        assert order_prev1 == order_prev2
+        assert (order_prev1 <= interface < order_curr1 or
+                order_curr1 < interface <= order_prev1)
         # Test with a Mock Engine:
         interface = 3
         engine = MockEngine(interface)
@@ -92,9 +92,5 @@ class TestKick(unittest.TestCase):
         prev, curr = engine.kick_across_middle(ensemble,
                                                interface,
                                                tis_settings)
-        self.assertEqual(prev.order, 2)
-        self.assertEqual(curr.order, 4)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert prev.order == 2
+        assert curr.order == 4

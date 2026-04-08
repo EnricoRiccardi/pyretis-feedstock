@@ -4,7 +4,7 @@
 """Test the bin."""
 import logging
 import os
-import unittest
+import pytest
 import shutil
 import subprocess
 import types
@@ -27,7 +27,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class test_pyretis_main_runner(unittest.TestCase):
+class TestPyretisMainRunner:
     """Test Main."""
 
     def test_pyretisrun(self):
@@ -36,12 +36,12 @@ class test_pyretis_main_runner(unittest.TestCase):
             with subprocess.Popen(['pyretisrun', '-V'],
                                   stdout=subprocess.PIPE) as ex:
                 asd = ex.stdout.read().split()
-            self.assertTrue(b'PyRETIS' in asd)
+            assert b'PyRETIS' in asd
 
             with subprocess.Popen(['pyretisrun'],
                                   stderr=subprocess.PIPE) as ex:
                 asd = ex.stderr.read().split()
-            self.assertTrue(b'pyretisrun' in asd)
+            assert b'pyretisrun' in asd
 
     def test_pyretisrun2(self):
         """Test pyretisrun by actually running a retis sim with 0 steps."""
@@ -56,8 +56,8 @@ class test_pyretis_main_runner(unittest.TestCase):
                                       stderr=subprocess.DEVNULL,
                                       stdout=subprocess.PIPE) as ex:
                     asd = ex.stdout.read().split()
-        self.assertTrue(b'Riccardi' in asd)
-        self.assertTrue(b'"kick"' in asd)
+        assert b'Riccardi' in asd
+        assert b'"kick"' in asd
 
     def test_exit(self):
         """Test pyretisrun exit by creating an EXIT file."""
@@ -70,7 +70,7 @@ class test_pyretis_main_runner(unittest.TestCase):
                 main(input_file, tempdir, tempdir,
                      progress=False, log_level=20)
                 asd = stdout.getvalue().strip()
-        self.assertIn('EXIT file found', asd)
+        assert 'EXIT file found' in asd
 
     def test_main(self):
         """Test the main() function for a tis task."""
@@ -81,14 +81,14 @@ class test_pyretis_main_runner(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()) as stdout:
                 main(input_file, tempdir, tempdir, progress=False, log_level=9)
                 asd = stdout.getvalue().strip()
-            self.assertIn('Execution ended', asd)
+            assert 'Execution ended' in asd
             with patch('sys.stdout', new=StringIO()) as stdout:
                 input_file = os.path.join(tempdir, 'does_not_exist.rst')
-                self.assertRaises(ValueError, main, input_file, tempdir,
-                                  tempdir, progress=False,
-                                  log_level=9)
+                pytest.raises(ValueError, main, input_file, tempdir,
+                              tempdir, progress=False,
+                              log_level=9)
                 asd = stdout.getvalue().strip()
-            self.assertIn('ERROR - execution stopped.', asd)
+            assert 'ERROR - execution stopped.' in asd
 
     def test_run_simulation(self):
         """Test all simulations functions."""
@@ -110,7 +110,7 @@ class test_pyretis_main_runner(unittest.TestCase):
                         ens['engine']['exe_path'] = tempdir
                     sim_settings['simulation']['task'] = key
                     sim = create_simulation(sim_settings)
-                    self.assertTrue(runner(sim, sim_settings))
+                    assert runner(sim, sim_settings)
 
     def test_simulation_exit(self):
         """Test exit feature of explore_simulation and run_path_simulation."""
@@ -132,20 +132,20 @@ class test_pyretis_main_runner(unittest.TestCase):
                     sim_settings['simulation']['task'] = key
                     sim = create_simulation(sim_settings)
                     open(tempdir + '/EXIT', 'w').close()
-                    self.assertFalse(runner(sim, sim_settings))
+                    assert not runner(sim, sim_settings)
 
     def test_use_tqdm(self):
         """Test tqdm."""
         bar = use_tqdm(progress=True)
-        self.assertEqual(type(bar), type(tqdm.tqdm))
-        self.assertTrue(bar is tqdm.tqdm)
-        self.assertFalse(isinstance(bar, Iterable))
+        assert isinstance(bar, type(tqdm.tqdm))
+        assert bar is tqdm.tqdm
+        assert not isinstance(bar, Iterable)
 
         bar = use_tqdm(progress=False)
-        self.assertTrue(bar is not tqdm.tqdm)
-        self.assertTrue(isinstance(bar, types.FunctionType))
+        assert bar is not tqdm.tqdm
+        assert isinstance(bar, types.FunctionType)
         value = bar(iterable='something1', dummy='something2')
-        self.assertEqual(value, 'something1')
+        assert value == 'something1'
 
     def test_hello_world(self):
         """Test that we are polite."""
@@ -153,27 +153,22 @@ class test_pyretis_main_runner(unittest.TestCase):
             hello_world(infile='I_can_read_your_mind.rst',
                         rundir=HERE,
                         logfile='nothing_to_declare')
-        self.assertIn('Start', stdout.getvalue().strip())
+        assert 'Start' in stdout.getvalue().strip()
 
     def test_bye_world(self):
         """Test that we can die."""
         with patch('sys.stdout', new=StringIO()) as stdout:
             bye_bye_world()
-        self.assertIn('reference', stdout.getvalue().strip())
+        assert 'reference' in stdout.getvalue().strip()
 
     def test_set_up_simulation(self):
         """Test that we know how to set up a simulation."""
         inputfile = 'a_non_existent_input.rst'
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             set_up_simulation(inputfile, HERE)
-        self.assertEqual(f'Input file "{inputfile}" NOT found!',
-                         str(err.exception))
+        assert f'Input file "{inputfile}" NOT found!' == str(err.value)
 
         inputfile = os.path.join(HERE, 'dummy_input.rst')
         with patch('sys.stdout', new=StringIO()) as stdout:
             set_up_simulation(inputfile, HERE)
-        self.assertIn('Reading', stdout.getvalue().strip())
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert 'Reading' in stdout.getvalue().strip()

@@ -1472,7 +1472,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
         if trj_name:
             try:
-                subprocess.run(["avogadro2", trj_name], check=True)
+                subprocess.run(  # nosec B603 B607
+                    ["avogadro2", trj_name], check=True)
                 os.remove(os.getcwd() + '/' + trj_name)
             except FileNotFoundError:
                 self.display_message_box('Cannot play cycle',
