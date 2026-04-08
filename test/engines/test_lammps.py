@@ -6,7 +6,7 @@ import logging
 import os
 import shutil
 import tempfile
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.random_gen import create_random_generator
 from pyretis.core.system import System
@@ -122,23 +122,23 @@ def read_raw_file(filename):
     return lines
 
 
-class LAMMPSEngineMethodsTest(unittest.TestCase):
+class TestLAMMPSEngineMethods:
     """Run the tests for the methods defined in LAMMPS module."""
 
     def test_read_lammps_input(self):
         """Test that we can read LAMMPS input."""
         infile = os.path.join(HERE, 'lammps_input', 'lammps.in')
         settings = read_lammps_input(infile)
-        self.assertEqual(len(LAMMPS_IN), len(settings))
+        assert len(LAMMPS_IN) == len(settings)
         for i, j in zip(LAMMPS_IN, settings):
-            self.assertEqual(i, j)
+            assert i == j
         timestep = get_setting('timestep', settings)
-        self.assertEqual(timestep, ['1.0'])
+        assert timestep == ['1.0']
         fix = get_setting('fix', settings)
         correct_fix = [item[1] for item in settings[-3:]]
-        self.assertTrue(len(correct_fix), len(fix))
+        assert len(correct_fix) == len(fix)
         for i, j in zip(correct_fix, fix):
-            self.assertEqual(i, j)
+            assert i == j
 
     def test_create_md_input(self):
         """Test that we can create input files for LAMMPS."""
@@ -167,18 +167,18 @@ class LAMMPSEngineMethodsTest(unittest.TestCase):
             # check that the last lines are equal:
             offset = len(written)
             for i, line in enumerate(written):
-                self.assertEqual(line, data[-(offset-i)])
+                assert line == data[-(offset - i)]
 
     def test_read_lammps_log(self):
         """Test that we can read some data from a LAMMPS log file."""
         infile = os.path.join(HERE, 'lammps_input', 'pyretis_md.log')
         logdata = read_lammps_log(infile)
-        self.assertIn('energy', logdata)
-        self.assertEqual(len(logdata['energy']), len(LAMMPS_ENERGY_DATA))
+        assert 'energy' in logdata
+        assert len(logdata['energy']) == len(LAMMPS_ENERGY_DATA)
         for i in LAMMPS_ENERGY_DATA:
-            self.assertIn(i, logdata['energy'])
+            assert i in logdata['energy']
         for key, val in LAMMPS_ENERGY_DATA.items():
-            self.assertTrue(np.allclose(val, logdata['energy'][key]))
+            assert np.allclose(val, logdata['energy'][key])
 
     def test_system_to_lammps(self):
         """Test the conversion of systems to LAMMPS commands."""
@@ -193,7 +193,7 @@ class LAMMPSEngineMethodsTest(unittest.TestCase):
             'read_restart some.restart',
         ]
         cmd = system_to_lammps(system, False, 3)
-        self.assertEqual(correct, cmd)
+        assert correct == cmd
 
         # 2) Test for a restart file & reversing velocities:
         correct = [
@@ -209,7 +209,7 @@ class LAMMPSEngineMethodsTest(unittest.TestCase):
         system.particles.set_pos(('some.restart', 0))
         system.particles.set_vel(True)
         cmd = system_to_lammps(system, True, 3)
-        self.assertEqual(correct, cmd)
+        assert correct == cmd
 
         # 3) Test if we give a file with an index:
         correct = [
@@ -221,7 +221,7 @@ class LAMMPSEngineMethodsTest(unittest.TestCase):
         system.particles.set_pos(('notsome.restart', 10))
         system.particles.set_vel(False)
         cmd = system_to_lammps(system, False, 3)
-        self.assertEqual(correct, cmd)
+        assert correct == cmd
 
         # 4) Test index + reversing velocities:
         system.particles.set_pos(('dump.lammpstrj', 10))
@@ -239,29 +239,27 @@ class LAMMPSEngineMethodsTest(unittest.TestCase):
         ]
         system.particles.set_vel(True)
         cmd = system_to_lammps(system, True, 3)
-        self.assertEqual(correct, cmd)
+        assert correct == cmd
 
 
-class LAMMPSEngineTest(unittest.TestCase):
+class TestLAMMPSEngine:
     """Run the tests for the LAMMPSEngine class."""
 
     def test_lammps_initiate(self):
         """Test that we can initiate the LAMMPS engine."""
         # This should not fail:
         engine = LAMMPSEngine('lmp_serial', INPUT_PATH, 10, extra_files=None)
-        self.assertEqual(engine.lmp, 'lmp_serial')
-        self.assertEqual(engine.engine_type, 'external')
-        self.assertEqual(engine.description, 'LAMMPS Engine')
+        assert engine.lmp == 'lmp_serial'
+        assert engine.engine_type == 'external'
+        assert engine.description == 'LAMMPS Engine'
         # This should also fail - input files not found:
         extra_files = ['Oh Lawd He Comin']
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError) as context:
             LAMMPSEngine('lmp_serial', INPUT_PATH, 10,
                          extra_files=extra_files)
-        except_str = str(context.exception)
-        self.assertTrue(
-            except_str.startswith(MISSING_FILE_MSG)
-        )
-        self.assertTrue(extra_files[0] in except_str)
+        except_str = str(context.value)
+        assert except_str.startswith(MISSING_FILE_MSG)
+        assert extra_files[0] in except_str
 
     def test_run_lammps(self):
         """Test the method to run LAMMPS."""
@@ -271,28 +269,29 @@ class LAMMPSEngineTest(unittest.TestCase):
         system = create_system_for_lammps()
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'aprogram.py'), tempdir)
-            engine = LAMMPSEngine('./aprogram.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'aprogram.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             # First we test with missing settings:
             settings = {}
             # None of the required settings were given, engine should fail:
-            with self.assertRaises(KeyError) as context:
+            with pytest.raises(KeyError) as context:
                 engine.run_lammps(system, settings, 'lammps_test')
-            except_str = str(context.exception)
-            self.assertEqual(except_str, MISSING_REVVEL_MSG)
+            except_str = str(context.value)
+            assert except_str == MISSING_REVVEL_MSG
             # Add the missing required setting(s):
             settings['steps_subcycles'] = 1
             settings['reverse_velocities'] = False
             # By construction of "aprogram.py" this just gives a
             # RuntimeError:
-            with self.assertRaises(RuntimeError):
+            with pytest.raises(RuntimeError):
                 engine.run_lammps(system, settings, 'lammps_test')
             # Check the standard out and error:
             correct = [
                 ['This is a program for testing external commands.'],
                 ['ERROR: Program got arguments:',
-                 ('./aprogram.py -in lammps_test.in '
+                 (os.path.join(HERE, 'aprogram.py') +
+                  ' -in lammps_test.in '
                   '-l lammps_test.log -screen '
                   'lammps_test.screen')]
             ]
@@ -300,9 +299,9 @@ class LAMMPSEngineTest(unittest.TestCase):
                 with open(os.path.join(tempdir, filei), 'r',
                           encoding="utf8") as output:
                     lines = output.readlines()
-                    self.assertEqual(len(lines), len(correcti))
+                    assert len(lines) == len(correcti)
                     for i, j in zip(lines, correcti):
-                        self.assertEqual(i.strip(), j)
+                        assert i.strip() == j
 
     def test_add_files(self):
         """Test that the LAMMPS engine adds input files."""
@@ -313,9 +312,9 @@ class LAMMPSEngineTest(unittest.TestCase):
             engine.add_input_files(tempdir)
             files = [i.name for i in os.scandir(tempdir) if i.is_file()]
             expected = ['system.data'] + extra_files
-            self.assertEqual(len(files), len(expected))
+            assert len(files) == len(expected)
             for i in files:
-                self.assertIn(i, expected)
+                assert i in expected
 
     def test_integrate(self):
         """Test the integrate method.
@@ -334,36 +333,32 @@ class LAMMPSEngineTest(unittest.TestCase):
         steps = 10
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'mocklammps.py'), tempdir)
-            engine = LAMMPSEngine('./mocklammps.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'mocklammps.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             engine.add_input_files(tempdir)
             system = create_system_for_lammps()
             # The expected files should not be present yet:
             for i in expected_files:
-                self.assertFalse(os.path.isfile(os.path.join(tempdir, i)))
+                assert not os.path.isfile(os.path.join(tempdir, i))
             engine.integrate(system, steps)
             # We now expect to find the files:
             for i in expected_files:
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, i)))
+                assert os.path.isfile(os.path.join(tempdir, i))
             # And we expect the system to have an order parameter:
-            self.assertEqual(
-                os.path.join(tempdir, 'pyretis_md.lammpstrj'),
-                system.particles.get_pos()[0],
-            )
-            self.assertEqual(
-                engine.subcycles * steps, system.particles.get_pos()[1]
-            )
-            self.assertEqual(len(system.order), 2)
-            self.assertEqual(system.order[0], engine.subcycles * steps + 1)
-            self.assertEqual(system.order[1], -(engine.subcycles * steps + 1))
+            assert (os.path.join(tempdir, 'pyretis_md.lammpstrj') ==
+                    system.particles.get_pos()[0])
+            assert engine.subcycles * steps == system.particles.get_pos()[1]
+            assert len(system.order) == 2
+            assert system.order[0] == engine.subcycles * steps + 1
+            assert system.order[1] == -(engine.subcycles * steps + 1)
 
     def test_modify_velocities(self):
         """Test the modify_velocities method."""
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'mocklammps.py'), tempdir)
-            engine = LAMMPSEngine('./mocklammps.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'mocklammps.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             engine.add_input_files(tempdir)
             system = create_system_for_lammps()
@@ -373,39 +368,36 @@ class LAMMPSEngineTest(unittest.TestCase):
             ensemble = {'system': system, 'rgen': None}
             vel_settings = {'aimless': True}
             dek, kin_new = engine.modify_velocities(ensemble, vel_settings)
-            self.assertAlmostEqual(4.0, kin_new)
-            self.assertEqual(float('inf'), dek)
-            self.assertTrue(np.allclose([1., -1.], system.order))
+            assert 4.0 == pytest.approx(kin_new)
+            assert float('inf') == dek
+            assert np.allclose([1., -1.], system.order)
             # Check the calculate order:
-            self.assertIs(
-                system.order,
-                engine.calculate_order(ensemble),
-            )
+            assert system.order is engine.calculate_order(ensemble)
             # Check the created input file for LAMMPS:
             seed = read_seed(os.path.join(tempdir, 'generate_vel.in'))
-            self.assertEqual(seed, 1)
+            assert seed == 1
             # Test that we can set the seed:
             rgen = create_random_generator({'rgen': 'mock'})
             ensemble = {'system': system, 'rgen': rgen}
             vel_settings = {'aimless': True}
             dek, kin_new = engine.modify_velocities(ensemble, vel_settings)
-            self.assertAlmostEqual(4.0, kin_new)
-            self.assertAlmostEqual(0.0, dek)
-            self.assertTrue(np.allclose([1., -1.], system.order))
+            assert 4.0 == pytest.approx(kin_new)
+            assert 0.0 == pytest.approx(dek)
+            assert np.allclose([1., -1.], system.order)
             seed = read_seed(os.path.join(tempdir, 'generate_vel.in'))
-            self.assertAlmostEqual(1675209429, seed)
-            with self.assertRaises(ValueError) as context:
+            assert 1675209429 == pytest.approx(seed)
+            with pytest.raises(ValueError) as context:
                 vel_settings = {'aimless': False}
                 engine.modify_velocities(ensemble, vel_settings)
-            except_str = str(context.exception)
-            self.assertEqual(except_str, AIMLESS_ERROR_MSG)
+            except_str = str(context.value)
+            assert except_str == AIMLESS_ERROR_MSG
 
     def test_propagate_forward(self):
         """Test the propagate method."""
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'mocklammps.py'), tempdir)
-            engine = LAMMPSEngine('./mocklammps.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'mocklammps.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             engine.add_input_files(tempdir)
             system = create_system_for_lammps()
@@ -428,17 +420,15 @@ class LAMMPSEngineTest(unittest.TestCase):
             pref = [i for i in os.listdir(tempdir) if i[0].isdigit()][0][0]
             lmp_in = read_raw_file(os.path.join(tempdir, pref + '_trajF.in'))
             for i in correct:
-                self.assertIn(i, lmp_in)
-            self.assertTrue(success)
-            self.assertEqual(path.length, 9)
+                assert i in lmp_in
+            assert success
+            assert path.length == 9
             traj = [i.particles.get_pos() for i in path.phasepoints]
             for i, point in enumerate(traj):
-                self.assertEqual(point[1], i*engine.subcycles)
-                self.assertTrue(tempdir in point[0])
-                self.assertTrue('trajF.lammpstrj' in point[0])
-            self.assertFalse(
-                any(i.particles.get_vel() for i in path.phasepoints)
-            )
+                assert point[1] == i*engine.subcycles
+                assert tempdir in point[0]
+                assert 'trajF.lammpstrj' in point[0]
+            assert not any(i.particles.get_vel() for i in path.phasepoints)
             # Run "forward" until we exceed the max length:
             path = Path(rgen=None, maxlen=4)
             ensemble = {
@@ -449,23 +439,21 @@ class LAMMPSEngineTest(unittest.TestCase):
             success, _ = engine.propagate(
                 path=path, ensemble=ensemble, reverse=False,
             )
-            self.assertFalse(success)
-            self.assertEqual(path.length, path.maxlen)
+            assert not success
+            assert path.length == path.maxlen
             traj = [i.particles.get_pos() for i in path.phasepoints]
             for i, point in enumerate(traj):
-                self.assertEqual(point[1], i*engine.subcycles)
-                self.assertTrue(tempdir in point[0])
-                self.assertTrue('trajF.lammpstrj' in point[0])
-            self.assertFalse(
-                any(i.particles.get_vel() for i in path.phasepoints)
-            )
+                assert point[1] == i*engine.subcycles
+                assert tempdir in point[0]
+                assert 'trajF.lammpstrj' in point[0]
+            assert not any(i.particles.get_vel() for i in path.phasepoints)
 
     def test_propagate_backward(self):
         """Test the propagate method."""
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'mocklammps.py'), tempdir)
-            engine = LAMMPSEngine('./mocklammps.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'mocklammps.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             engine.add_input_files(tempdir)
             system = create_system_for_lammps()
@@ -479,31 +467,23 @@ class LAMMPSEngineTest(unittest.TestCase):
             success, _ = engine.propagate(
                 path=path, ensemble=ensemble, reverse=True
             )
-            self.assertFalse(success)
-            self.assertEqual(path.length, 4)
+            assert not success
+            assert path.length == 4
             traj = [i.particles.get_pos() for i in path.phasepoints]
             for i, point in enumerate(traj):
-                self.assertEqual(point[1], i*engine.subcycles)
-                self.assertTrue('trajB.lammpstrj' in point[0])
-                self.assertTrue(tempdir in point[0])
-            self.assertTrue(
-                all(i.particles.get_vel() for i in path.phasepoints)
-            )
+                assert point[1] == i*engine.subcycles
+                assert 'trajB.lammpstrj' in point[0]
+                assert tempdir in point[0]
+            assert all(i.particles.get_vel() for i in path.phasepoints)
 
     def test_dump_phasepoint(self):
         """Test the method to dump a phase point."""
         system = create_system_for_lammps()
         with tempfile.TemporaryDirectory() as tempdir:
             shutil.copy(os.path.join(HERE, 'mocklammps.py'), tempdir)
-            engine = LAMMPSEngine('./mocklammps.py', INPUT_PATH,
-                                  10, extra_files=None)
+            engine = LAMMPSEngine(os.path.join(HERE, 'mocklammps.py'),
+                                  INPUT_PATH, 10, extra_files=None)
             engine.exe_dir = tempdir
             engine.dump_phasepoint(system, deffnm='dumped')
             # Check that the dumped file exists:
-            self.assertTrue(
-                os.path.isfile(os.path.join(tempdir, 'dumped.lammpstrj'))
-            )
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert os.path.isfile(os.path.join(tempdir, 'dumped.lammpstrj'))

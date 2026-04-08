@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test module for the energy analysis."""
 import logging
-import unittest
+import pytest
 import os
 import pickle
 import numpy as np
@@ -15,7 +15,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class EnergyTest(unittest.TestCase):
+class TestEnergy:
     """Test that we can analyse energies."""
 
     def test_energy_analysis(self):
@@ -38,12 +38,8 @@ class EnergyTest(unittest.TestCase):
         with open(correct_file, 'rb') as infile:
             correct_data = pickle.load(infile)
         for key0 in ('time', 'temp', 'etot', 'vpot', 'ekin'):
-            self.assertTrue(key0 in correct_data)
-            self.assertTrue(key0 in results)
+            assert key0 in correct_data
+            assert key0 in results
             for key, val in correct_data[key0].items():
                 for i, j in zip(val, results[key0][key]):
-                    self.assertTrue(np.allclose(i, j))
-
-
-if __name__ == '__main__':
-    unittest.main()
+                    assert np.allclose(i, j)

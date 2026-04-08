@@ -3,6 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the OpenMMEngine class."""
 import unittest
+import pytest
 import os
 import numpy as np
 import pyretis
@@ -20,10 +21,27 @@ if HAS_OPENMM:
     from .test_helpers.test_helpers import (create_openmm_simulation,
                                             write_test_pdb, FakeOp,
                                             write_openmm_simulation)
+else:
+    def create_openmm_simulation(*args, **kwargs):
+        """Dummy function for when OpenMM is missing."""
+        raise RuntimeError("OpenMM is not installed")
+
+    def write_test_pdb(*args, **kwargs):
+        """Dummy function for when OpenMM is missing."""
+        pass
+
+    def write_openmm_simulation(*args, **kwargs):
+        """Dummy function for when OpenMM is missing."""
+        pass
+
+    class FakeOp:
+        """Dummy class for when OpenMM is missing."""
+        def __init__(self, *args, **kwargs):
+            pass
 
 
-@unittest.skipIf(HAS_OPENMM is False, "OpenMM is not installed")
-class TestOpenMMEngine(unittest.TestCase):
+@pytest.mark.skipif(not HAS_OPENMM, reason="OpenMM is not installed")
+class TestOpenMMEngine:
     """Test the OpenMMEngine."""
     pdb = 'test_openmm_pyretis'
     f_name = pdb+'.pdb'
@@ -32,7 +50,7 @@ class TestOpenMMEngine(unittest.TestCase):
     openmm_module = 'openmm_module.py'
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         if os.path.isfile(cls.f_name):
             i = 1
             while os.path.isfile(cls.pdb+str(i)+'.pdb'):
@@ -42,13 +60,13 @@ class TestOpenMMEngine(unittest.TestCase):
         write_openmm_simulation(cls.openmm_module, cls.f_name)
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         files = [cls.f_name, cls.openmm_module]
         for f in files:
             if os.path.isfile(f):
                 os.remove(f)
 
-    def setUp(self):
+    def setup_method(self):
         self.sim = create_openmm_simulation(self.f_name)
         # Distance between the two water oxygens periodic= false, because
         # triclininc boxes are hard:
@@ -73,12 +91,12 @@ class TestOpenMMEngine(unittest.TestCase):
         eng.integration_step(self.system)
 
     def test_init_string_but_no_module(self):
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             OpenMMEngine(openmm_simulation=self.openmm_simulation)
 
     def test_installation_error(self):
         """Test failure when the OpenMMEngine is missing."""
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             pyretis.engines.openmm.HAS_OPENMM = False
             _ = OpenMMEngine(openmm_simulation=self.sim)
         # Reset change:
@@ -247,32 +265,32 @@ class TestOpenMMEngine(unittest.TestCase):
         eng.modify_velocities({'system': system, 'rgen': rgen},
                               {'sigma_v': None, 'aimless': True,
                                'momentum': False, 'rescale': None})
-        self.assertAlmostEqual(system.particles.vel[0][0], rgen.rgen[1])
+        assert system.particles.vel[0][0] == pytest.approx(rgen.rgen[1])
         deltav = np.ones_like(system.particles.vel)
         eng.modify_velocities({'system': system, 'rgen': rgen},
                               {'sigma_v': deltav, 'aimless': False,
                                'momentum': False, 'rescale': None})
-        self.assertAlmostEqual(system.particles.vel[0][0],
-                               rgen.rgen[1] + rgen.rgen[2])
+        assert (system.particles.vel[0][0] ==
+                pytest.approx(rgen.rgen[1] + rgen.rgen[2]))
         eng.modify_velocities({'system': system, 'rgen': rgen},
                               {'sigma_v': None, 'aimless': True,
                                'momentum': True, 'rescale': None})
-        self.assertAlmostEqual(system.particles.vel[0][0], 0.0)
+        assert system.particles.vel[0][0] == pytest.approx(0.0)
 
         system.particles.pos = np.ones_like(system.particles.pos)
         system.particles.vpot = system.potential()
         dek, kin_new = eng.modify_velocities({'system': system, 'rgen': rgen},
                                              {'sigma_v': None, 'aimless': True,
                                               'momentum': False, 'rescale': 6})
-        self.assertAlmostEqual(6, kin_new + system.particles.vpot)
+        assert 6 == pytest.approx(kin_new + system.particles.vpot)
         kin_old = kin_new
         dek, kin_new2 = eng.modify_velocities({'system': system, 'rgen': rgen},
                                               {'sigma_v': None,
                                                'aimless': True,
                                                'momentum': False,
                                                'rescale': -1})
-        self.assertAlmostEqual(kin_old, kin_new2)
-        self.assertAlmostEqual(dek, 0.0)
+        assert kin_old == pytest.approx(kin_new2)
+        assert dek == pytest.approx(0.0)
 
     def propagate_test(self, reverse=False):
         """Test the propagation method with the OpenMMEngine."""

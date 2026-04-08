@@ -74,8 +74,6 @@ energygrps               =
 cutoff-scheme            = Verlet
 ; nblist update frequency
 nstlist                  = 10
-; ns algorithm (simple or grid)
-ns_type                  = grid
 ; Periodic boundary conditions: xyz, no, xy
 pbc                      = xyz
 periodic-molecules       = no
@@ -84,10 +82,6 @@ periodic-molecules       = no
 verlet-buffer-tolerance  = -1
 ; nblist cut-off        
 rlist                    = 1.1
-; long-range cut-off for switched potentials
-rlistlong                = -1
-nstcalclr                = -1
-
 ; OPTIONS FOR ELECTROSTATICS AND VDW
 ; Method for doing electrostatics
 coulombtype              = pme
@@ -126,28 +120,6 @@ epsilon-surface          = 0
 ; IMPLICIT SOLVENT ALGORITHM
 implicit-solvent         = No
 
-; GENERALIZED BORN ELECTROSTATICS
-; Algorithm for calculating Born radii
-gb-algorithm             = Still
-; Frequency of calculating the Born radii inside rlist
-nstgbradii               = 1
-; Cutoff for Born radii calculation; the contribution from atoms
-; between rlist and rgbradii is updated every nstlist steps
-rgbradii                 = 1
-; Dielectric coefficient of the implicit solvent
-gb-epsilon-solvent       = 80
-; Salt concentration in M for Generalized Born models
-gb-saltconc              = 0
-; Scaling factors used in the OBC GB model. Default values are OBC(II)
-gb-obc-alpha             = 1
-gb-obc-beta              = 0.8
-gb-obc-gamma             = 4.85
-gb-dielectric-offset     = 0.009
-sa-algorithm             = Ace-approximation
-; Surface tension (kJ/mol/nm^2) for the SA (nonpolar surface) part of GBSA
-; The value -1 will set default value for Still/HCT/OBC GB-models.
-sa-surface-tension       = -1
-
 ; OPTIONS FOR WEAK COUPLING ALGORITHMS
 ; Temperature coupling  
 Tcoupl                   = Berendsen
@@ -169,34 +141,6 @@ compressibility          = 5e-5
 ref_p                    = 1
 ; Scaling of reference coordinates, No, All or COM
 refcoord-scaling         = No
-
-; OPTIONS FOR QMMM calculations
-QMMM                     = no
-; Groups treated Quantum Mechanically
-QMMM-grps                = 
-; QM method             
-QMmethod                 = 
-; QMMM scheme           
-QMMMscheme               = normal
-; QM basisset           
-QMbasis                  = 
-; QM charge             
-QMcharge                 = 
-; QM multiplicity       
-QMmult                   = 
-; Surface Hopping       
-SH                       = 
-; CAS space options     
-CASorbitals              = 
-CASelectrons             = 
-SAon                     = 
-SAoff                    = 
-SAsteps                  = 
-; Scale factor for MM charges
-MMChargeScaleFactor      = 1
-; Optimization of QM subsystem
-bOPT                     = 
-bTS                      = 
 
 ; SIMULATED ANNEALING  
 ; Type of annealing for each temperature group (no/single/periodic)

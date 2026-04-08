@@ -574,8 +574,10 @@ def create_system(settings):
             required_file = {}
             # Get the engine input files
             if 'cp2k' in settings['engine']['class'].lower():
-                required_file = {'conf': 'initial.{}'.format(
-                    settings['engine'].get('cp2k_format', 'xyz'))}
+                ext = settings['engine'].get('cp2k_format', 'xyz')
+                default_conf = f'initial.{ext}'
+                required_file = {'conf': settings['engine'].get(
+                    'conf', default_conf)}
             elif 'gromacs' in settings['engine']['class'].lower():
                 required_file = {
                     'conf':

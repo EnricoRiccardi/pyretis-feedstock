@@ -336,7 +336,9 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
                                    cycles.get('header', 'Recalculated data'))
 
             if ens.get('main_o') is not None:
-                os.system(f"cat {local_order} >> {main_order}")
+                with open(local_order, 'rb') as src, \
+                        open(main_order, 'ab') as dst:
+                    dst.write(src.read())
 
     print_to_screen('# Data successfully recomputed!', level='success')
     print_to_screen(f'# Time spent: {timeit.default_timer() - tic:.2f}s',

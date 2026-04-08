@@ -3,14 +3,13 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test common methods that are used in testing."""
 import os
-import unittest
-from pyretis.testing.compare import (
-    compare_files,
-    compare_files_lines,
-    compare_files_columns,
-    compare_files_numerical,
+from pyretis.testing.simulation_comparison import (
+    compare_simulation_files,
+    compare_text_line_by_line,
+    compare_data_by_columns,
+    compare_numerical_data,
     compare_traj_archive,
-    compare_pathensemble_files,
+    compare_path_ensemble_data,
 )
 
 
@@ -50,7 +49,7 @@ ARCHIVE4 = os.path.join(TEST_PATH, 'traj4')
 ARCHIVE5 = os.path.join(TEST_PATH, 'traj5')
 
 
-class TestCompareFiles(unittest.TestCase):
+class TestCompareFiles:
     """Test that we can compare files."""
 
     def test_compare_numerical_columns(self):
@@ -90,10 +89,10 @@ class TestCompareFiles(unittest.TestCase):
             },
         ]
         for case in cases:
-            result = compare_files_columns(
+            result = compare_data_by_columns(
                 *case['args'], **case['kwargs']
             )
-            self.assertEqual(result, case['result'])
+            assert result == case['result']
 
     def test_compare_numerical(self):
         """Compare energy.txt and order.txt type of files."""
@@ -116,8 +115,8 @@ class TestCompareFiles(unittest.TestCase):
             },
         ]
         for case in cases:
-            result = compare_files_numerical(*case['args'])
-            self.assertEqual(result, case['result'])
+            result = compare_numerical_data(*case['args'])
+            assert result == case['result']
 
     def test_compare_archive(self):
         """Test the method for comparing archive output."""
@@ -156,9 +155,9 @@ class TestCompareFiles(unittest.TestCase):
                 result_base.append(
                     (os.path.basename(i), os.path.basename(j))
                 )
-            self.assertEqual(len(result_base), len(case['result']))
+            assert len(result_base) == len(case['result'])
             for i in case['result']:
-                self.assertIn(i, result_base)
+                assert i in result_base
 
     def test_compare_lines(self):
         """Test the method for comparing files line-by-line."""
@@ -190,8 +189,8 @@ class TestCompareFiles(unittest.TestCase):
             },
         ]
         for case in cases:
-            result = compare_files_lines(*case['args'], **case['kwargs'])
-            self.assertEqual(result, case['result'])
+            result = compare_text_line_by_line(*case['args'], **case['kwargs'])
+            assert result == case['result']
 
     def test_compare_files(self):
         """Test the method for comparing files."""
@@ -238,8 +237,8 @@ class TestCompareFiles(unittest.TestCase):
             },
         ]
         for case in cases:
-            result = compare_files(*case['args'], **case['kwargs'])
-            self.assertEqual(result, case['result'])
+            result = compare_simulation_files(*case['args'], **case['kwargs'])
+            assert result == case['result']
 
     def test_compare_pathensemble_files(self):
         """Test comparison for path ensemble files."""
@@ -284,15 +283,13 @@ class TestCompareFiles(unittest.TestCase):
             },
         ]
         for case in cases:
-            result = compare_pathensemble_files(
+            result = compare_path_ensemble_data(
                 *case['args'], **case['kwargs']
             )
-            self.assertEqual(result, case['result'])
+            assert result == case['result']
         # Check that the cases fail for a line-by-line comparison:
         for case in cases:
-            equal, _ = compare_files(*case['args'], skip=None, mode='line')
-            self.assertFalse(equal)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            equal, _ = compare_simulation_files(
+                *case['args'], skip=None, mode='line'
+            )
+            assert not equal

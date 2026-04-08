@@ -9,7 +9,7 @@ Package structure
 Modules
 ~~~~~~~
 
-compare.py (:py:mod:`pyretis.testing.compare`)
+simulation_comparison.py (:py:mod:`pyretis.testing.simulation_comparison`)
     Common methods for comparing results.
 
 helpers.py (:py:mod:`pyretis.testing.helpers`)

@@ -8,7 +8,7 @@ import os
 import shutil
 import pathlib
 import tempfile
-import unittest
+import pytest
 from io import StringIO
 from unittest.mock import patch
 import numpy as np
@@ -34,6 +34,7 @@ from .help import (
     remove_file,
     set_up_system,
 )
+
 
 logging.disable(logging.CRITICAL)
 
@@ -64,26 +65,26 @@ PATH_DATA = [
 ]
 
 
-class TestAnaIo(unittest.TestCase):
+class TestAnaIo:
     """Test the analysisio files."""
-    def test_read_first_block(self):
+    def test_read_first_block(self, caplog):
         """Test read first block function."""
         with tempfile.TemporaryDirectory() as tempdir:
             filegone = os.path.join(tempdir, 'Mordvichev')
             pathlib.Path(filegone).touch(exist_ok=True)
             out = read_first_block(file_type='energy', file_name=filegone)
-            self.assertEqual(out, None)
-            with self.assertRaises(ValueError) as ext:
+            assert out is None
+            with pytest.raises(ValueError) as ext:
                 read_first_block(file_type='BT2', file_name=filegone)
-            self.assertIn('Unknown file type', str(ext.exception))
+            assert 'Unknown file type' in str(ext.value)
             filetest = os.path.join(HERE, 'order-data.txt')
             with turn_on_logging():
-                with self.assertLogs(
-                        'pyretis.inout.analysisio.analysisio',
-                        level='WARNING'):
+                with caplog.at_level(
+                        logging.WARNING,
+                        logger='pyretis.inout.analysisio.analysisio'):
                     read_first_block(file_type='order', file_name=filetest)
 
-    def test_run_analysis(self):
+    def test_run_analysis(self, caplog):
         """Test analysisio function"""
         lines = ['']*8
         moves = ['ki', 'sh', 'ki', 'sh', 'ld', 'xx', 'sh']
@@ -165,8 +166,8 @@ class TestAnaIo(unittest.TestCase):
             settings['analysis']['report-dir'] = tempdir
             with patch('sys.stdout', new=StringIO()) as stdout:
                 run_analysis(settings)
-            self.assertIn('Pathensemble data', stdout.getvalue().strip())
-            self.assertIn('99.000000', stdout.getvalue().strip())
+            assert 'Pathensemble data' in stdout.getvalue().strip()
+            assert '99.000000' in stdout.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             with open(os.path.join(tempdir, 'pathensemble.txt'), 'w',
@@ -195,13 +196,13 @@ class TestAnaIo(unittest.TestCase):
             settings['simulation']['interfaces'] = [-0.9, -0.8]
             with patch('sys.stdout', new=StringIO()) as stdout:
                 run_analysis(settings)
-            self.assertIn('0.2500', stdout.getvalue().strip())
-            self.assertIn('0.3750', stdout.getvalue().strip())
+            assert '0.2500' in stdout.getvalue().strip()
+            assert '0.3750' in stdout.getvalue().strip()
 
         settings['simulation']['task'] = 'mistery'
-        with self.assertRaises(ValueError) as err:
+        with pytest.raises(ValueError) as err:
             run_analysis(settings)
-            self.assertIn('Unknown ', err.exception)
+            assert 'Unknown ' in err.value
 
         # repptis analysis
         with tempfile.TemporaryDirectory() as tempdir:
@@ -220,27 +221,27 @@ class TestAnaIo(unittest.TestCase):
             with patch('sys.stdout', new=StringIO()) as stdout:
                 run_analysis(settings)
             # flux
-            self.assertIn('0.862851052', stdout.getvalue().strip())
+            assert '0.862851052' in stdout.getvalue().strip()
             # pcross
-            self.assertIn('2.213477168e-03', stdout.getvalue().strip())
+            assert '2.213477168e-03' in stdout.getvalue().strip()
 
 
-class TestFileIO(unittest.TestCase):
+class TestFileIO:
     """Test the FileIO class."""
 
-    def test_initiation(self):
+    def test_initiation(self, caplog):
         """Test initiation and opening of files."""
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.fileio', level='INFO'):
+            with caplog.at_level(logging.INFO, logger='pyretis.inout.fileio'):
                 FileIO('some-name', 'r', None, backup='not-an-option!')
 
         # Test for completely new file:
         filename = os.path.join(HERE, 'a_new_file')
         remove_file(filename)
         fileio = FileIO(filename, 'w', None, backup=False)
-        self.assertIsNone(fileio.fileh)
+        assert fileio.fileh is None
         fileio.open()
-        self.assertIsNotNone(fileio.fileh)
+        assert fileio.fileh is not None
         fileio.write('test')
         fileio.close()
         remove_file(filename)
@@ -254,63 +255,63 @@ class TestFileIO(unittest.TestCase):
         fileio = FileIO(filename, 'w', None, backup=True)
         fileio.open()
         fileio.write('text')
-        self.assertIsNotNone(fileio.fileh)
-        self.assertTrue(os.path.isfile(filename))
-        self.assertTrue(os.path.isfile(f'{filename}_000'))
+        assert fileio.fileh is not None
+        assert os.path.isfile(filename)
+        assert os.path.isfile(f'{filename}_000')
         del fileio
         remove_file(filename)
         remove_file(f'{filename}_000')
         # Test for invalid filename + context manager:
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.fileio',
-                                 level='CRITICAL'):
+            with caplog.at_level(logging.CRITICAL,
+                                 logger='pyretis.inout.fileio'):
                 with FileIO('/#"½%&?<><|*', 'r', None) as some_file:
-                    self.assertEqual(some_file.file_mode, 'r')
+                    assert some_file.file_mode == 'r'
                     lines = list(some_file)
-                    self.assertFalse(lines)
+                    assert not lines
         # Test for weird mode:
         fileio = FileIO('some-file', 'q', None)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             fileio.open()
         fileio = FileIO('some-file', 'r', None)
         fileio.file_mode = 'q'
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             fileio.open_file_read()
         fileio = FileIO('some-file', 'w', None)
         fileio.file_mode = 'q'
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             fileio.open_file_write()
 
-    def test_write_modes(self):
+    def test_write_modes(self, caplog):
         """Test the write modes and backup settings."""
         with tempfile.NamedTemporaryFile() as tmp:
             with FileIO(tmp.name, 'w', None, backup=True) as fileio:
-                self.assertIsNotNone(fileio.fileh)
-                self.assertFalse(fileio.fileh.closed)
+                assert fileio.fileh is not None
+                assert not fileio.fileh.closed
                 fileio.write('some text')
             with FileIO(tmp.name, 'a', None, backup=True) as fileio:
-                self.assertIsNotNone(fileio.fileh)
-                self.assertFalse(fileio.fileh.closed)
+                assert fileio.fileh is not None
+                assert not fileio.fileh.closed
                 status = fileio.write('some text')
-                self.assertTrue(status)
+                assert status
                 status = fileio.write('some text', end=None)
-                self.assertTrue(status)
+                assert status
                 status = fileio.write(None)
-                self.assertFalse(status)
+                assert not status
             fileio = FileIO(tmp.name, 'w', None, backup=True)
             fileio.open()
             fileio.close()
             with turn_on_logging():
-                with self.assertLogs('pyretis.inout.fileio',
-                                     level='WARNING'):
+                with caplog.at_level(logging.WARNING,
+                                     logger='pyretis.inout.fileio'):
                     fileio.write('text')
             fileio = FileIO(tmp.name, 'a', None, backup='True')
             with turn_on_logging():
-                with self.assertLogs('pyretis.inout.fileio',
-                                     level='WARNING'):
+                with caplog.at_level(logging.WARNING,
+                                     logger='pyretis.inout.fileio'):
                     fileio.write('text')
 
-    def test_reading(self):
+    def test_reading(self, caplog):
         """Test generic reading."""
         filename = os.path.join(HERE, 'energy.txt')
         correct = []
@@ -320,24 +321,22 @@ class TestFileIO(unittest.TestCase):
         with FileIO(filename, 'r', OutputFormatter('test')) as fileio:
             for line in fileio:
                 lines.append(line)
-        self.assertListEqual(lines, correct)
+        assert lines == correct
         with FileIO(filename, 'r', OutputFormatter('test')) as fileio:
             fileio.close()
             lines = list(fileio)
-            self.assertFalse(lines)
+            assert not lines
 
-    def test_load(self):
+    def test_load(self, caplog):
         """Test generic load."""
         filename = os.path.join(HERE, 'energy.txt')
         with FileIO(filename, 'r', OutputFormatter('test')) as fileio:
             for block in fileio.load():
-                self.assertEqual(
-                    block['comment'],
-                    [('#     Time      Potential        Kinetic'
-                      '          Total    Temperature')],
-                )
+                assert block['comment'] == [
+                    '#     Time      Potential        Kinetic'
+                    '          Total    Temperature']
 
-    def test_output(self):
+    def test_output(self, caplog):
         """Test generic output."""
         data = [1, 2.0, 3.123456]
         with tempfile.NamedTemporaryFile() as tmp:
@@ -350,7 +349,7 @@ class TestFileIO(unittest.TestCase):
                 for block in fileio.load():
                     for i, line in enumerate(block['data']):
                         raw = [i + 1] + data
-                        self.assertListEqual(line, raw)
+                        assert line == raw
         with tempfile.NamedTemporaryFile() as tmp:
             fileio = FileIO(tmp.name, 'w', OutputFormatter(''), backup=False)
             fileio.open()
@@ -359,21 +358,21 @@ class TestFileIO(unittest.TestCase):
             fileio.close()
             fileio.flush()
 
-    def test_formatter_info(self):
+    def test_formatter_info(self, caplog):
         """Test the formatter info method."""
         fileio = FileIO('My-name-is-nobody', 'r', None)
         info = fileio.formatter_info()
-        self.assertIsNone(info)
+        assert info is None
         formatter = OutputFormatter('Yippee ki-yay')
         fileio = FileIO('My-name-is-nobody', 'r', formatter)
         info = fileio.formatter_info()
-        self.assertEqual(info, OutputFormatter)
+        assert info == OutputFormatter
 
 
-class TestEnergyFile(unittest.TestCase):
+class TestEnergyFile:
     """Test the energy file i/o."""
 
-    def test_energy_fileio(self):
+    def test_energy_fileio(self, caplog):
         """Test reading and writing for energy files."""
         fields = ['vpot', 'ekin', 'etot', 'temp']
         with tempfile.NamedTemporaryFile() as tmp:
@@ -391,9 +390,9 @@ class TestEnergyFile(unittest.TestCase):
                     data = block['data']
                     for i, key in enumerate(['time'] + fields):
                         for num1, num2 in zip(raw_data[:, i], data[key]):
-                            self.assertAlmostEqual(num1, num2, 6)
+                            assert num1 == pytest.approx(num2, abs=1e-6)
 
-    def test_energy_file_read(self):
+    def test_energy_file_read(self, caplog):
         """Test reading existing energy data."""
         filename = os.path.join(HERE, 'energy.txt')
         correct = {
@@ -406,21 +405,21 @@ class TestEnergyFile(unittest.TestCase):
         with EnergyFile(filename, 'r') as efile:
             for block in efile.load():
                 for key, val in correct.items():
-                    self.assertTrue(np.allclose(val, block['data'][key]))
+                    assert np.allclose(val, block['data'][key])
         # Reading a file with errors, this should give a warning:
         filename = os.path.join(HERE, 'energy-error.txt')
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.fileio',
-                                 level='WARNING'):
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.inout.fileio'):
                 with EnergyFile(filename, 'r') as efile:
                     for _ in efile.load():
                         pass
 
 
-class TestCrossFile(unittest.TestCase):
+class TestCrossFile:
     """Test the cross file i/o."""
 
-    def test_cross_fileio(self):
+    def test_cross_fileio(self, caplog):
         """Test reading and writing for cross files."""
         with tempfile.NamedTemporaryFile() as tmp:
             raw_data = []
@@ -439,16 +438,16 @@ class TestCrossFile(unittest.TestCase):
                 for block in cfile.load():
                     data = block['data']
                     for i, j in zip(data, raw_data):
-                        self.assertEqual(i, j)
+                        assert i == j
 
-    def test_cross_fileread(self):
+    def test_cross_fileread(self, caplog):
         """Test reading from existing files."""
         filename1 = os.path.join(HERE, 'cross-error.txt')
         filename2 = os.path.join(HERE, 'cross.txt')
         data1 = None
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.fileio',
-                                 level='WARNING'):
+            with caplog.at_level(logging.WARNING,
+                                 logger='pyretis.inout.fileio'):
                 with CrossFile(filename1, 'r') as cfile:
                     for block in cfile.load():
                         data1 = block['data']
@@ -458,17 +457,17 @@ class TestCrossFile(unittest.TestCase):
                 data2 = block['data']
         for i, line in enumerate(data2):
             if i < 10:
-                self.assertEqual(line, data1[i])
+                assert line == data1[i]
             elif i == 10:
                 pass
             else:
-                self.assertEqual(line, data1[i-1])
+                assert line == data1[i-1]
 
 
-class TestOrderFile(unittest.TestCase):
+class TestOrderFile:
     """Test the order parameter file i/o."""
 
-    def test_order_parameter_fileio(self):
+    def test_order_parameter_fileio(self, caplog):
         """Test writing and reading of order parameter files."""
         extra = 3
         with tempfile.NamedTemporaryFile() as tmp:
@@ -484,9 +483,9 @@ class TestOrderFile(unittest.TestCase):
                     data = block['data']
                     for i, j in zip(data, raw_data):
                         for num1, num2 in zip(i, j):
-                            self.assertAlmostEqual(num1, num2, 6)
+                            assert num1 == pytest.approx(num2, abs=1e-6)
 
-    def test_order_parameter_read(self):
+    def test_order_parameter_read(self, caplog):
         """Test reading of order parameter data from a file."""
         filename = os.path.join(HERE, 'order-data.txt')
         correct_data = [
@@ -502,22 +501,16 @@ class TestOrderFile(unittest.TestCase):
         ]
         with OrderFile(filename, 'r') as ofile:
             for i, data in enumerate(ofile.load()):
-                self.assertEqual(
-                    data['comment'][0],
-                    f'# Cycle: {i}, status: ACC'
-                )
-                self.assertEqual(
-                    data['comment'][1],
-                    '#     Time       Orderp',
-                )
+                assert data['comment'][0] == f'# Cycle: {i}, status: ACC'
+                assert data['comment'][1] == '#     Time       Orderp'
                 for j, k in zip(correct_data[i], data['data']):
-                    self.assertTrue(np.allclose(j, k))
+                    assert np.allclose(j, k)
 
 
-class TestPathFiles(unittest.TestCase):
+class TestPathFiles:
     """Test file i/o for path files."""
 
-    def test_energy_path_file(self):
+    def test_energy_path_file(self, caplog):
         """Test i/o for energy path data."""
         paths, correct_data = create_test_paths(npath=5)
         with tempfile.NamedTemporaryFile() as tmp:
@@ -528,10 +521,10 @@ class TestPathFiles(unittest.TestCase):
             with EnergyPathFile(tmp.name, 'r') as efile:
                 for i, block in enumerate(efile.load()):
                     for key in ('ekin', 'vpot'):
-                        self.assertTrue(np.allclose(block['data'][key],
-                                                    correct_data[i][key]))
+                        assert np.allclose(block['data'][key],
+                                           correct_data[i][key])
 
-    def test_order_path_file(self):
+    def test_order_path_file(self, caplog):
         """Test i/o for order path data."""
         paths, correct_data = create_test_paths(npath=5)
         with tempfile.NamedTemporaryFile() as tmp:
@@ -543,11 +536,11 @@ class TestPathFiles(unittest.TestCase):
                 for i, block in enumerate(ofile.load()):
                     corr = np.array(correct_data[i]['order'])
                     data = block['data']
-                    self.assertTrue(np.allclose(data[:, 1], corr[:, 0]))
-                    self.assertTrue(np.allclose(data[:, 2], corr[:, 1]))
-                    self.assertTrue(np.allclose(data[:, 3], corr[:, 2]))
+                    assert np.allclose(data[:, 1], corr[:, 0])
+                    assert np.allclose(data[:, 2], corr[:, 1])
+                    assert np.allclose(data[:, 3], corr[:, 2])
 
-    def test_path_int_file(self):
+    def test_path_int_file(self, caplog):
         """Test the internal path writer."""
         paths, _ = create_test_paths(npath=3)
         with tempfile.NamedTemporaryFile() as tmp:
@@ -557,10 +550,9 @@ class TestPathFiles(unittest.TestCase):
             tmp.flush()
             with PathIntFile(tmp.name, 'r') as pfile:
                 for i, block in enumerate(pfile.load()):
-                    self.assertEqual(f'# Cycle: {i}, status: ACC',
-                                     block['comment'][0])
+                    assert f'# Cycle: {i}, status: ACC' == block['comment'][0]
 
-    def test_path_ext_file(self):
+    def test_path_ext_file(self, caplog):
         """Test the external path writer."""
         with tempfile.NamedTemporaryFile() as tmp:
             for i in range(3):
@@ -570,11 +562,10 @@ class TestPathFiles(unittest.TestCase):
             tmp.flush()
             with PathExtFile(tmp.name, 'r') as pfile:
                 for i, block in enumerate(pfile.load()):
-                    self.assertEqual(f'# Cycle: {i}, status: ACC',
-                                     block['comment'][0])
+                    assert f'# Cycle: {i}, status: ACC' == block['comment'][0]
 
 
-class TestPathEnsembleFile(unittest.TestCase):
+class TestPathEnsembleFile:
     """Test the i/o for the PathEnsembleFile."""
 
     @staticmethod
@@ -610,7 +601,7 @@ class TestPathEnsembleFile(unittest.TestCase):
             path.phasepoints[idx].order[0] = path_dict[key][0]
         return path
 
-    def test_path_ensemble_write(self):
+    def test_path_ensemble_write(self, caplog):
         """Test writing of path ensemble data."""
         filename = os.path.join(HERE, 'pathensemble001.txt')
         settings = {
@@ -629,35 +620,37 @@ class TestPathEnsembleFile(unittest.TestCase):
                                       cycle=pathi['cycle'])
                     pfile.output(pathi['cycle'], ens)
             tmp.flush()
-            self.assertTrue(filecmp.cmp(tmp.name, filename))
+            assert filecmp.cmp(tmp.name, filename)
         # Test warning when ensemble settings are not given:
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.formats.pathensemble',
-                                 level='WARNING'):
+            with caplog.at_level(
+                    logging.WARNING,
+                    logger='pyretis.inout.formats.pathensemble'):
                 with PathEnsembleFile(filename, 'r') as pfile:
                     pass
         # Test open missing file:
         with PathEnsembleFile('path_mack_path/file__', 'r',
                               ensemble_settings=settings) as pfile:
             with turn_on_logging():
-                with self.assertLogs('pyretis.inout.formats.pathensemble',
-                                     level='CRITICAL'):
+                with caplog.at_level(
+                        logging.CRITICAL,
+                        logger='pyretis.inout.formats.pathensemble'):
                     for _ in pfile.load():
                         pass
 
 
-class TestSnapshot(unittest.TestCase):
+class TestSnapshot:
     """Test methods related to the snapshot files."""
 
-    def test_initiate_settings(self):
+    def test_initiate_settings(self, caplog):
         """Test initiation of the snapshot file with settings."""
         settings = {'write_vel': False, 'extra-to-ignore': False}
         with tempfile.NamedTemporaryFile() as tmp:
             with SnapshotFile(tmp.name, 'r',
                               format_settings=settings) as sfile:
-                self.assertFalse(sfile.formatter.write_vel)
+                assert not sfile.formatter.write_vel
 
-    def test_read_txt_snapshot(self):
+    def test_read_txt_snapshot(self, caplog):
         """Test the read_txt_snapshot method."""
         filename = os.path.join(HERE, 'config.txt')
         read1 = read_txt_snapshots(filename)
@@ -675,28 +668,24 @@ class TestSnapshot(unittest.TestCase):
             'vz': [[6.0, 3.0], [6.1, 3.1]],
         }
         for i, (snap1, snap2) in enumerate(zip(read1, read2)):
-            self.assertTrue(snap1['atomname'] == correct['atomname'][i])
-            self.assertTrue(snap2['name'] == correct['atomname'][i])
+            assert snap1['atomname'] == correct['atomname'][i]
+            assert snap2['name'] == correct['atomname'][i]
             for j in ('x', 'y', 'z', 'box'):
-                self.assertTrue(np.allclose(snap1[j], correct[j][i]))
-                self.assertTrue(np.allclose(snap2[j], correct[j][i]))
+                assert np.allclose(snap1[j], correct[j][i])
+                assert np.allclose(snap2[j], correct[j][i])
             for j in ('vx', 'vy', 'vz'):
-                self.assertTrue(np.allclose(snap1[j], correct[j][i]))
-                self.assertFalse(j in snap2)
+                assert np.allclose(snap1[j], correct[j][i])
+                assert j not in snap2
         filename = os.path.join(HERE, 'config_with_error.txt')
         read3 = read_txt_snapshots(filename)
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             for i in read3:
                 print(i)
-        self.assertTrue('Oops_not_an_integer' in str(context.exception))
-        self.assertTrue('invalid literal for int()' in str(context.exception))
+        assert 'Oops_not_an_integer' in str(context.value)
+        assert 'invalid literal for int()' in str(context.value)
         # Also test the file writer:
         filename = os.path.join(HERE, 'config.txt')
         with SnapshotFile(filename, 'r') as traj:
             for i, data in enumerate(traj.load()):
                 for j in ('x', 'y', 'z', 'box'):
-                    self.assertTrue(np.allclose(data[j], correct[j][i]))
-
-
-if __name__ == '__main__':
-    unittest.main()
+                    assert np.allclose(data[j], correct[j][i])

@@ -72,7 +72,8 @@ class GromacsEngine(ExternalMDEngine):
                  maxwarn=0, gmx_format='gro',
                  write_vel=True,
                  write_force=False,
-                 domain_decomp=False):
+                 domain_decomp=False,
+                 conf=None, template='grompp.mdp', top='topol.top'):
         """Set up the GROMACS engine.
 
         Parameters
@@ -100,6 +101,12 @@ class GromacsEngine(ExternalMDEngine):
         domain_decomp: boolean, optional
             Whether domain decomposition (DD) is executed by GROMACS or not.
             User should know if this happens or not.
+        conf : string, optional
+            The default configuration file (e.g. 'conf.gro').
+        template : string, optional
+            The GROMACS mdp template (default is 'grompp.mdp').
+        top : string, optional
+            The GROMACS topology file (default is 'topol.top').
         """
         super().__init__('GROMACS engine', timestep, subcycles)
         self.ext = gmx_format
@@ -122,26 +129,32 @@ class GromacsEngine(ExternalMDEngine):
         self.energy_terms = self.select_energy_terms('path')
         self.input_path = os.path.join(exe_path, input_path)
         # Set the defaults input files:
+        if conf is None:
+            conf = f'conf.{self.ext}'
         default_files = {
-            'conf': f'conf.{self.ext}',
-            'input_o': 'grompp.mdp',  # "o" = original input file.
-            'topology': 'topol.top'}
+            'conf': conf,
+            'input_o': template,  # "o" = original input file.
+            'topology': top}
         extra_files = {
             'index': 'index.ndx',
         }
 
         # An user doesn't need to have problems with g96 and mdtraj.
-        file_g = os.path.join(self.input_path, 'conf.')
+        file_g = os.path.join(self.input_path, os.path.splitext(conf)[0])
         if self.ext == 'gro':
-            self.top, _, _, _ = read_gromacs_gro_file(file_g+self.ext)
+            self.top, _, _, _ = read_gromacs_gro_file(
+                os.path.join(self.input_path, conf)
+            )
         elif self.ext == 'g96':
-            if not os.path.isfile(file_g+'gro'):
+            if not os.path.isfile(file_g+'.gro'):
                 cmd = [self.gmx, 'editconf',
-                       '-f', file_g+self.ext,
-                       '-o', file_g+'gro']
+                       '-f', os.path.join(self.input_path, conf),
+                       '-o', file_g+'.gro']
                 self.execute_command(cmd, cwd=None)
 
-            self.top, _, _, _ = read_gromos96_file(file_g+self.ext)
+            self.top, _, _, _ = read_gromos96_file(
+                os.path.join(self.input_path, conf)
+            )
             self.top['VELOCITY'] = self.top['POSITION'].copy()
 
         # Check the presence of the defaults input files or, if absent,

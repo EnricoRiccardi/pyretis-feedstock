@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# Copyright (c) 2026, PyRETIS Development Team.
+# Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Run linting for a set of source files.
 
 Here, we will also give some over-all evaluation of the results.
@@ -16,7 +19,7 @@ from pathlib import Path
 from pylint import lint
 from pylint.reporters.text import TextReporter
 
-SCORE_THRESHOLD = 6.7
+SCORE_THRESHOLD = 9.0
 
 
 def look_for_source_files(rootdir, skip=None):
@@ -33,11 +36,9 @@ def look_for_source_files(rootdir, skip=None):
 
 def lint_file(filename, reg_score, reg_warning, reg_error, white_list=None):
     """Run linting for a single file."""
-    if white_list is None:
-        cmd = str(Path(filename))
-    else:
-        cmd = [str(Path(filename)),
-               f"--ignored-modules={','.join(white_list)}"]
+    cmd = [str(Path(filename))]
+    if white_list is not None:
+        cmd.append(f"--ignored-modules={','.join(white_list)}")
 
     buf = io.StringIO()
 

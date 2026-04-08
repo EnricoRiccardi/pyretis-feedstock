@@ -85,7 +85,7 @@ the :ref:`example section <examples-index>`.
 
          :header:`RETIS`
 
-         This example show how we can run a Replica Exchange
+         This example shows how we can run a Replica Exchange
          Transition Interface Sampling calculation and obtain
          a crossing probability and a rate constant.
          Here, we consider a 1D potential in which a single particle
@@ -232,7 +232,7 @@ the :ref:`example section <examples-index>`.
          In this example, we show the usage of |pyvisa|. First, the optional
          requisite, PyQt5, is installed to enable |pyvisa| GUI. 
          The compressor tool, and the visualization tool usage is then
-         demostrated. A few sample pictures are reported.
+         demonstrated. A few sample pictures are reported.
 
    .. container:: col-lg-3 col-md-3 col-sm-3 col-xs-6 thumbnail thumbnail2
 
@@ -246,7 +246,7 @@ the :ref:`example section <examples-index>`.
          :header:`Post processing using PyVisA`
 
          In this example, we show the usage of the features for post 
-         processing availeable in |pyvisa|. Here we will use the
+         processing available in |pyvisa|. Here we will use the
          methane hydrate system from the "Using GROMACS" example,
          where we will add two new collective variables and perform
          PCA and clustering.

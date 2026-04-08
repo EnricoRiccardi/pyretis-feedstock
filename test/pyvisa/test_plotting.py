@@ -4,7 +4,7 @@
 """Test the common methods in pyretis.pyvisa.plotting."""
 import os
 import logging
-import unittest
+import pytest
 import numpy as np
 from matplotlib import pyplot
 from matplotlib.lines import Line2D
@@ -20,7 +20,7 @@ logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods:
     """Test some of the methods from pyretis.pyvisa.plotting."""
 
     def test_plot_regline(self):
@@ -35,7 +35,7 @@ class TestMethods(unittest.TestCase):
         regline = plot_regline(ax, x, y)
         # Loop over y-values and compare
         for i, j in zip(regline[0].get_ydata(), line.get_ydata()):
-            self.assertEqual(i, j)
+            assert i == j
 
     def test_plot_int_plane(self):
         """Test if we can make an interface plane in 3d plot"""
@@ -99,8 +99,4 @@ class TestMethods(unittest.TestCase):
 
         mins = _grid_it_up([x, y, z], res_x=20, res_y=20, fill='max')
         maxs = _grid_it_up([x, y, z], res_x=20, res_y=20, fill='min')
-        self.assertFalse(np.equal(mins, maxs).all())
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert not np.allclose(mins, maxs)

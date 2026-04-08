@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the trajectory writers."""
 import logging
-import unittest
+import pytest
 import tempfile
 import os
 import numpy as np
@@ -62,7 +62,7 @@ def create_path():
     return phasepoints, path
 
 
-class TrajTest(unittest.TestCase):
+class TestTraj:
     """Test trajectory writing work as intended."""
 
     def test_txt_writer(self):
@@ -73,7 +73,7 @@ class TrajTest(unittest.TestCase):
         correct = os.path.join(HERE, 'generated.txt')
         with open(correct, 'r', encoding='utf-8') as fileh:
             for lines1, lines2 in zip(fileh, snapshot):
-                self.assertEqual(lines1.rstrip(), lines2.rstrip())
+                assert lines1.rstrip() == lines2.rstrip()
 
     def test_traj_writer_novel(self):
         """Test the SnapShotFormatter class when we exclude velocities."""
@@ -88,11 +88,11 @@ class TrajTest(unittest.TestCase):
             del writer
             reader = SnapshotFile(tmp.name, 'r')
             for block, snapshot in zip(reader.load(), phasepoints):
-                self.assertTrue(np.allclose(block['box'], snapshot.box.length))
+                assert np.allclose(block['box'], snapshot.box.length)
                 xyz = np.transpose(np.vstack((block['x'],
                                               block['y'],
                                               block['z'])))
-                self.assertTrue(np.allclose(xyz, snapshot.particles.get_pos()))
+                assert np.allclose(xyz, snapshot.particles.get_pos())
 
     def test_traj_writer_vel(self):
         """Test the SnapshotFormatter class when we include velocities."""
@@ -107,15 +107,15 @@ class TrajTest(unittest.TestCase):
             del writer
             reader = SnapshotFile(tmp.name, 'r')
             for block, snapshot in zip(reader.load(), phasepoints):
-                self.assertTrue(np.allclose(block['box'], snapshot.box.length))
+                assert np.allclose(block['box'], snapshot.box.length)
                 xyz = np.transpose(np.vstack((block['x'],
                                               block['y'],
                                               block['z'])))
                 vel = np.transpose(np.vstack((block['vx'],
                                               block['vy'],
                                               block['vz'])))
-                self.assertTrue(np.allclose(xyz, snapshot.particles.get_pos()))
-                self.assertTrue(np.allclose(vel, snapshot.particles.get_vel()))
+                assert np.allclose(xyz, snapshot.particles.get_pos())
+                assert np.allclose(vel, snapshot.particles.get_vel())
 
     def test_path_int_writer(self):
         """Test the path internal writer."""
@@ -126,10 +126,10 @@ class TrajTest(unittest.TestCase):
         idx = 0
         for i, lines in enumerate(writer.format(0, (path, 'ACC'))):
             if i == 0:
-                self.assertEqual('# Cycle: 0, status: ACC', lines)
+                assert '# Cycle: 0, status: ACC', lines
             else:
                 if lines.startswith('Snapshot'):
-                    self.assertEqual(f'Snapshot: {idxs}', lines)
+                    assert f'Snapshot: {idxs}' == lines
                     idxs += 1
                     idx = 0
                 else:
@@ -137,7 +137,7 @@ class TrajTest(unittest.TestCase):
                         *phasepoints[idxs - 1].particles.get_pos()[idx],
                         *phasepoints[idxs - 1].particles.get_vel()[idx]
                     )
-                    self.assertEqual(lines, posvel)
+                    assert lines == posvel
                     idx += 1
 
     def test_pathint_read_write(self):
@@ -157,26 +157,22 @@ class TrajTest(unittest.TestCase):
             for status, path, phasepoints in zip(statuses,
                                                  reader.load(),
                                                  path_phasepoints):
-                self.assertEqual(status, path['comment'][0].split()[-1])
+                assert status == path['comment'][0].split()[-1]
                 for snapshot, phasepoint in zip(path['data'], phasepoints):
                     particles = phasepoint.particles
-                    self.assertTrue(
-                        np.allclose(snapshot['pos'], particles.get_pos())
-                    )
-                    self.assertTrue(
-                        np.allclose(snapshot['vel'], particles.get_vel())
-                    )
+                    assert np.allclose(snapshot['pos'], particles.get_pos())
+                    assert np.allclose(snapshot['vel'], particles.get_vel())
 
     def test_pathint_read_error(self):
         """Test what happens in we read faulty input with PathIntFile."""
         filename = os.path.join(HERE, 'traj-error1.txt')
         reader = PathIntFile(filename, 'r').load()
         next(reader)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             next(reader)
         filename = os.path.join(HERE, 'traj-error2.txt')
         reader = PathIntFile(filename, 'r').load()
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             next(reader)
 
     def test_path_ext_writer(self):
@@ -185,7 +181,7 @@ class TrajTest(unittest.TestCase):
         writer = PathExtFormatter()
         for corr, snap in zip(CORRECT_PATH_EXT,
                               writer.format(0, (path, 'ACC'))):
-            self.assertEqual(corr, snap)
+            assert corr == snap
 
     def test_path_ext_read_write(self):
         """Test the read/write for the PathExtFormatter."""
@@ -204,16 +200,16 @@ class TrajTest(unittest.TestCase):
             reader = PathExtFile(tmp.name, 'r')
             for status, path, data in zip(statuses, reader.load(),
                                           all_path_data):
-                self.assertEqual(status, path['comment'][0].split()[-1])
+                assert status == path['comment'][0].split()[-1]
                 for snapshot, datai in zip(path['data'], data):
-                    self.assertEqual(int(snapshot[0]), datai[0])
-                    self.assertEqual(snapshot[1], datai[1])
+                    assert int(snapshot[0]) == datai[0]
+                    assert snapshot[1] == datai[1]
                     if datai[2] is None:
-                        self.assertEqual(int(snapshot[2]), 0)
+                        assert int(snapshot[2]) == 0
                     else:
-                        self.assertEqual(int(snapshot[2]), datai[2])
+                        assert int(snapshot[2]) == datai[2]
                     vel = snapshot[3] == '-1'
-                    self.assertEqual(vel, datai[3])
+                    assert vel == datai[3]
 
     def test_path_eq_none(self):
         """
@@ -223,10 +219,6 @@ class TrajTest(unittest.TestCase):
         This is tested here.
         """
         writer = PathExtFormatter()
-        self.assertEqual(list(writer.format(4, (None, 'ACC'))), [])
+        assert list(writer.format(4, (None, 'ACC'))) == []
         writer = PathIntFormatter()
-        self.assertEqual(list(writer.format(13, (None, 'ACC'))), [])
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert list(writer.format(13, (None, 'ACC'))) == []

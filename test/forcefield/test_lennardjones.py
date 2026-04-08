@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test of the Lennard-Jones pair potential."""
 import logging
-import unittest
+import pytest
 import numpy as np
 from pyretis.core.box import create_box
 from pyretis.core.particles import Particles
@@ -47,7 +47,7 @@ def create_system_box(use_numpy=False):
     return system, box, pot
 
 
-class TestLennardJonesCutPairPotential(unittest.TestCase):
+class TestLennardJonesCutPairPotential:
     """Run tests for the Lennard-Jones pair potential."""
 
     def test_parameters(self):
@@ -67,59 +67,55 @@ class TestLennardJonesCutPairPotential(unittest.TestCase):
         correct_pair[(1, 0)] = correct_pair[(0, 1)]
         for key, val in correct_pair.items():
             for key2, val2 in val.items():
-                self.assertAlmostEqual(val2, pot.params[key][key2])
+                assert val2 == pytest.approx(pot.params[key][key2])
         parameters = {
             0: {'sigma': 1, 'epsilon': 1, 'factor': 0.0},
         }
         pot.set_parameters(parameters)
-        self.assertAlmostEqual(pot.params[(0, 0)]['rcut'], 0.0)
+        assert pot.params[(0, 0)]['rcut'] == pytest.approx(0.0)
 
     def test_potential(self):
         """Test evaluation of the Lennard-Jones potential."""
         system, _, pot = create_system_box()
         vpot = pot.potential(system)
-        self.assertAlmostEqual(vpot, CORRECT_VPOT)
+        assert vpot == pytest.approx(CORRECT_VPOT)
 
     def test_force(self):
         """Test evaluation of the Lennard-Jones force."""
         system, _, pot = create_system_box()
         force, virial = pot.force(system)
-        self.assertTrue(np.allclose(force, CORRECT_FORCE))
-        self.assertTrue(np.allclose(virial, CORRECT_VIRIAL))
+        assert np.allclose(force, CORRECT_FORCE)
+        assert np.allclose(virial, CORRECT_VIRIAL)
 
     def test_potential_and_force(self):
         """Test evaluate of Lennard-Jones potential and force."""
         system, _, pot = create_system_box()
         vpot, force, virial = pot.potential_and_force(system)
-        self.assertTrue(np.allclose(force, CORRECT_FORCE))
-        self.assertTrue(np.allclose(virial, CORRECT_VIRIAL))
-        self.assertAlmostEqual(vpot, CORRECT_VPOT)
+        assert np.allclose(force, CORRECT_FORCE)
+        assert np.allclose(virial, CORRECT_VIRIAL)
+        assert vpot == pytest.approx(CORRECT_VPOT)
 
 
-class TestLennardJonesCutPairPotentialnp(unittest.TestCase):
+class TestLennardJonesCutPairPotentialnp:
     """Run tests for the Lennard-Jones pair potential (numpy)."""
 
     def test_potential(self):
         """Test evaluation of the Lennard-Jones potential (numpy)."""
         system, _, pot = create_system_box(use_numpy=True)
         vpot = pot.potential(system)
-        self.assertAlmostEqual(vpot, CORRECT_VPOT)
+        assert vpot == pytest.approx(CORRECT_VPOT)
 
     def test_force(self):
         """Test evaluation of the Lennard-Jones force (numpy)."""
         system, _, pot = create_system_box(use_numpy=True)
         force, virial = pot.force(system)
-        self.assertTrue(np.allclose(force, CORRECT_FORCE))
-        self.assertTrue(np.allclose(virial, CORRECT_VIRIAL))
+        assert np.allclose(force, CORRECT_FORCE)
+        assert np.allclose(virial, CORRECT_VIRIAL)
 
     def test_potential_and_force(self):
         """Test evaluate of Lennard-Jones potential and force (numpy)."""
         system, _, pot = create_system_box(use_numpy=True)
         vpot, force, virial = pot.potential_and_force(system)
-        self.assertTrue(np.allclose(force, CORRECT_FORCE))
-        self.assertTrue(np.allclose(virial, CORRECT_VIRIAL))
-        self.assertAlmostEqual(vpot, CORRECT_VPOT)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert np.allclose(force, CORRECT_FORCE)
+        assert np.allclose(virial, CORRECT_VIRIAL)
+        assert vpot == pytest.approx(CORRECT_VPOT)

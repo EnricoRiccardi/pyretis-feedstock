@@ -103,10 +103,10 @@ class PairLennardJonesCutF(PairLennardJonesCut):
         self.params = {}
         pair_param = generate_pair_interactions(parameters, self.mixing)
         self.ntype = max(int(np.sqrt(len(pair_param))), 2)
-        self._lj = {'1': np.zeros((self.ntype, self.ntype)),
-                    '2': np.zeros((self.ntype, self.ntype)),
-                    '3': np.zeros((self.ntype, self.ntype)),
-                    '4': np.zeros((self.ntype, self.ntype))}
+        self._lj = {1: np.zeros((self.ntype, self.ntype)),
+                    2: np.zeros((self.ntype, self.ntype)),
+                    3: np.zeros((self.ntype, self.ntype)),
+                    4: np.zeros((self.ntype, self.ntype))}
         self._rcut2 = np.zeros_like(self._lj[1])
         self._offset = np.zeros_like(self._lj[1])
         for pair, value in pair_param.items():
@@ -213,7 +213,10 @@ class PairLennardJonesCutF(PairLennardJonesCut):
         forces, virial, vpot = ljfortran.potential_and_force(particles.pos,
                                                              box.length,
                                                              box.ilength,
-                                                             self._lj,
+                                                             self._lj[1],
+                                                             self._lj[2],
+                                                             self._lj[3],
+                                                             self._lj[4],
                                                              self._offset,
                                                              self._rcut2,
                                                              particles.ptype,

@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the engine classes."""
 import logging
-import unittest
+import pytest
 import copy
 from io import StringIO
 from unittest.mock import patch
@@ -115,7 +115,7 @@ def prepare_test_system():
     return system
 
 
-class EngineTest(unittest.TestCase):
+class TestEngine:
     """Run the tests for the different Engines."""
 
     def test_restart_internal_engine_langevin(self):
@@ -124,21 +124,23 @@ class EngineTest(unittest.TestCase):
                   prepare_test_system(),
                   prepare_test_system()]
 
-        eng = [Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False),
-               Langevin(0.002, 0.3, rgen='mock', seed=16, high_friction=False),
-               Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False)]
+        eng = [
+            Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False),
+            Langevin(0.002, 0.3, rgen='mock', seed=16, high_friction=False),
+            Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False)
+            ]
 
         for _ in range(5):
             eng[0].integration_step(system[0])
             eng[1].integration_step(system[1])
-            self.assertFalse(np.allclose(system[0].particles.pos,
-                                         system[1].particles.pos))
+            assert not np.allclose(system[0].particles.pos,
+                                   system[1].particles.pos)
 
         for _ in range(16):
             eng[1].integration_step(system[1])
             eng[2].integration_step(system[2])
-            self.assertFalse(np.allclose(system[1].particles.pos,
-                                         system[2].particles.pos))
+            assert not np.allclose(system[1].particles.pos,
+                                   system[2].particles.pos)
 
         sav_en = copy.deepcopy(eng[0].restart_info())
         eng[1].load_restart_info(sav_en)
@@ -149,14 +151,14 @@ class EngineTest(unittest.TestCase):
         for _ in range(11):
             eng[1].integration_step(system[1])
 
-        self.assertTrue(np.allclose(system[1].particles.pos,
-                                    system[2].particles.pos))
-        self.assertTrue(np.allclose(system[1].particles.vel,
-                                    system[2].particles.vel))
-        self.assertFalse(np.allclose(system[0].particles.pos,
-                                     system[2].particles.pos))
-        self.assertFalse(np.allclose(system[0].particles.vel,
-                                     system[2].particles.vel))
+        assert np.allclose(system[1].particles.pos,
+                           system[2].particles.pos)
+        assert np.allclose(system[1].particles.vel,
+                           system[2].particles.vel)
+        assert not np.allclose(system[0].particles.pos,
+                               system[2].particles.pos)
+        assert not np.allclose(system[0].particles.vel,
+                               system[2].particles.vel)
 
     def test_restart_internal_engine_velocity_verlet(self):
         """Run test to check generic restart info."""
@@ -176,8 +178,8 @@ class EngineTest(unittest.TestCase):
         for _ in range(16):
             eng[1].integration_step(system[1])
             eng[2].integration_step(system[2])
-            self.assertFalse(np.allclose(system[1].particles.pos,
-                                         system[2].particles.pos))
+            assert not np.allclose(system[1].particles.pos,
+                                   system[2].particles.pos)
 
         sav_sys = copy.deepcopy(system[0].restart_info())
         system[1].load_restart_info(sav_sys)
@@ -185,14 +187,14 @@ class EngineTest(unittest.TestCase):
         for _ in range(11):
             eng[1].integration_step(system[1])
 
-        self.assertTrue(np.allclose(system[1].particles.pos,
-                                    system[2].particles.pos))
-        self.assertTrue(np.allclose(system[1].particles.vel,
-                                    system[2].particles.vel))
-        self.assertFalse(np.allclose(system[0].particles.pos,
-                                     system[2].particles.pos))
-        self.assertFalse(np.allclose(system[0].particles.vel,
-                                     system[2].particles.vel))
+        assert np.allclose(system[1].particles.pos,
+                           system[2].particles.pos)
+        assert np.allclose(system[1].particles.vel,
+                           system[2].particles.vel)
+        assert not np.allclose(system[0].particles.pos,
+                               system[2].particles.pos)
+        assert not np.allclose(system[0].particles.vel,
+                               system[2].particles.vel)
 
     def test_retarts_internal(self):
         """Check all internal engine restarts."""
@@ -211,9 +213,9 @@ class EngineTest(unittest.TestCase):
                 ergen = reference.rgen.get_state()
                 rrgen = engine.rgen.get_state()
                 # todo __eq__ method for rgen should be improved?
-                self.assertTrue(big_fat_comparer(ergen, rrgen, hard=True))
+                assert big_fat_comparer(ergen, rrgen, hard=True)
                 reference.rgen = engine.rgen
-            self.assertTrue(engine == reference)
+            assert engine == reference
 
     def test_restart_internal_engine_verlet(self):
         """Run test to check verlet error in restart."""
@@ -235,8 +237,8 @@ class EngineTest(unittest.TestCase):
         for _ in range(16):
             eng[1].integration_step(system[1])
             eng[2].integration_step(system[2])
-            self.assertFalse(np.allclose(system[1].particles.pos,
-                                         system[2].particles.pos))
+            assert not np.allclose(system[1].particles.pos,
+                                   system[2].particles.pos)
 
         sav_sys = copy.deepcopy(system[0].restart_info())
         system[1].load_restart_info(sav_sys)
@@ -245,39 +247,38 @@ class EngineTest(unittest.TestCase):
         for _ in range(10):
             eng[1].integration_step(system[1])
 
-        self.assertFalse(np.allclose(system[1].particles.pos,
-                                     system[2].particles.pos))
-        self.assertFalse(np.allclose(system[1].particles.vel,
-                                     system[2].particles.vel))
-        self.assertFalse(np.allclose(system[0].particles.pos,
-                                     system[2].particles.pos))
-        self.assertFalse(np.allclose(system[0].particles.vel,
-                                     system[2].particles.vel))
+        assert not np.allclose(system[1].particles.pos,
+                               system[2].particles.pos)
+        assert not np.allclose(system[1].particles.vel,
+                               system[2].particles.vel)
+        assert not np.allclose(system[0].particles.pos,
+                               system[2].particles.pos)
+        assert not np.allclose(system[0].particles.vel,
+                               system[2].particles.vel)
 
     def test_invert_dt(self):
         """Test that we can invert time."""
         eng = MDEngine(1, description='Mock engine for testing')
         invert = eng.invert_dt()
-        self.assertFalse(invert)
-        self.assertAlmostEqual(eng.timestep, -1)
+        assert not invert
+        assert eng.timestep == pytest.approx(-1)
         invert = eng.invert_dt()
-        self.assertTrue(invert)
-        self.assertAlmostEqual(eng.timestep, 1)
+        assert invert
+        assert eng.timestep == pytest.approx(1)
 
     def test_thermo(self):
         """Test that we can select the thermo function."""
         eng = MDEngine(1, description='Mock engine for testing')
         thermo = eng.select_thermo_function(thermo='full')
-        self.assertEqual(thermo.__code__.co_code,
-                         calculate_thermo.__code__.co_code)
+        assert thermo.__code__.co_code == calculate_thermo.__code__.co_code
         thermo = eng.select_thermo_function(thermo='path')
-        self.assertEqual(thermo.__code__.co_code,
-                         calculate_thermo_path.__code__.co_code)
+        assert (thermo.__code__.co_code ==
+                calculate_thermo_path.__code__.co_code)
         thermo = eng.select_thermo_function(thermo='gibberish')
-        self.assertEqual(thermo.__code__.co_code,
-                         calculate_thermo_path.__code__.co_code)
+        assert (thermo.__code__.co_code ==
+                calculate_thermo_path.__code__.co_code)
         thermo = eng.select_thermo_function(thermo=None)
-        self.assertIsNone(thermo)
+        assert thermo is None
 
     def test_calculate_order(self):
         """Test that we can calculate the order parameter."""
@@ -288,14 +289,14 @@ class EngineTest(unittest.TestCase):
         order_function = PositionVelocity(0, dim='x', periodic=False)
         ensemble = {'system': system, 'order_function': order_function}
         order = eng.calculate_order(ensemble)
-        self.assertAlmostEqual(order[0], system.particles.pos[0])
-        self.assertAlmostEqual(order[1], system.particles.vel[0])
+        assert order[0] == pytest.approx(system.particles.pos[0])
+        assert order[1] == pytest.approx(system.particles.vel[0])
         pos = np.array([[1.0], ])
         vel = np.array([[-1.0], ])
         box = [100.0]
         order = eng.calculate_order(ensemble, xyz=pos, vel=vel, box=box)
-        self.assertTrue(np.allclose(order, [1.0, -1.0]))
-        self.assertTrue(np.allclose(system.box.cell, box))
+        assert np.allclose(order, [1.0, -1.0])
+        assert np.allclose(system.box.cell, box)
 
     def test_modify_velocities(self):
         """Test that the engine can modify velocities."""
@@ -305,16 +306,15 @@ class EngineTest(unittest.TestCase):
         ensemble = {'system': system, 'rgen': rgen}
         eng.modify_velocities(ensemble, {'aimless': True,
                                          'momentum': False})
-        self.assertAlmostEqual(system.particles.vel[0][0], rgen.rgen[1])
+        assert system.particles.vel[0][0] == pytest.approx(rgen.rgen[1])
         deltav = np.ones_like(system.particles.vel)
         eng.modify_velocities(ensemble, {'sigma_v': deltav,
                                          'aimless': False,
                                          'momentum': False})
-        self.assertAlmostEqual(system.particles.vel[0][0],
-                               rgen.rgen[1] + rgen.rgen[2])
+        assert system.particles.vel[0][0] == rgen.rgen[1] + rgen.rgen[2]
         eng.modify_velocities(ensemble, {'aimless': True,
                                          'momentum': True})
-        self.assertAlmostEqual(system.particles.vel[0][0], 0.0)
+        assert system.particles.vel[0][0] == pytest.approx(0.0)
 
         system.particles.pos = np.ones_like(system.particles.pos)
         system.particles.vpot = system.potential()
@@ -322,14 +322,14 @@ class EngineTest(unittest.TestCase):
                                              {'aimless': True,
                                               'momentum': False,
                                               'rescale': 6})
-        self.assertAlmostEqual(6, kin_new + system.particles.vpot)
+        assert 6 == pytest.approx(kin_new + system.particles.vpot)
         kin_old = kin_new
         dek, kin_new2 = eng.modify_velocities(ensemble,
                                               {'aimless': True,
                                                'momentum': False,
                                                'rescale': -1})
-        self.assertAlmostEqual(kin_old, kin_new2)
-        self.assertAlmostEqual(dek, 0.0)
+        assert kin_old == pytest.approx(kin_new2)
+        assert dek == pytest.approx(0.0)
 
     def test_langevin_inertia(self):
         """Test the Langevin engine.
@@ -344,17 +344,15 @@ class EngineTest(unittest.TestCase):
         eng = Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False)
 
         for i in range(51):
-            self.assertTrue(np.allclose(system.particles.pos,
-                                        TISMOL_POS[i]))
-            self.assertTrue(np.allclose(system.particles.vel,
-                                        TISMOL_VEL[i]))
+            assert np.allclose(system.particles.pos, TISMOL_POS[i])
+            assert np.allclose(system.particles.vel, TISMOL_VEL[i])
             eng.integration_step(system)
 
     def test_langevin_negative_gamma(self):
         """Test that we fail for a negative gamma value."""
         system = prepare_test_system()
         eng = Langevin(0.002, -0.3, rgen='mock', seed=1, high_friction=False)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             eng._init_parameters(system)  # pylint: disable=protected-access
 
     def test_langevin_hf(self):
@@ -362,10 +360,8 @@ class EngineTest(unittest.TestCase):
         system = prepare_test_system()
         eng = Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=True)
         for i in range(51):
-            self.assertTrue(np.allclose(system.particles.pos,
-                                        TISMOL_POS_HF[i]))
-            self.assertTrue(np.allclose(system.particles.vel,
-                                        TISMOL_VEL_HF[i]))
+            assert np.allclose(system.particles.pos, TISMOL_POS_HF[i])
+            assert np.allclose(system.particles.vel, TISMOL_VEL_HF[i])
             eng.integration_step(system)
 
     def test_velocityverlet(self):
@@ -373,10 +369,8 @@ class EngineTest(unittest.TestCase):
         system = prepare_test_system()
         eng = VelocityVerlet(0.002)
         for i in range(21):
-            self.assertTrue(np.allclose(system.particles.pos,
-                                        TISMOL_POS_VV[i]))
-            self.assertTrue(np.allclose(system.particles.vel,
-                                        TISMOL_VEL_VV[i]))
+            assert np.allclose(system.particles.pos, TISMOL_POS_VV[i])
+            assert np.allclose(system.particles.vel, TISMOL_VEL_VV[i])
             eng.integration_step(system)
 
     def test_velocityverlet2(self):
@@ -384,23 +378,23 @@ class EngineTest(unittest.TestCase):
         system = prepare_test_system()
         eng = VelocityVerlet(0.002)
         eng(system)
-        self.assertTrue(np.allclose(system.particles.pos, TISMOL_POS_VV[1]))
-        self.assertTrue(np.allclose(system.particles.vel, TISMOL_VEL_VV[1]))
+        assert np.allclose(system.particles.pos, TISMOL_POS_VV[1])
+        assert np.allclose(system.particles.vel, TISMOL_VEL_VV[1])
 
     def test_verlet(self):
         """Test the Verlet engine."""
         system = prepare_test_system()
         eng = Verlet(0.002)
         eng.set_initial_positions(system.particles)
-        self.assertAlmostEqual(eng.previous_pos[0][0], -1.00156016)
+        assert eng.previous_pos[0][0] == pytest.approx(-1.00156016)
         correct_pos = np.array([-0.99843984, -0.99687973, -0.99531972,
                                 -0.99375986, -0.99220019])
         correct_vel = np.array([0.78008018, 0.78006773, 0.78003043,
                                 0.77996841, 0.77988177])
         for i in range(5):
             eng.integration_step(system)
-            self.assertAlmostEqual(system.particles.pos[0][0], correct_pos[i])
-            self.assertAlmostEqual(system.particles.vel[0][0], correct_vel[i])
+            assert system.particles.pos[0][0] == pytest.approx(correct_pos[i])
+            assert system.particles.vel[0][0] == pytest.approx(correct_vel[i])
 
     def test_add_to_path(self):
         """Test that we can add to paths from the engine."""
@@ -417,36 +411,36 @@ class EngineTest(unittest.TestCase):
             phasepoint = eng.snapshot_to_system(system, snapshot)
             status, success, stop, add = eng.add_to_path(path, phasepoint,
                                                          left, right)
-            self.assertEqual(status, 'Running propagate...')
-            self.assertFalse(success)
-            self.assertFalse(stop)
-            self.assertTrue(add)
+            assert status == 'Running propagate...'
+            assert not success
+            assert not stop
+            assert add
         snapshot = {'order': [10.], 'pos': np.ones(3),
                     'vel': np.ones(3), 'vpot': 0.0, 'ekin': 0.0}
         phasepoint = eng.snapshot_to_system(system, snapshot)
         status, success, stop, add = eng.add_to_path(path, phasepoint,
                                                      left, right)
-        self.assertEqual(status, 'Crossed right interface!')
-        self.assertTrue(success)
-        self.assertTrue(stop)
-        self.assertTrue(add)
+        assert status == 'Crossed right interface!'
+        assert success
+        assert stop
+        assert add
         snapshot = {'order': [9.], 'pos': np.ones(3),
                     'vel': np.ones(3), 'vpot': 0.0, 'ekin': 0.0}
         phasepoint = eng.snapshot_to_system(system, snapshot)
         status, success, stop, add = eng.add_to_path(path, phasepoint,
                                                      left, right)
-        self.assertEqual(status, 'Max. path length exceeded!')
-        self.assertFalse(success)
-        self.assertTrue(stop)
-        self.assertTrue(add)
+        assert status == 'Max. path length exceeded!'
+        assert not success
+        assert stop
+        assert add
         phasepoint = {'order': [9.], 'pos': np.ones(3),
                       'vel': np.ones(3), 'vpot': 0.0, 'ekin': 0.0}
         status, success, stop, add = eng.add_to_path(path, phasepoint,
                                                      left, right)
-        self.assertEqual(status, 'Max. path length exceeded!')
-        self.assertFalse(success)
-        self.assertTrue(stop)
-        self.assertFalse(add)
+        assert status == 'Max. path length exceeded!'
+        assert not success
+        assert stop
+        assert not add
 
     def test_eq_and_ne(self):
         """Test that engines can be compared."""
@@ -455,38 +449,34 @@ class EngineTest(unittest.TestCase):
         eng2 = VelocityVerlet(0.002)
 
         with patch('sys.stdout', new=StringIO()):
-            self.assertTrue(eng != eng1)
-            self.assertTrue(eng != eng2)
+            assert eng != eng1
+            assert eng != eng2
 
         eng = Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False)
         eng1 = Langevin(0.002, 0.3, rgen='rgen', seed=1, high_friction=False)
         eng2 = Langevin(0.002, 0.3)
         with patch('sys.stdout', new=StringIO()):
-            self.assertTrue(eng != eng1)
-            self.assertTrue(eng != eng2)
+            assert eng != eng1
+            assert eng != eng2
 
         eng = [VelocityVerlet(0.02),
                VelocityVerlet(0.02),
                VelocityVerlet(0.02),
                VelocityVerlet(0.01)]
 
-        self.assertTrue(eng[0] == eng[1])
-        self.assertTrue(eng[0] == eng[2])
+        assert eng[0] == eng[1]
+        assert eng[0] == eng[2]
         with patch('sys.stdout', new=StringIO()):
-            self.assertTrue(eng[0] != eng[3])
+            assert eng[0] != eng[3]
 
         eng = [Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False),
                Langevin(0.002, 0.3, rgen='mock', seed=16, high_friction=False),
                Langevin(0.002, 0.3, rgen='mock', seed=1, high_friction=False)]
 
-        self.assertTrue(eng[0] == eng[2])
+        assert eng[0] == eng[2]
         with patch('sys.stdout', new=StringIO()):
-            self.assertTrue(eng[0] != eng[1])
-            self.assertTrue(eng[0] != 'gino')
+            assert eng[0] != eng[1]
+            assert eng[0] != 'gino'
 
         eng[0].just = 'kidding'
-        self.assertTrue(eng[0] != eng[2])
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert eng[0] != eng[2]

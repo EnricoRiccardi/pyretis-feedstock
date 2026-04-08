@@ -26,5 +26,4 @@ class DistanceL(Distance):
 
     def __init__(self, idx1, idx2):
         """Set up the order parameter."""
-        self.index = (idx1, idx2)
-        self.periodic = True
+        super().__init__(index=(idx1, idx2), periodic=True)

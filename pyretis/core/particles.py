@@ -29,7 +29,7 @@ np.set_printoptions(legacy='1.21')
 __all__ = ['Particles', 'ParticlesExt']
 
 
-class Particles:
+class Particles:  # pylint: disable=too-many-instance-attributes
     """Base class for a collection of particles.
 
     This is a simple particle list. It stores the positions,
@@ -224,8 +224,7 @@ class Particles:
         """Return (a copy of) the forces."""
         return np.copy(self.force)
 
-    def add_particle(self, pos, vel, force, mass=1.0,
-                     name='?', ptype=0):
+    def add_particle(self, pos, vel, force, mass=1.0, name='?', ptype=0):
         """Add a particle to the system.
 
         Parameters
@@ -380,7 +379,7 @@ class Particles:
         self.vel = self.vel * -1
 
 
-class ParticlesExt(Particles):
+class ParticlesExt(Particles):  # pylint: disable=too-many-instance-attributes
     """A particle list, when positions and velocities are stored in files.
 
     Attributes
@@ -418,8 +417,7 @@ class ParticlesExt(Particles):
         self.config = (None, None)
         self.vel_rev = False
 
-    def add_particle(self, pos, vel, force, mass=1.0,
-                     name='?', ptype=0):
+    def add_particle(self, pos, vel, force, mass=1.0, name='?', ptype=0):
         """Add a particle to the system.
 
         Parameters
@@ -482,7 +480,7 @@ class ParticlesExt(Particles):
         """Just return the positions of the particles."""
         return self.config
 
-    def set_vel(self, rev_vel):
+    def set_vel(self, vel):
         """Set velocities for the particles.
 
         Here we store information which tells if the
@@ -490,12 +488,11 @@ class ParticlesExt(Particles):
 
         Parameters
         ----------
-        rev_vel : boolean
-            The velocities to set. If True, the velocities should
-            be reversed before used.
+        vel : boolean
+            If True, the velocities should be reversed before used.
 
         """
-        self.vel_rev = rev_vel
+        self.vel_rev = vel
 
     def get_vel(self):
         """Return info about the velocities."""
@@ -519,10 +516,10 @@ def get_particle_type(engine_type):
                     'external': ParticlesExt}
     try:
         return particle_map[engine_type]
-    except KeyError:
+    except KeyError as exc:
         msg = f'Unknown particle type "{engine_type}" requested.'
         logger.critical(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from exc
 
 
 def particles_from_restart(restart):

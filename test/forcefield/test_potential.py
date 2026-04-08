@@ -3,12 +3,12 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """A test for the potential base class."""
 import logging
-import unittest
+import pytest
 from pyretis.forcefield.potential import PotentialFunction
 logging.disable(logging.CRITICAL)
 
 
-class TestPotentialFunction(unittest.TestCase):
+class TestPotentialFunction:
     """Test the PotentialFunction class."""
 
     def test_potential_function(self):
@@ -16,8 +16,4 @@ class TestPotentialFunction(unittest.TestCase):
         pot = PotentialFunction()
         params = {'a': 10}
         pot.set_parameters(params)
-        self.assertFalse(pot.params)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert not pot.params

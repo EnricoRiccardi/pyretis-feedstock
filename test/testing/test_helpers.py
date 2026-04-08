@@ -5,13 +5,13 @@
 import os
 import pathlib
 import tempfile
-import unittest
+import pytest
 from pyretis.inout.common import make_dirs
 from pyretis.testing.helpers import search_for_files, clean_dir
 from pyretis.testing.systemhelp import create_system_ext
 
 
-class TestSearchForFiles(unittest.TestCase):
+class TestSearchForFiles:
     """Test that we can search for files."""
 
     def test_search(self):
@@ -35,18 +35,16 @@ class TestSearchForFiles(unittest.TestCase):
                 created_files.append(filename)
             # Test searching for all files:
             found_files = search_for_files(tempdir)
-            self.assertEqual(
-                sorted(found_files),
-                sorted([str(i) for i in created_files])
-            )
+            assert (sorted(found_files) ==
+                    sorted([str(i) for i in created_files]))
             # Test searching for a specific file name:
             found_files = search_for_files(tempdir, match='test4.txt')
-            self.assertEqual(len(found_files), 0)
+            assert len(found_files) == 0
             found_files = search_for_files(tempdir, match='test3.txt')
             created_files_match = [
                 str(i) for i in created_files if i.name == 'test3.txt'
             ]
-            self.assertEqual(sorted(found_files), sorted(created_files_match))
+            assert sorted(found_files) == sorted(created_files_match)
 
     def test_clean_dir(self):
         """Test the search for files method."""
@@ -58,14 +56,14 @@ class TestSearchForFiles(unittest.TestCase):
                 pathlib.Path(filename).touch()
                 created_files.append(filename)
             files = [i for i in os.scandir(tempdir) if i.is_file]
-            self.assertEqual(len(files), len(created_files))
+            assert len(files) == len(created_files)
             # Remove the files:
             clean_dir(tempdir)
             files = [i for i in os.scandir(tempdir) if i.is_file]
-            self.assertEqual(len(files), 0)
+            assert len(files) == 0
 
 
-class TestSystemHelp(unittest.TestCase):
+class TestSystemHelp:
     """Test the System helpers."""
 
     def test_create(self):
@@ -79,11 +77,7 @@ class TestSystemHelp(unittest.TestCase):
         for case in cases:
             system = create_system_ext(pos=case[0], vel=case[1])
             if case[0] is None:
-                self.assertEqual(system.particles.get_pos(), (None, None))
+                assert system.particles.get_pos() == (None, None)
             else:
-                self.assertEqual(system.particles.get_pos(), case[0])
-            self.assertEqual(system.particles.get_vel(), case[1])
-
-
-if __name__ == '__main__':
-    unittest.main()
+                assert system.particles.get_pos() == case[0]
+            assert system.particles.get_vel() == case[1]

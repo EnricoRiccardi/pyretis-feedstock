@@ -4,7 +4,6 @@
 """Test the PathStorage classes."""
 import logging
 import os
-import unittest
 import tempfile
 import tarfile
 import pathlib
@@ -66,53 +65,50 @@ def look_for_files_and_dirs(dirname):
     return files, dirs
 
 
-class TestArchiveMethods(unittest.TestCase):
+class TestArchiveMethods:
     """Test methods defined in the module."""
 
-    def test_add_to_tar(self):
+    def test_add_to_tar(self, caplog):
         """Test adding files."""
         with tempfile.TemporaryDirectory() as tempdir:
             tar_file = os.path.join(tempdir, 'test.tar')
             # Create some files to add:
             files = generate_file_names(0, 5, tempdir, ['aaa', 'bbb', 'ccc'])
             add = add_to_tar_file(tar_file, files, file_mode='w')
-            self.assertTrue(add)
+            assert add
             with tarfile.open(tar_file, 'r') as tar:
                 members = [i.name for i in tar.getmembers()]
-                self.assertEqual(len(members), len(files))
+                assert len(members) == len(files)
                 for _, i in files:
-                    self.assertIn(i, members)
+                    assert i in members
             # Append to the file:
             files2 = generate_file_names(5, 10, tempdir, ['123', '456', '689'])
             add = add_to_tar_file(tar_file, files2, file_mode='a')
-            self.assertTrue(add)
+            assert add
             files += files2
             with tarfile.open(tar_file, 'r') as tar:
                 members = [i.name for i in tar.getmembers()]
-                self.assertEqual(len(members), len(files))
+                assert len(members) == len(files)
                 for (_, i) in files:
-                    self.assertIn(i, members)
+                    assert i in members
             # Check if we can get an read error:
             with open(tar_file, 'w', encoding='utf-8') as tar:
                 tar.write('Some Men Just Want to Watch The World Burn')
             add = add_to_tar_file(tar_file, files, file_mode='a')
-            self.assertFalse(add)
+            assert not add
 
-    def test_generate_names(self):
+    def test_generate_names(self, caplog):
         """Test the generation of trajectory names for the archive."""
         path, _ = create_external_path()
         files = generate_traj_names(path, 'traj')
         for (src, trg) in files:
-            self.assertEqual(
-                trg,
-                os.path.join('traj', src)
-            )
+            assert trg == os.path.join('traj', src)
 
 
-class TestPathStorageTar(unittest.TestCase):
+class TestPathStorageTar:
     """Test the PathStorageTar class."""
 
-    def test_output(self):
+    def test_output(self, caplog):
         """Test that we can output to the storage."""
         storage = PathStorageTar()
         path, _ = create_external_path()
@@ -127,11 +123,11 @@ class TestPathStorageTar(unittest.TestCase):
                                         archive)
                 with tarfile.open(tar_file, 'r') as tar:
                     members = [i.name for i in tar.getmembers()]
-                    self.assertEqual(len(members), len(files))
+                    assert len(members) == len(files)
                     for _, i in files:
-                        self.assertIn(i, members)
+                        assert i in members
 
-    def test_output_recreate(self):
+    def test_output_recreate(self, caplog):
         """Test that the backup of archives does work."""
         storage = PathStorageTar()
         path, _ = create_external_path()
@@ -155,31 +151,32 @@ class TestPathStorageTar(unittest.TestCase):
                 f"{storage.archive_name_from_status('ACC')}_000"
             ]
             files, _ = look_for_files_and_dirs(path_ensemble.directory['traj'])
-            self.assertEqual(len(expected), len(files))
+            assert len(expected) == len(files)
             for i in expected:
-                self.assertIn(i, files)
+                assert i in files
 
 
-class TestPathStorage(unittest.TestCase):
+class TestPathStorage:
     """Test the PathStorage class."""
 
-    def test_write_fail(self):
+    def test_write_fail(self, caplog):
         """Test that the write method give an critical log message."""
         storage = PathStorage()
         with turn_on_logging():
-            with self.assertLogs('pyretis.inout.archive', level='CRITICAL'):
+            with caplog.at_level(logging.CRITICAL,
+                                 logger='pyretis.inout.archive'):
                 storage.write('test')
 
-    def test_formatter_info(self):
+    def test_formatter_info(self, caplog):
         """Test that we get correct info about formatters."""
         storage = PathStorage()
         info = storage.formatter_info()
         correct = [OrderPathFormatter, EnergyPathFormatter, PathExtFormatter]
-        self.assertEqual(len(info), len(correct))
+        assert len(info) == len(correct)
         for i in correct:
-            self.assertIn(i, info)
+            assert i in info
 
-    def test_output(self):
+    def test_output(self, caplog):
         """Test that we can create output."""
         storage = PathStorage()
         path, _ = create_external_path()
@@ -189,8 +186,8 @@ class TestPathStorage(unittest.TestCase):
             # Now, there should be no output yet:
             files, dirs = look_for_files_and_dirs(
                 path_ensemble.directory['traj'])
-            self.assertEqual(len(files), 0)
-            self.assertEqual(len(dirs), 0)
+            assert len(files) == 0
+            assert len(dirs) == 0
             # Output some trajectories:
             statuses = ('ACC', 'REJ', 'AN USER ERROR')
             files = {}
@@ -209,22 +206,16 @@ class TestPathStorage(unittest.TestCase):
             # We now expect to have some files:
             for key, val in files.items():
                 dir_name = os.path.join(path_ensemble.directory['traj'], key)
-                self.assertTrue(os.path.isdir(dir_name))
+                assert os.path.isdir(dir_name)
                 # Check that the files we claimed to make are present
                 # as files:
                 for i in val:
-                    self.assertTrue(os.path.isfile(i))
+                    assert os.path.isfile(i)
                 # Just search for all files in the given archive folder
                 # to check that we did not create anything extra:
                 found_files = []
                 for root, _, filei in os.walk(dir_name):
                     found_files += [os.path.join(root, i) for i in filei]
-                self.assertEqual(
-                    len(val), len(found_files)
-                )
+                assert len(val) == len(found_files)
                 for i in found_files:
-                    self.assertIn(i, val)
-
-
-if __name__ == '__main__':
-    unittest.main()
+                    assert i in val

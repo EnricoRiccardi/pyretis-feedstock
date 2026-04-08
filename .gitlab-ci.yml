@@ -6,9 +6,9 @@
   artifacts:
     paths:
       - .coverage*
-    expire_in: 1 week
+    expire_in: 2 week
 
-image: python:3.12.11-bullseye
+image: python:3.12-bookworm
 
 .oldpy: &old_py
   image: python:3.8-buster
@@ -44,7 +44,7 @@ pylint:
   - apt-get install git -y
   - pip install -r requirements.txt
   - pip install pylint
-  - python devtools/run_linting.py --input pyretis --white-list numpy PyQt5 mdtraj
+  - python devtools/run_linting.py --input pyretis --white-list numpy PyQt5 mdtraj graphviz sklearn
   needs: []
 
 pystyle:
@@ -59,8 +59,8 @@ pystyle:
 test:
   stage: light_test
   script:
-  - pip install coverage
-  - coverage run -p -m unittest discover -s test
+  - pip install coverage pytest pytest-cov
+  - pytest --cov=pyretis --cov-report=xml test/
   <<: *coverage_artifacts
   needs: []
 
@@ -77,7 +77,7 @@ test_pyvisa:
   - cd examples/test/test-pyvisa/
   - ./run-all-pyvisa.sh
   - cd ../../../
-  - coverage run -p -m unittest discover -s test/pyvisa
+  - pytest --cov=pyretis test/pyvisa/
   <<: *coverage_artifacts
   needs: []
 
@@ -97,11 +97,18 @@ test_lammps:
   needs: []
 
 test_gromacs:
+  image: ubuntu:plucky
   stage: heavy_test
   when: manual
+  before_script:
+  - apt-get update -qy
+  - apt-get install -y python3 python3-pip gcc git gromacs
+  - pip3 install --upgrade pip --break-system-packages
+  - pip3 install -r requirements.txt --break-system-packages
+  - pip3 install -e . --break-system-packages
+  - python3 -V
   script:
   - apt-cache policy gromacs
-  - apt-get install -y gromacs
   - gmx --version
   - gmx_d --version
   - cd examples/test/test-gromacs/
@@ -135,8 +142,8 @@ test_openmm:
   - python -V
   - conda list
   - python -m openmm.testInstallation
-  - pip install coverage
-  - coverage run -p -m unittest discover -s test
+  - pip install coverage pytest pytest-cov
+  - pytest --cov=pyretis --cov-report=xml test/
   <<: *coverage_artifacts
   needs: []
 
@@ -167,12 +174,12 @@ test_internal_oldpy:
    when: manual
    <<: *old_py
 
-test_gromacs_oldpy:   
+test_gromacs_oldpy:
    extends: test_gromacs
    when: manual
    <<: *old_py
 
-test_cp2k_oldpy:   
+test_cp2k_oldpy:
    extends: test_cp2k
    when: manual
    <<: *old_py
@@ -197,18 +204,14 @@ test_min_version:
 
 .coverage:
   stage: coverage
-  needs: ["test_oldpy", "test_pyvisa", "test_openmm", "test"]
+  needs: ["test"]
   dependencies:
-    - test_oldpy
-    - test_pyvisa
-    - test_openmm
     - test
-  before_script: 
+  before_script:
   - pip install coverage
   script:
-  - coverage combine --append
-  - coverage xml -o coverage.xml
   - coverage report -m
+  - coverage xml -o coverage.xml
   coverage: '/^TOTAL.*\s+(\d+\%)/'
 
 coverage_unprotected:

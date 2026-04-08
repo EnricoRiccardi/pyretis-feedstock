@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 shopt -s extglob
-set -e 
+set -e
+# Disable HWLOC hardware detection components that may hang on some systems
+# when X11 display sockets are in a broken state (e.g. full accept queue).
+export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 make clean
 gmx=${1:-gmx_d}
 echo "Using gmx=$gmx"
@@ -9,8 +12,8 @@ replace="s/GMXCOMMAND/$gmx/g"
 cd run-gromacs-ini
 cp ../../gmx/gromacs.py .
 cp ../../gmx/orderp.py .
-cp ../../gmx/gromacs_input gromacs_input_ini -r
-sed -e $replace retis.rst > retis-run.rst
+cp ../../../shared_input/gromacs gromacs_input_ini -r
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 
@@ -22,17 +25,17 @@ cp -r run-gromacs-ini/!(*.rst) run-gromacs2
 
 
 cd run-gromacs1
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 cd run-gromacs2
-sed -e $replace retis.rst > retis-run.rst
+sed -e "$replace" retis.rst > retis-run.rst
 pyretisrun -i retis-run.rst -p
 cd ..
 
 cp ../gmx/compare.py .
 python compare.py run-gromacs1 run-gromacs2 --energy_skip 'vpot'
 rm compare.py
-rm */gromacs.py
-rm */orderp.py
+rm -- */gromacs.py
+rm -- */orderp.py
 make clean

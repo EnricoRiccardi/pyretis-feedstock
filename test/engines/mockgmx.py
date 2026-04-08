@@ -10,10 +10,7 @@ can have a script for testing the GROMACS engine.
 """
 import sys
 import os
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-)
-from pyretis.inout.formats.gromacs import (  # noqa: E402
+from pyretis.inout.formats.gromacs import (
     write_gromacs_gro_file,
     read_gromacs_gro_file,
     write_gromos96_file,

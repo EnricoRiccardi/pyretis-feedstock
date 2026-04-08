@@ -489,7 +489,7 @@ class GromacsRunner:
         # pylint: disable=consider-using-with
         self.stderr = open(self.stderr_name, 'wb')
 
-        self.running = subprocess.Popen(
+        self.running = subprocess.Popen(  # nosec B603 B607
             self.cmd,
             stdin=subprocess.PIPE,
             stdout=self.stdout,

@@ -94,7 +94,7 @@ def main():
     print_to_screen(f'Time spent: {end - start}', level='info')
 
     start = time.perf_counter()
-    test_genvel(engine, 'cp2k_input/initial.xyz', exe_dir='genvel')
+    test_genvel(engine, engine.input_files['conf'], exe_dir='genvel')
     end = time.perf_counter()
     print_to_screen(f'Time spent: {end - start}', level='info')
 
