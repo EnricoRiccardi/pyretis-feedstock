@@ -121,13 +121,14 @@ def import_from(module_path, function_name):
         sys.modules[module_name] = module
         logger.debug('Imported module: %s', module)
         return getattr(module, function_name)
-    except (ImportError, IOError):
+    except (ImportError, IOError) as err:
         msg = f'Could not import module: {module_path}'
-        logger.critical(msg)
-    except AttributeError:
+        logger.critical('%s: %s', msg, err)
+        raise ValueError(msg) from err
+    except AttributeError as err:
         msg = f'Could not import "{function_name}" from "{module_path}"'
-        logger.critical(msg)
-    raise ValueError(msg)
+        logger.critical('%s: %s', msg, err)
+        raise ValueError(msg) from err
 
 
 def _arg_kind(arg):

@@ -1355,17 +1355,23 @@ def wire_fencing(ensemble, tis_settings, start_cond):
     """
     trial_path = ensemble['path_ensemble'].last_path
     engine = ensemble['engine']
-    wf_int = [ensemble['interfaces'][1], ensemble['interfaces'][1],
-              tis_settings.get('interface_cap', ensemble['interfaces'][2])]
+    intf_cap = tis_settings.get('interface_cap', ensemble['interfaces'][2])
+    # Wire fencing needs middle != cap interface. For the [0^-] ensemble
+    # middle == right == lambda_0, making WF inapplicable.
+    if ensemble['interfaces'][1] == intf_cap:
+        logger.info('Wire fencing not applicable (middle == cap '
+                    'interface = %s). Falling back to standard shooting.',
+                    ensemble['interfaces'][1])
+        return shoot(ensemble, tis_settings, start_cond)
+
+    wf_int = [ensemble['interfaces'][1], ensemble['interfaces'][1], intf_cap]
     n_frames, new_segment = wirefence_weight_and_pick(trial_path, wf_int[0],
                                                       wf_int[2],
                                                       return_seg=True)
 
-    # This is probably a too strong condition. It helps for [0^-] but it might
-    # hinder implementation problems or bad sampling.
     if n_frames == 0:
-        logger.warning('Wire fencing move not usable. N frames of Path = 0')
-        logger.warning('between interfaces %s and %s.', wf_int[0], wf_int[-1])
+        logger.warning('Wire fencing move not usable. N frames of Path = 0 '
+                       'between interfaces %s and %s.', wf_int[0], wf_int[-1])
         return False, trial_path, 'NSG'
     sub_ens = {'interfaces': wf_int, 'engine': engine,
                'rgen': ensemble['rgen'],

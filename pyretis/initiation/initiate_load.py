@@ -99,9 +99,10 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
             folder,
             generate_ensemble_name(path_ensemble.ensemble_number))
         if not os.path.exists(os.path.join(edir, 'order.txt')):
-            logger.info('Input Load missing')
-            print_to_screen('No order.txt file found in %, attempt generate!',
-                            edir)
+            logger.info('No order.txt found in %s, attempting to generate.',
+                        edir)
+            print_to_screen(f'No order.txt file found in {edir},'
+                            ' attempt generate!')
             # Make sure the files are where they are supposed to be:
             _do_the_dirty_load_job(folder, edir)
             path.set_move('ld')
@@ -132,7 +133,6 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         # of the defined region. So even if accepted, we need to clean if the
         # path type is 'ld'.
         simtype = set_ens['simulation']['task']
-        print("I am this simtype:", simtype)
         if accept and path.get_move() == 'ld':  # Some cleaning if needed
             clean_path(path, path_ensemble, simtype=simtype)
             # The path should still be checked, as something funny might occur
@@ -589,7 +589,7 @@ def _load_order_parameters_ext(traj, dirname, order_function, engine):
             order = next(orderfile.load())
             return order['data'][:, 1:]
     else:
-        print_to_screen('Could not read file: {order_file_name}')
+        print_to_screen(f'Could not read file: {order_file_name}')
 
     orderdata = []
     print_to_screen('Recalculating order parameters for input path.')
@@ -803,8 +803,9 @@ def _load_external_trajectory(dirname, engine, copy=True):
         # **correct** names from the traj.txt file!
         files = set([])
         for snapshot in traj['data']:
+            basename = os.path.basename(snapshot[1])
             filename = os.path.join(os.path.abspath(dirname),
-                                    'accepted', snapshot[1])
+                                    'accepted', basename)
             files.add(filename)
         print_to_screen('Copying trajectory files.')
 
@@ -817,7 +818,7 @@ def _load_external_trajectory(dirname, engine, copy=True):
                 shutil.copy(filename, engine.exe_dir)
         # Update trajectory to use full path names:
         for i, snapshot in enumerate(traj['data']):
-            config = os.path.join(loc, snapshot[1])
+            config = os.path.join(loc, os.path.basename(snapshot[1]))
             traj['data'][i][1] = config
             reverse = int(snapshot[3]) == -1
             idx = int(snapshot[2])

@@ -125,7 +125,6 @@ def create_ensemble(settings):
         if change_start_cond:
             # adapt the starting condition of the paths
             logger.info("adapted start_condition to R/L in ensemble %s", i_ens)
-            print('booger')
             path_ensemble.start_condition = ['R', 'L']
             path_ensemble.must_cross_M = True  # used in the shooting move
 
