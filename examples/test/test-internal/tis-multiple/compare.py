@@ -8,7 +8,6 @@ Here we compare a TIS simulation of 50 steps to known results.
 import os
 import sys
 import colorama
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.setup.createsimulation import create_ensembles
@@ -17,6 +16,9 @@ from pyretis.testing.simulation_comparison import (
     compare_reports_normalized,
     compare_path_ensemble_data
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 RESULTS = 'results'
@@ -35,10 +37,10 @@ def check_path_file(ens):
     status : int
         0 if successful, 1 otherwise.
     """
-    print_to_screen(f'\nReading for {ens.ensemble_name}')
+    logger.info(f'\nReading for {ens.ensemble_name}')
     filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
                             'pathensemble.txt')
-    print_to_screen(f'Reading: {filename}')
+    logger.info(f'Reading: {filename}')
     start = ens.start_condition
     end = ('R') if ens.ensemble_number == 0 else ('R', 'L')
     something_weird = False
@@ -59,23 +61,17 @@ def check_path_file(ens):
             maxo = float(splitline[10])
 
             if length < 3:
-                print_to_screen(f'Suspicious length for path {step}',
-                                level='error')
+                logger.error(f'Suspicious length for path {step}')
                 something_weird = True
             if start != left:
-                print_to_screen(
-                    f'Inconsistent start: {start} != {left} (step {step})',
-                    level='error')
+                logger.error(
+                    f'Inconsistent start: {start} != {left} (step {step})')
                 something_weird = True
             if middle != 'M':
-                print_to_screen(
-                    f'Middle differ: M != {middle} (step {step})',
-                    level='error')
+                logger.error(f'Middle differ: M != {middle} (step {step})')
                 something_weird = True
             if right not in end:
-                print_to_screen(
-                    f'Inconsistent end: {right} (step {step})',
-                    level='error')
+                logger.error(f'Inconsistent end: {right} (step {step})')
                 something_weird = True
             cross = [mino < interpos < maxo for interpos in ens.interfaces]
             if ens.ensemble_number == 0:
@@ -84,13 +80,11 @@ def check_path_file(ens):
                 idx1, idx2 = 0, 1
             if not cross[idx1] or not cross[idx2]:
                 something_weird = True
-                print_to_screen(
+                logger.error(
                     f'Inconsistent crossings: {cross[idx1]} '
-                    f'{cross[idx2]} (step {step})',
-                    level='error'
-                )
+                    f'{cross[idx2]} (step {step})')
     if not something_weird:
-        print_to_screen('Accepted paths are OK!', level='success')
+        logger.info('Accepted paths are OK!')
         return 0
     return 1
 
@@ -134,10 +128,10 @@ def compare_path_files(settings):
         fil2 = os.path.join(RESULTS, ens_dir, 'pathensemble.txt')
         equal, msg = compare_path_ensemble_data(fil1, fil2)
         if not equal:
-            print_to_screen(f'Mismatch in {fil1}: {msg}', level='error')
+            logger.error(f'Mismatch in {fil1}: {msg}')
             retval += 1
         else:
-            print_to_screen(f'Files are equal: {fil1}', level='success')
+            logger.info(f'Files are equal: {fil1}')
     return retval
 
 
@@ -164,10 +158,10 @@ def compare_rst_files(settings):
             fil1, fil2, skip_keys=['exe_path']
         )
         if not equal:
-            print_to_screen(f'Mismatch in {fil1}: {msg}', level='error')
+            logger.error(f'Mismatch in {fil1}: {msg}')
             retval += 1
         else:
-            print_to_screen(f'Files are equal: {fil1}', level='success')
+            logger.info(f'Files are equal: {fil1}')
     return retval
 
 
@@ -188,29 +182,27 @@ def compare_prob_files():
         fil2 = os.path.join(RESULTS, name)
         equal, msg = compare_reports_normalized(fil1, fil2)
         if not equal:
-            print_to_screen(
-                f'Report mismatch {name}: {msg}', level='error'
-            )
+            logger.error(f'Report mismatch {name}: {msg}')
             retval += 1
         else:
-            print_to_screen(f'Reports are equal: {name}', level='success')
+            logger.info(f'Reports are equal: {name}')
     return retval
 
 
 def main():
     """Run the full comparison."""
     sets = parse_settings_file('tis-multiple.rst')
-    print_to_screen('\nCheck crossing probabilities', level='message')
-    print_to_screen('============================', level='message')
+    logger.info('\nCheck crossing probabilities')
+    logger.info('============================')
     ret4 = compare_prob_files()
-    print_to_screen('\nComparing tis.rst files', level='message')
-    print_to_screen('=======================', level='message')
+    logger.info('\nComparing tis.rst files')
+    logger.info('=======================')
     ret1 = compare_rst_files(sets)
-    print_to_screen('\nComparing pathensemble.txt files', level='message')
-    print_to_screen('================================', level='message')
+    logger.info('\nComparing pathensemble.txt files')
+    logger.info('================================')
     ret2 = compare_path_files(sets)
-    print_to_screen('\nCheck accepted paths', level='message')
-    print_to_screen('====================', level='message')
+    logger.info('\nCheck accepted paths')
+    logger.info('====================')
     ret3 = run_check_path_file(sets)
     return ret1 + ret2 + ret3 + ret4
 

@@ -7,11 +7,13 @@ import sys
 import colorama
 from matplotlib import pyplot as plt
 from pyretis.engines.lammps import LAMMPSEngine
-from pyretis.inout import print_to_screen
 from pyretis.inout.common import make_dirs
 from pyretis.testing.systemhelp import create_system_ext
 from pyretis.testing.helpers import clean_dir
 from plotting import plot_compare, plot_xy
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -32,33 +34,22 @@ def run_in_folder(system, engine, exe_dir, steps):
 
 def run_forward():
     """Use the LAMMPS engine to run a MD simulation forward in time."""
-    print_to_screen(
-        '\nTesting the LAMMPS engine by running forward.\n',
-    )
+    logger.info('\nTesting the LAMMPS engine by running forward.\n',)
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', SUBCYCLES)
-    print_to_screen(
-        f'Running forward for {2 * STEPS} steps...',
-        level='info',
-    )
+    logger.info(f'Running forward for {2 * STEPS} steps...')
     # Create a dummy system:
     system = create_system_ext(pos=('system.data', 0))
     exe_dir = os.path.join(HERE, 'run-forward1')
     energy_f1, order_f1 = run_in_folder(system, engine, exe_dir, 2*STEPS)
     # Run forward, for the initial state for 100 steps:
-    print_to_screen('-> Forward done! Resetting system.')
-    print_to_screen(
-        f'\nRunning forward for {STEPS} steps...',
-        level='info',
-    )
+    logger.info('-> Forward done! Resetting system.')
+    logger.info(f'\nRunning forward for {STEPS} steps...')
     system = create_system_ext(pos=('system.data', 0))
     exe_dir = os.path.join(HERE, 'run-forward2')
     energy_f2, order_f2 = run_in_folder(system, engine, exe_dir, STEPS)
     # Run for 50 more steps:
-    print_to_screen('-> Forward done!')
-    print_to_screen(
-        f'\nContinuing run for {STEPS} steps...',
-        level='info',
-    )
+    logger.info('-> Forward done!')
+    logger.info(f'\nContinuing run for {STEPS} steps...')
     config = system.particles.get_pos()
     traj_file = os.path.join(exe_dir, config[0])
     system.particles.set_pos((traj_file, config[1]))
@@ -66,7 +57,7 @@ def run_forward():
     energy_f3, order_f3 = run_in_folder(system, engine, exe_dir, STEPS)
     # Update step for part 3:
     energy_f3['Step'] += energy_f2['Step'][-1]
-    print_to_screen('-> Forward done! Comparing energies:')
+    logger.info('-> Forward done! Comparing energies:')
 
     data_sets = []
 
@@ -100,7 +91,7 @@ def run_forward():
         )
     plot_xy(data_sets_xy)
 
-    print_to_screen('-> Will also compare order parameters:')
+    logger.info('-> Will also compare order parameters:')
     data_sets = [
         [
             (energy_f1['Step'], order_f1[:, 0], 'Full simulation'),
@@ -134,32 +125,27 @@ def run_forward():
 
 def run_forward_backward():
     """Use the LAMMPS engine to run a MD simulation forward in time."""
-    print_to_screen(
-        '\nTesting the LAMMPS engine by running forward and backward.\n',
-    )
+    logger.info(
+        '\nTesting the LAMMPS engine by running forward and backward.\n')
     # Set up for running forward:
-    print_to_screen(
-        f'-> Running forward for {STEPS} steps...',
-        level='info',
-    )
+    logger.info(f'-> Running forward for {STEPS} steps...')
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', SUBCYCLES)
     system = create_system_ext(pos=('system.data', 0))
     exe_dir = os.path.join(HERE, 'run-forward')
     energy_f, order_f = run_in_folder(system, engine, exe_dir, STEPS)
-    print_to_screen('-> Forward done! Prepare backward run.')
+    logger.info('-> Forward done! Prepare backward run.')
     # Reverse the velocities and run:
     config = system.particles.get_pos()
     traj_file = os.path.join(exe_dir, config[0])
-    print_to_screen('-> Setting configuration.')
+    logger.info('-> Setting configuration.')
     system.particles.set_pos((traj_file, config[1]))
-    print_to_screen('-> Reversing velocities.')
+    logger.info('-> Reversing velocities.')
     system.particles.set_vel(True)
 
-    print_to_screen(f'\n-> Starting backward run ({STEPS}) steps!',
-                    level='info')
+    logger.info(f'\n-> Starting backward run ({STEPS}) steps!')
     exe_dir = os.path.join(HERE, 'run-backward')
     energy_b, order_b = run_in_folder(system, engine, exe_dir, STEPS)
-    print_to_screen('\n-> Backward done! Will compare energies:')
+    logger.info('\n-> Backward done! Will compare energies:')
 
     step = energy_b['Step'] - energy_b['Step'][0]
     data_sets = [
@@ -198,10 +184,9 @@ def run_forward_backward():
     ]
     plot_xy(data_sets_xy)
 
-    print_to_screen('\n-> Will also compare order parameters:')
-    print_to_screen('NOTE: OP2 IS HERE MULTIPLIED WITH "-1"', level='warning')
-    print_to_screen('NOTE: THIS, SINCE IT IS VELOCITY DEPENDENT!',
-                    level='warning')
+    logger.info('\n-> Will also compare order parameters:')
+    logger.warning('NOTE: OP2 IS HERE MULTIPLIED WITH "-1"')
+    logger.warning('NOTE: THIS, SINCE IT IS VELOCITY DEPENDENT!')
     data_sets = [
         [
             (step, order_f[:, 0], 'Forward'),

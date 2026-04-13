@@ -20,8 +20,6 @@ check_engine (:py:func:`.check_engine`)
 
 """
 import logging
-from pyretis.inout.screen import print_to_screen
-
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 logger.addHandler(logging.NullHandler())
 
@@ -148,7 +146,8 @@ def check_for_bullshitt(settings):
 
 
 def _check_wire_fencing_zero_minus(settings):
-    """Warn if wire fencing is set for the [0^-] ensemble.
+    """
+    Warn if wire fencing is set for the [0^-] ensemble.
 
     Wire fencing requires middle != right interface, but the [0^-]
     ensemble has middle == right == lambda_0, making it inapplicable.
@@ -179,7 +178,6 @@ def _check_wire_fencing_zero_minus(settings):
                '(middle == right interface). The shooting move for [0^-] '
                'will be set to standard shooting (sh).')
         logger.warning(msg)
-        print_to_screen(msg, level='error')
         # Fix it: override the [0^-] shooting move.
         if shooting_moves:
             settings['tis']['shooting_moves'][0] = 'sh'

@@ -23,7 +23,6 @@ from matplotlib import pyplot as plt
 from pyretis.core import System, create_box, ParticlesExt, Path
 from pyretis.orderparameter import PositionVelocity
 from pyretis.inout.common import make_dirs
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.inout.formats.xyz import read_xyz_file, write_xyz_trajectory
 from pyretis.engines.cp2k import (
@@ -31,6 +30,9 @@ from pyretis.engines.cp2k import (
     write_for_step_vel,
     convert_snapshot
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 plt.style.use('seaborn-v0_8-deep')
@@ -67,9 +69,8 @@ def run_in_steps(engine, system, order_parameter, interfaces,
         Selects the time direction.
 
     """
-    print_to_screen(f'\nRunning {steps} steps in "{exe_dir}"',
-                    level='message')
-    print_to_screen(f'(Reverse = {reverse})')
+    logger.info(f'\nRunning {steps} steps in "{exe_dir}"')
+    logger.info(f'(Reverse = {reverse})')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
@@ -81,8 +82,8 @@ def run_in_steps(engine, system, order_parameter, interfaces,
                       'interfaces': interfaces},
                      reverse=reverse)
     end = time.perf_counter()
-    print_to_screen('Propagation done!')
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info('Propagation done!')
+    logger.info(f'Time spent: {end - start}')
     return path
 
 
@@ -108,11 +109,8 @@ def run_plain_cp2k(engine, system, order_parameter, input_conf,
         Selects the time direction.
 
     """
-    print_to_screen(
-        f'\nRunning {steps} plain CP2K steps in "{exe_dir}"',
-        level='message'
-    )
-    print_to_screen(f'(Reverse = {reverse})')
+    logger.info(f'\nRunning {steps} plain CP2K steps in "{exe_dir}"')
+    logger.info(f'(Reverse = {reverse})')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
@@ -131,12 +129,12 @@ def run_plain_cp2k(engine, system, order_parameter, input_conf,
         print_freq=1
     )
     engine.add_input_files(exe_dir)
-    print_to_screen('Running CP2K...')
+    logger.info('Running CP2K...')
     start = time.perf_counter()
     engine.run_cp2k('md.inp', 'md')
     end = time.perf_counter()
-    print_to_screen('Done!')
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info('Done!')
+    logger.info(f'Time spent: {end - start}')
     energy_file = os.path.join(exe_dir, 'md-1.ener')
     energy = np.loadtxt(energy_file)
     pos_file = os.path.join(exe_dir, 'md-pos-1.xyz')
@@ -182,8 +180,7 @@ def test_genvel(engine, input_file, exe_dir='genvel'):
         velocities.
 
     """
-    print_to_screen(f'\nRunning CP2K genvel step in "{exe_dir}"',
-                    level='message')
+    logger.info(f'\nRunning CP2K genvel step in "{exe_dir}"')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
@@ -191,8 +188,8 @@ def test_genvel(engine, input_file, exe_dir='genvel'):
     start = time.perf_counter()
     out_conf, _ = engine._prepare_shooting_point(input_file)
     end = time.perf_counter()
-    print_to_screen('Generation of velocity done!')
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info('Generation of velocity done!')
+    logger.info(f'Time spent: {end - start}')
     return out_conf
 
 
@@ -209,9 +206,9 @@ def main(plot=False):
         extra_files=engine_settings.get('extra_files', []),
         conf=engine_settings.get('conf', 'h2.xyz')
     )
-    print_to_screen(f'Testing engine: {engine}', level='info')
-    print_to_screen(f'Time step: {engine.timestep}')
-    print_to_screen(f'Subcycles: {engine.subcycles}')
+    logger.info(f'Testing engine: {engine}')
+    logger.info(f'Time step: {engine.timestep}')
+    logger.info(f'Subcycles: {engine.subcycles}')
     system = System(units='gromacs',
                     box=create_box(cell=[100, 100, 100]),
                     temperature=500)
@@ -262,10 +259,10 @@ def mse_combinations(text, var, tol=None):
                 tol_ok = abs(mse) < tol
             if not tol_ok:
                 level = 'error'
-        print_to_screen(
-            f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}',
-            level=level
-        )
+        if level == 'error':
+            logger.error(f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}')
+        else:
+            logger.info(f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}')
         if not tol_ok:
             sys.exit(1)
 

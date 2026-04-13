@@ -7,11 +7,13 @@ import time
 import colorama
 from pyretis.core import System, create_box, ParticlesExt
 from pyretis.inout.common import make_dirs
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.engines.cp2k import (
     CP2KEngine,
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def clean_dir(dirname):
@@ -34,14 +36,13 @@ def run_step(engine, system, exe_dir='forward-single-step'):
     exe_dir : string
         The folder to use for the execution.
     """
-    print_to_screen(f'\nRunning a single CP2K step in "{exe_dir}"',
-                    level='message')
+    logger.info(f'\nRunning a single CP2K step in "{exe_dir}"')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
     engine.exe_dir = folder
     engine.step(system, 'single')
-    print_to_screen('Propagation done!')
+    logger.info('Propagation done!')
 
 
 def test_genvel(engine, input_file, exe_dir='genvel'):
@@ -56,14 +57,13 @@ def test_genvel(engine, input_file, exe_dir='genvel'):
     exe_dir : string, optional
         The directory where we will be running CP2K.
     """
-    print_to_screen(f'\nRunning CP2K genvel step in "{exe_dir}"',
-                    level='message')
+    logger.info(f'\nRunning CP2K genvel step in "{exe_dir}"')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
     engine.exe_dir = folder
     engine._prepare_shooting_point(input_file)
-    print_to_screen('Propagation done!')
+    logger.info('Propagation done!')
 
 
 def main():
@@ -77,9 +77,9 @@ def main():
         engine_settings['subcycles'],
         engine_settings.get('extra_files', [])
     )
-    print_to_screen(f'Testing engine: {engine}', level='info')
-    print_to_screen(f'Time step: {engine.timestep}')
-    print_to_screen(f'Subcycles: {engine.subcycles}')
+    logger.info(f'Testing engine: {engine}')
+    logger.info(f'Time step: {engine.timestep}')
+    logger.info(f'Subcycles: {engine.subcycles}')
     system = System(units='gromacs',
                     box=create_box(cell=[100, 100, 100]),
                     temperature=500)
@@ -91,12 +91,12 @@ def main():
     start = time.perf_counter()
     run_step(engine, system, exe_dir='forward-single-step')
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
 
     start = time.perf_counter()
     test_genvel(engine, engine.input_files['conf'], exe_dir='genvel')
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
 
 
 if __name__ == '__main__':

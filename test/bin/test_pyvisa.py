@@ -2,11 +2,13 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the bin."""
+import logging
 import os
 import pytest
 import subprocess
 import tempfile
 import shutil
+from contextlib import contextmanager
 from io import StringIO
 from unittest.mock import patch
 from pyretis.bin.pyvisa import (main,
@@ -15,6 +17,27 @@ from pyretis.bin.pyvisa import (main,
                                 pyvisa_visual)
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+@contextmanager
+def capture_log_output():
+    """Capture all logger output to a StringIO buffer."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(handler)
+    prev_disable = logging.root.manager.disable
+    prev_level = root_logger.level
+    logging.disable(logging.NOTSET)
+    root_logger.setLevel(logging.DEBUG)
+    try:
+        yield stream
+    finally:
+        root_logger.removeHandler(handler)
+        root_logger.setLevel(prev_level)
+        logging.disable(prev_disable)
 
 
 class TestVarious:
@@ -43,15 +66,15 @@ class TestVarious:
 
     def test_hello_world(self):
         """Test that we are polite."""
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             hello_pyvisa(run_dir='.', infile='This_is_enough.lol')
-        assert 'Start' in stdout.getvalue().strip()
+        assert 'Start' in log_out.getvalue().strip()
 
     def test_bye_pyvisa(self):
         """Test that we can die."""
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             bye_pyvisa()
-        assert 'references' in stdout.getvalue().strip()
+        assert 'references' in log_out.getvalue().strip()
 
     def test_pyvisa_visual(self):
         """Test that we know how to set up a simulation."""
@@ -66,29 +89,29 @@ class TestVarious:
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 main(basepath=tempdir, input_file=input_file,
                      pyvisa_dict={'pyvisa_recalculate': True})
-            assert 'Execution failed!' in stdout.getvalue().strip()
+            assert 'Execution failed!' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 main(basepath=tempdir, input_file=input_file,
                      pyvisa_dict={'pyvisa_compressor': True})
-            assert 'No files to an' in stdout.getvalue().strip()
+            assert 'No files to an' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 main(basepath=tempdir, input_file=input_file,
                      pyvisa_dict={})
-            assert 'traceback' in stdout.getvalue().strip()
+            assert 'traceback' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 main(basepath=tempdir, input_file='no_thank_you',
                      pyvisa_dict={})
-            assert 'NOT' in stdout.getvalue().strip()
+            assert 'NOT' in log_out.getvalue().strip()

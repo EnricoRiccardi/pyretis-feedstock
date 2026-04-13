@@ -46,7 +46,6 @@ import logging
 import os
 from pyretis.core.pathensemble import get_path_ensemble_class
 from pyretis.setup.createforcefield import create_force_field
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import (add_default_settings,
                                     add_specific_default_settings,
                                     settings_from_restart)
@@ -71,6 +70,7 @@ from pyretis.inout.checker import (
     check_engine,
     check_ensemble,
 )
+from pyretis.inout.screen import REFERENCE
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -100,8 +100,7 @@ def create_ensemble(settings):
     i_ens = settings['tis']['ensemble_number']
 
     logtxt = f'\nCREATING  ENSEMBLE  {i_ens}\n====================='
-    print_to_screen(logtxt, level='message')
-    logger.info(logtxt)
+    logger.log(REFERENCE, logtxt)
 
     rgen_ens = create_random_generator(settings['tis'])
     rgen_path = create_random_generator(settings['system'])
@@ -418,18 +417,15 @@ def prepare_system(settings):
         return settings['system']['obj']
 
     logtxt = 'Initializing unit system.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     units_from_settings(settings)
 
     logtxt = 'Creating system from settings.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     system = create_system(settings)
 
     logtxt = 'Creating force field.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     system.forcefield = create_force_field(settings)
     system.particles.vpot = system.evaluate_potential()
 
@@ -455,14 +451,12 @@ def prepare_engine(settings):
         return settings['engine']['obj']
 
     logtxt = units_from_settings(settings)
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
 
     check_engine(settings)
     engine = create_engine(settings)
     logtxt = f'Created engine "{engine}" from settings.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     return engine
 
 
@@ -524,7 +518,7 @@ def create_simulation(settings):
 
     simulation = sim_map[sim_type](settings)
     msgtxt = f'{simulation}'
-    logger.info('Created simulation:\n%s', msgtxt)
+    logger.progress('\nCreated simulation:\n%s', msgtxt)
 
     if settings['simulation'].get('restart', False):
         simulation.load_restart_info(info_restart)

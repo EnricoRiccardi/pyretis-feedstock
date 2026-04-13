@@ -33,10 +33,32 @@ from pyretis.simulation.md_simulation import (
     SimulationMDFlux,
 )
 from pyretis.tools.lattice import generate_lattice
+from contextlib import contextmanager
 from unittest.mock import patch
 from .help import turn_on_logging, TxtWriter, TEST_SETTINGS
 
 logging.disable(logging.CRITICAL)
+
+
+@contextmanager
+def capture_log_output():
+    """Capture all logger output to a StringIO buffer."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(handler)
+    prev_disable = logging.root.manager.disable
+    prev_level = root_logger.level
+    logging.disable(logging.NOTSET)
+    root_logger.setLevel(logging.DEBUG)
+    try:
+        yield stream
+    finally:
+        root_logger.removeHandler(handler)
+        root_logger.setLevel(prev_level)
+        logging.disable(prev_disable)
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -277,10 +299,10 @@ def test_soft_exit_md(caplog):
         assert 'thermo.txt' in files
         exit_file = os.path.join(tempdir, 'EXIT')
         pathlib.Path(exit_file).touch()
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             for _ in enumerate(simulation.run()):
                 pass
-            assert 'soft exit' in stdout.getvalue().strip()
+            assert 'soft exit' in log_out.getvalue().strip()
         assert simulation.cycle['step'] == simulation.restart_freq + 2
 
 
@@ -532,10 +554,10 @@ def test_soft_exit_md_flux(caplog):
 
         exit_file = os.path.join(tempdir, 'EXIT')
         pathlib.Path(exit_file).touch()
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             for _ in enumerate(simulation.run()):
                 pass
-            assert 'soft exit' in stdout.getvalue().strip()
+            assert 'soft exit' in log_out.getvalue().strip()
         assert simulation.cycle['step'] == simulation.restart_freq + 2
 
 

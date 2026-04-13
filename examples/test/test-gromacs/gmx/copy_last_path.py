@@ -9,10 +9,12 @@ import os
 import sys
 import shutil
 import colorama
-from pyretis.inout import print_to_screen
 from pyretis.inout.archive import PathStorage
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def read_path_file(filename):
@@ -32,11 +34,10 @@ def read_path_file(filename):
 
 def get_files_from_directory(source, target):
     """Investigate and copy an accepted path for the given ensemble."""
-    print_to_screen(f'Checking directory:\xa0{source}',
-                    level='info')
+    logger.info(f'Checking directory:\xa0{source}')
     path_file = os.path.join(source, 'pathensemble.txt')
     last_one = read_path_file(path_file)
-    print_to_screen(f'Will use path no. {last_one}')
+    logger.info(f'Will use path no. {last_one}')
 
     # Copy the accepted last path from the traj archive.
     # This is the path where it is stored:

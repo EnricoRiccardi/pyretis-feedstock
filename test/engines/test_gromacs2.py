@@ -153,15 +153,10 @@ class TestGromacsEngine2:
                             'interfaces': [-0.45, 10.0, 14.0]}
                 eng.propagate(path, ensemble, reverse=False)
             # Check the error - output:
-            with open(os.path.join(rundir, 'stderr.txt'), 'r',
+            with open(os.path.join(rundir, 'engine.err'), 'r',
                       encoding="utf8") as infile:
-                data = infile.readlines()
-                # Following assert should be 1, but is 2 while gromacs fixes
-                # their openmm imports (which raises an extra warning atm)
-                # Following assert should be 1, but is 2 while gromacs fixes
-                # their openmm imports (which raises an extra warning atm)
-                assert len(data) <= 2
-                assert data[-1].strip() == 'Crash error for testing.'
+                data = infile.read()
+                assert 'Crash error for testing.' in data
             eng.clean_up()
 
     def test_propagate_sleep(self):

@@ -22,7 +22,9 @@ from pyretis.inout.settings import (fill_up_tis_and_retis_settings,
                                     _add_specific_default_settings)
 from pyretis.setup import create_simulation
 from pyretis.analysis.path_analysis import _pcross_lambda_cumulative
-from pyretis.inout import print_to_screen
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 INTERFACES = [-0.9, -0.8, -0.7, -0.6, -0.5, -0.4, -0.3, 1.0]
@@ -506,19 +508,18 @@ def update(frame, simulation, plot_patches, variables, axes):
         result = simulation.step()
         step = result['cycle']['step']
         ensembles = simulation.ensembles
-        print_to_screen(f'# Current cycle: {step}', level='info')
+        logger.info(f'# Current cycle: {step}')
         anr = analyse_path_ensembles(ensembles, step, variables)
         retis_txt, force = step_txt(ensembles, result, variables['prun'])
         global FTOT
         FTOT += force
         for line in retis_txt:
-            print_to_screen(f'# {line}')
-        print_to_screen('# Flux: {flux:<8.6g} +- {fluxe:<8.6g}'.format(**anr))
-        print_to_screen(('# Crossing probability: {pcross:<8.6g} +-'
-                         '{pcrosse:<8.6g}').format(**anr))
-        print_to_screen('# K_AB: {kab:<8.6g} +- {kabe:<8.6g}'.format(**anr))
-        print_to_screen(f'# No. of force evaluations: {force:g}')
-        print_to_screen('')
+            logger.info(f'# {line}')
+        logger.info('# Flux: {flux:<8.6g} +- {fluxe:<8.6g}'.format(**anr))
+        logger.info(('# Crossing probability: {pcross:<8.6g} +-'
+                     '{pcrosse:<8.6g}').format(**anr))
+        logger.info('# K_AB: {kab:<8.6g} +- {kabe:<8.6g}'.format(**anr))
+        logger.info(f'# No. of force evaluations: {force:g}')
 
         for i, ensemble in enumerate(ensembles):
             _, pos, vel = get_path(ensemble['path_ensemble'].last_path)
@@ -570,8 +571,8 @@ def update(frame, simulation, plot_patches, variables, axes):
         patches.append(plot_patches['matched'])
         return patches
     # Just return without updating:
-    print_to_screen(f'# Simulation is done (frame = {frame})')
-    print_to_screen(f'# Total number of force evaluations: {FTOT}')
+    logger.info(f'# Simulation is done (frame = {frame})')
+    logger.info(f'# Total number of force evaluations: {FTOT}')
     patches = []
     for key in ('paths', 'prob', 'prob2', 'txtmove', 'start', 'end'):
         patches.extend(plot_patches[key])
@@ -583,20 +584,18 @@ def update(frame, simulation, plot_patches, variables, axes):
 def main():
     """Run the simulation."""
     colorama.init(autoreset=True)
-    print_to_screen('# CREATING SYSTEM', level='info')
+    logger.info('# CREATING SYSTEM')
     simulation = create_simulation(SETTINGS)
-    print_to_screen(simulation)
-    print_to_screen('# GENERATING INITIAL PATHS', level='info')
+    logger.info(simulation)
+    logger.info('# GENERATING INITIAL PATHS')
 
     for i, _ in enumerate(initiate_path_simulation(simulation, SETTINGS)):
         path_ensemble = simulation.ensembles[i]['path_ensemble']
         name = path_ensemble.ensemble_name
-        print_to_screen(f'Info about ensemble {name}:',
-                        level='success')
-        print_to_screen(path_ensemble)
-        print_to_screen('Info about the initial path:', level='success')
-        print_to_screen(path_ensemble.last_path)
-        print_to_screen('')
+        logger.info(f'Info about ensemble {name}:')
+        logger.info(path_ensemble)
+        logger.info('Info about the initial path:')
+        logger.info(path_ensemble.last_path)
     # We make a dictionary of these variable for easier access:
     # Set up some variables for storing results:
     fig, plot_patches, axes = matplotlib_setup()

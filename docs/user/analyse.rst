@@ -12,27 +12,6 @@ The general syntax for executing is:
    pyretisanalyse [-h] [-i INPUT] [-V]
 
 
-where ``INPUT`` is the input file for the analysis. It can be of two types:
-An hdf5 file, that can be used with the PyVisA tool, or the 
-standard input file used by |pyretis| 
-:ref:`application <user-guide-application>` with the 
-settings for the analysis, defined via the 
-:ref:`analysis section <user-section-analysis>`.
-
-
-.. container:: panel panel-info
-
-   .. container:: panel-heading
-   
-      **Note**
-
-   .. container:: panel-body
-   
-      The ``INPUT`` file for the analysis is created automatically
-      by running the |pyretis| application. This file is named ``out.rst``
-      and can be directly used as input for the analysis program.
-
-
 where ``INPUT`` is the input file for the analysis. This file is
 similar to the input file to the |pyretis|
 :ref:`application <user-guide-application>` with some differences:

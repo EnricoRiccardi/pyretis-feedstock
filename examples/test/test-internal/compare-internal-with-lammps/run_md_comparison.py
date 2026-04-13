@@ -16,8 +16,10 @@ from matplotlib import pyplot as plt
 from matplotlib import gridspec
 from pyretis.core.units import units_from_settings
 from pyretis.setup import create_simulation
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 LAMMPS_HEAD = '#Step Temp Press PotEng KinEng TotEng Pxx Pyy Pzz Pxy Pxz Pyz'
@@ -28,8 +30,7 @@ TOL_PRESS = 2.0
 
 def set_up(settings_file):
     """Set up the simulation from a settings file."""
-    print_to_screen(f'Loading settings: {settings_file}',
-                    level='info')
+    logger.info(f'Loading settings: {settings_file}')
     settings = parse_settings_file(settings_file)
     units_from_settings(settings)
     simulation = create_simulation(settings)
@@ -49,7 +50,7 @@ def format_thermo(result):
 
 def run_simulation(simulation, outputfile):
     """Run the simulation and write output to screen/file."""
-    print_to_screen(f'Running simulation: {simulation}')
+    logger.info(f'Running simulation: {simulation}')
     with open(outputfile, 'w') as output:
         output.write(f'{LAMMPS_HEAD}\n')
         print(LAMMPS_HEAD)
@@ -59,7 +60,7 @@ def run_simulation(simulation, outputfile):
                 print(txt)
                 output.write(f'{txt}\n')
         except KeyboardInterrupt:
-            print_to_screen('Aborting simulation!')
+            logger.info('Aborting simulation!')
             return 1
     return 0
 
@@ -78,7 +79,7 @@ def mean_absolute_percentage_error(value1, value2):
 
 def plot_energy(lammps, pyret):
     """Just plot the energy terms."""
-    print_to_screen('Plotting energy terms...')
+    logger.info('Plotting energy terms...')
     fig = plt.figure()
     grid = gridspec.GridSpec(3, 2)
 
@@ -105,10 +106,7 @@ def plot_energy(lammps, pyret):
                                               pyret[:, i + 1])
         if mape > TOL_ENERGY:
             retval += 1
-            print_to_screen(
-                f'Too large MAPE for {labi}: {mape:.3e}',
-                level='error'
-            )
+            logger.error(f'Too large MAPE for {labi}: {mape:.3e}')
         rec = plt.Rectangle((0, 0), 1, 1, fill=False, edgecolor='none',
                             visible=False)
         if i < last:
@@ -128,7 +126,7 @@ def plot_energy(lammps, pyret):
 
 def plot_pressure(lammps, pyret):
     """Plot the pressure components."""
-    print_to_screen('Plotting pressure terms...')
+    logger.info('Plotting pressure terms...')
     fig = plt.figure()
     grid = gridspec.GridSpec(3, 2)
     last = 5
@@ -143,10 +141,7 @@ def plot_pressure(lammps, pyret):
                                               pyret[:, i + 6])
         if mape > TOL_PRESS:
             retval += 1
-            print_to_screen(
-                f'Too large MAPE for {term}: {mape:.3e}',
-                level='error'
-            )
+            logger.error(f'Too large MAPE for {term}: {mape:.3e}')
         rec = plt.Rectangle((0, 0), 1, 1, fill=False, edgecolor='none',
                             visible=False)
         if i < last:
@@ -167,7 +162,7 @@ def plot_pressure(lammps, pyret):
 
 def plot_all_vs(lammps, pyret):
     """Plot terms vs each other."""
-    print_to_screen('Plotting all terms...')
+    logger.info('Plotting all terms...')
     fig = plt.figure()
     nrow, ncol = 3, 4
     grid = gridspec.GridSpec(nrow, ncol)
@@ -198,32 +193,25 @@ def plot_all_vs(lammps, pyret):
 
 def plot_comparison(lammps_file, pyretis_file):
     """Plot comparison with LAMMPS."""
-    print_to_screen(f'Loading LAMMPS data: {lammps_file}',
-                    level='info')
+    logger.info(f'Loading LAMMPS data: {lammps_file}')
     lammps = np.loadtxt(lammps_file)
-    print_to_screen(f'Loading PyRETIS data: {pyretis_file}',
-                    level='info')
+    logger.info(f'Loading PyRETIS data: {pyretis_file}')
     pyret = np.loadtxt(pyretis_file)
     if lammps.shape != pyret.shape:
-        print_to_screen('LAMMPS and PyRETIS data have different shape!',
-                        level='warning')
+        logger.warning('LAMMPS and PyRETIS data have different shape!')
 
     plt.style.use('seaborn-v0_8-poster')
     ret1 = plot_energy(lammps, pyret)
     if ret1 == 0:
-        print_to_screen('RMSD comparison for thermodynamic properties is OK!',
-                        level='info')
+        logger.info('RMSD comparison for thermodynamic properties is OK!')
     ret2 = plot_pressure(lammps, pyret)
     if ret2 == 0:
-        print_to_screen('RMSD comparison for pressure components is OK!',
-                        level='info')
+        logger.info('RMSD comparison for pressure components is OK!')
     # plot_all_vs(lammps, pyret)
 
     if len(pyret) < len(lammps):
-        print_to_screen(
-            f'PyRETIS data too short: {len(pyret)} vs LAMMPS: {len(lammps)}',
-            level='error'
-        )
+        logger.error(
+            f'PyRETIS data too short: {len(pyret)} vs LAMMPS: {len(lammps)}')
         return 1
     return ret1 + ret2
 
@@ -238,9 +226,9 @@ def main(settings_file, lammps_file, show_plot=True):
         if show_plot:
             plt.show()
         if retval == 0:
-            print_to_screen('Comparison was successful!', level='success')
+            logger.info('Comparison was successful!')
         else:
-            print_to_screen('Comparison FAILED!', level='error')
+            logger.error('Comparison FAILED!')
     return retval
 
 

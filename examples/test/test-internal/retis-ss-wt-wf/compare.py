@@ -10,7 +10,6 @@ import os
 import sys
 import colorama
 import numpy as np
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.setup.createsimulation import create_ensembles
@@ -20,6 +19,9 @@ from pyretis.testing.simulation_comparison import (
     compare_data_by_columns,
     compare_numerical_data
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 RESULTS = '../results/xxx'
 
@@ -37,10 +39,10 @@ def check_path_file(ens):
     status : int
         0 if successful, 1 otherwise.
     """
-    print_to_screen(f'\nReading for {ens.ensemble_name}')
+    logger.info(f'\nReading for {ens.ensemble_name}')
     filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
                             'pathensemble.txt')
-    print_to_screen(f'Reading: {filename}')
+    logger.info(f'Reading: {filename}')
     start = ens.start_condition
     end = ('R') if ens.ensemble_number == 0 else ('R', 'L')
     something_weird = False
@@ -61,23 +63,17 @@ def check_path_file(ens):
             maxo = float(splitline[10])
 
             if length < 3:
-                print_to_screen(f'Suspicious length for path {step}',
-                                level='error')
+                logger.error(f'Suspicious length for path {step}')
                 something_weird = True
             if start != left:
-                print_to_screen(
-                    f'Inconsistent start: {start} != {left} (step {step})',
-                    level='error')
+                logger.error(
+                    f'Inconsistent start: {start} != {left} (step {step})')
                 something_weird = True
             if middle != 'M':
-                print_to_screen(
-                    f'Middle differ: M != {middle} (step {step})',
-                    level='error')
+                logger.error(f'Middle differ: M != {middle} (step {step})')
                 something_weird = True
             if right not in end:
-                print_to_screen(
-                    f'Inconsistent end: {right} (step {step})',
-                    level='error')
+                logger.error(f'Inconsistent end: {right} (step {step})')
                 something_weird = True
             cross = [mino < interpos < maxo for interpos in ens.interfaces]
             if ens.ensemble_number == 0:
@@ -86,13 +82,11 @@ def check_path_file(ens):
                 idx1, idx2 = 0, 1
             if not cross[idx1] or not cross[idx2]:
                 something_weird = True
-                print_to_screen(
+                logger.error(
                     f'Inconsistent crossings: {cross[idx1]} '
-                    f'{cross[idx2]} (step {step})',
-                    level='error'
-                )
+                    f'{cross[idx2]} (step {step})')
     if not something_weird:
-        print_to_screen('Accepted paths are OK!', level='success')
+        logger.info('Accepted paths are OK!')
         return 0
     return 1
 
@@ -106,10 +100,10 @@ def run_check_path_file(settings):
 
 def read_path_file(ens):
     """Read information about paths from pathensemble.txt."""
-    print_to_screen(f'\nReading for {ens.ensemble_name}')
+    logger.info(f'\nReading for {ens.ensemble_name}')
     filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
                             'pathensemble.txt')
-    print_to_screen(f'Reading: {filename}')
+    logger.info(f'Reading: {filename}')
     paths = OrderedDict()
     path_acc = OrderedDict()
     current_acc = None
@@ -205,18 +199,16 @@ def check_swaps(paths, accepted, ens, kind):
                                                    special=special)
                         break
             if not found:
-                print_to_screen(f'Could not find parent for {idx0}',
-                                level='warning')
+                logger.warning(f'Could not find parent for {idx0}')
                 everything_is_ok = False
             elif not swap_ok:
-                print_to_screen(f'Comparison failed for {idx0}',
-                                level='error')
+                logger.error(f'Comparison failed for {idx0}')
                 everything_is_ok = False
                 errors.add(idx0)
     if everything_is_ok:
-        print_to_screen('All swaps are ok!', level='success')
+        logger.info('All swaps are ok!')
         return 0
-    print_to_screen(f'Error for some swaps: {errors}', level='error')
+    logger.error(f'Error for some swaps: {errors}')
     return 1
 
 
@@ -235,22 +227,18 @@ def check_ensemble_swaps(settings):
     for i in range(len(ensembles)):
         if i == 0:
             get_swap_parent(path_info[i], None, i+1, None, path_acc[i+1])
-            print_to_screen(f'\nChecking {names[i]} <- {names[i+1]} swaps...',
-                            level='info')
+            logger.info(f'\nChecking {names[i]} <- {names[i+1]} swaps...')
             status += check_swaps(path_info[i], path_acc[i], i, kind='right')
         elif i == len(ensembles) - 1:
             get_swap_parent(path_info[i], i-1, None, path_acc[i-1], None)
-            print_to_screen(f'\nChecking {names[i]} <- {names[i-1]} swaps...',
-                            level='info')
+            logger.info(f'\nChecking {names[i]} <- {names[i-1]} swaps...')
             status += check_swaps(path_info[i], path_acc[i], i, kind='left')
         else:
             get_swap_parent(path_info[i], i-1, i+1,
                             path_acc[i-1], path_acc[i+1])
-            print_to_screen(f'\nChecking {names[i]} -> {names[i+1]} swaps...',
-                            level='info')
+            logger.info(f'\nChecking {names[i]} -> {names[i+1]} swaps...')
             status += check_swaps(path_info[i], path_acc[i], i, kind='right')
-            print_to_screen(f'Checking {names[i]} <- {names[i-1]} swaps...',
-                            level='info')
+            logger.info(f'Checking {names[i]} <- {names[i-1]} swaps...')
             status += check_swaps(path_info[i], path_acc[i], i, kind='left')
     return status
 
@@ -270,37 +258,37 @@ def compare_ens_files(settings, fname, ftype=None):
         else:
             equal, msg = compare_numerical_data(fil1, fil2)
         if not equal:
-            print_to_screen(f'Mismatch in {fil1}: {msg}', level='error')
+            logger.error(f'Mismatch in {fil1}: {msg}')
             retval += 1
         else:
-            print_to_screen(f'Files are equal: {fil1}', level='success')
+            logger.info(f'Files are equal: {fil1}')
     return retval
 
 
 def main():
     """Run the full comparison."""
     sets = parse_settings_file('retis.rst')
-    print_to_screen('\nComparing pathensemble.txt files', level='message')
-    print_to_screen('================================', level='message')
+    logger.info('\nComparing pathensemble.txt files')
+    logger.info('================================')
     ret1 = compare_ens_files(sets, 'pathensemble.txt')
-    print_to_screen('\nCheck swaps', level='message')
-    print_to_screen('===========', level='message')
+    logger.info('\nCheck swaps')
+    logger.info('===========')
     ret2 = check_ensemble_swaps(sets)
-    print_to_screen('\nCheck accepted paths', level='message')
-    print_to_screen('====================', level='message')
+    logger.info('\nCheck accepted paths')
+    logger.info('====================')
     ret3 = run_check_path_file(sets)
-    print_to_screen('\nComparing energy.txt files', level='message')
-    print_to_screen('================================', level='message')
+    logger.info('\nComparing energy.txt files')
+    logger.info('================================')
     ret4 = compare_ens_files(sets, 'energy.txt', 'energy')
-    print_to_screen('\nComparing order.txt files', level='message')
-    print_to_screen('================================', level='message')
+    logger.info('\nComparing order.txt files')
+    logger.info('================================')
     ret5 = compare_ens_files(sets, 'order.txt', 'order')
 
     retval = ret1 + ret2 + ret3 + ret4 + ret5
     if retval == 0:
-        print_to_screen('\nComparison is successful!', level='success')
+        logger.info('\nComparison is successful!')
     else:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
     return retval
 
 

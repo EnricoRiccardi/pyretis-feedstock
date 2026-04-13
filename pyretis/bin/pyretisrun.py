@@ -46,8 +46,10 @@ from pyretis.inout.common import (
     check_python_version,
     create_backup,
 )
-from pyretis.inout import print_to_screen
-from pyretis.inout.formats.formatter import get_log_formatter
+from pyretis.inout.formats.formatter import (
+    get_log_formatter,
+    setup_console_logging,
+)
 from pyretis.inout.settings import (
     parse_settings_file,
     write_settings_file
@@ -55,14 +57,9 @@ from pyretis.inout.settings import (
 
 
 _DATE_FMT = '%d.%m.%Y %H:%M:%S'
-# Set up for logging:
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-# Define a console logger. This will log to sys.stderr:
-console = logging.StreamHandler()
-console.setLevel(logging.WARNING)
-console.setFormatter(get_log_formatter(logging.WARNING))
-logger.addHandler(console)
+# Register custom log levels and set up colored console handler:
+from pyretis.inout.screen import PROGRESS, REFERENCE  # noqa: E402
+logger = setup_console_logging()
 
 
 def use_tqdm(progress):
@@ -107,32 +104,23 @@ def hello_world(infile, rundir, logfile):
     """
     timestart = datetime.datetime.now().strftime(_DATE_FMT)
     pyversion = sys.version.split()[0]
-    print_to_screen('\n'.join([LOGO]), level='message')
-    logger.info('\n'.join([LOGO]))
+    logger.banner('\n'.join([LOGO]))
 
-    print_to_screen(f'{PROGRAM_NAME} version: {VERSION}',
-                    level='message')
-    logger.info('%s version: %s', PROGRAM_NAME, VERSION)
+    logger.banner('%s version: %s', PROGRAM_NAME, VERSION)
 
-    print_to_screen(f'Start of execution: {timestart}', level='message')
-    logger.info('Start of execution: %s', timestart)
-    print_to_screen(f'Python version: {pyversion}', level='message')
-    logger.info('Python version: %s', pyversion)
+    logger.banner('Start of execution: %s', timestart)
+    logger.banner('Python version: %s', pyversion)
 
-    print_to_screen(f'\nRunning in directory: {rundir}')
-    logger.info('Running in directory: %s', rundir)
-    print_to_screen(f'Input file: {infile}')
-    logger.info('Input file: %s', infile)
-    print_to_screen(f'Log file: {logfile}')
-    logger.info('Log file: %s', logfile)
+    logger.progress('\nRunning in directory: %s', rundir)
+    logger.progress('Input file: %s', infile)
+    logger.progress('Log file: %s', logfile)
 
 
 def bye_bye_world():
     """Print out the goodbye message for PyRETIS."""
     timeend = datetime.datetime.now().strftime(_DATE_FMT)
     msgtxt = f'End of {PROGRAM_NAME} execution: {timeend}'
-    print_to_screen(msgtxt, level='info')
-    logger.info(msgtxt)
+    logger.progress(msgtxt)
     # display some references:
     references = [f'{PROGRAM_NAME} references:']
     references.append(('-')*len(references[0]))
@@ -140,13 +128,9 @@ def bye_bye_world():
         if line:
             references.append(line)
     reftxt = '\n'.join(references)
-    logger.info(reftxt)
-    print_to_screen()
-    print_to_screen(reftxt)
+    logger.log(REFERENCE, '\n' + reftxt)
     urltxt = str(URL)
-    logger.info(urltxt)
-    print_to_screen()
-    print_to_screen(urltxt, level='info')
+    logger.log(REFERENCE, urltxt)
 
 
 def run_md_flux_simulation(sim, sim_settings, progress=False):
@@ -163,7 +147,7 @@ def run_md_flux_simulation(sim, sim_settings, progress=False):
         results to the screen.
 
     """
-    print_to_screen('Starting MD-Flux simulation', level='info')
+    logger.progress('Starting MD-Flux simulation')
     tqd = use_tqdm(progress)
     sim.engine.exe_dir = sim_settings['simulation']['exe_path']
     sim.set_up_output(sim_settings, progress=progress)
@@ -189,7 +173,7 @@ def run_md_simulation(sim, sim_settings, progress=False):
         results to the screen.
 
     """
-    print_to_screen('Starting MD simulation', level='info')
+    logger.progress('Starting MD simulation')
     tqd = use_tqdm(progress)
     sim.engine.exe_dir = sim_settings['simulation']['exe_path']
     sim.set_up_output(sim_settings, progress=progress)
@@ -221,8 +205,7 @@ def explore_simulation(sim, sim_settings, progress=False):
     )
 
     logtxt = 'Load frames for free energy landscape exploration'
-    print_to_screen(f'\n{logtxt}', level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
 
     # Make sure that the settings are correct. No users don't know better.
     for s_ens in sim_settings.get('ensemble', []):
@@ -231,14 +214,12 @@ def explore_simulation(sim, sim_settings, progress=False):
 
     # Here we do the initialisation:
     if not sim.initiate(sim_settings):
-        print_to_screen('Initiation stopped, will exit now.')
-        logger.info('Initiation stopped, will exit now.')
+        logger.progress('Initiation stopped, will exit now.')
         return False
     sim.write_restart(now=True)
 
     logtxt = 'Initiation done. Exploring now.'
-    print_to_screen(f'\n{logtxt}', level='success')
-    logger.info(logtxt)
+    logger.progress(logtxt)
 
     tqd = use_tqdm(progress)
 
@@ -270,25 +251,20 @@ def run_path_simulation(sim, sim_settings, progress=False):
         progress=progress
     )
 
-    logtxt = f"Initialising {sim_settings['simulation']['task']} simulation. "
-    print_to_screen(f'\n{logtxt}', level='info')
-    logger.info(logtxt)
+    task = sim_settings['simulation']['task']
+    sep = '=' * (len(task) + 26)
+    logtxt = f'\n{sep}\n  Initialising {task} simulation.\n{sep}'
+    logger.banner(logtxt)
 
-    logtxt = 'Initialising path ensembles:'
-    print_to_screen(f'\n{logtxt}')
-    logger.info(logtxt)
+    logger.progress('\nInitialising path ensembles:')
 
     # Here we do the initialisation:
     if not sim.initiate(sim_settings):
-        print_to_screen('Initiation stopped, will exit now.')
-        logger.info('Initiation stopped, will exit now.')
+        logger.progress('Initiation stopped, will exit now.')
         return False
     sim.write_restart(now=True)
 
-    logtxt = "Initiation done. "
-    logtxt += f"Starting {sim_settings['simulation']['task']} simulation. "
-    print_to_screen(f'\n{logtxt}', level='success')
-    logger.info(logtxt)
+    logger.progress('\nInitiation done. Starting %s simulation.', task)
 
     tqd = use_tqdm(progress)
 
@@ -313,14 +289,10 @@ def make_tis_files(_, settings, progress=False):
         The settings for the simulations.
 
     """
-    print_to_screen()
     logtxt = 'Input settings requests: TIS for multiple path ensembles.'
-    print_to_screen(logtxt)
-    logger.info(logtxt)
+    logger.progress(logtxt)
     logtxt = 'Will create input files for the TIS simulations and exit'
-    print_to_screen(logtxt)
-    logger.info(logtxt)
-    print_to_screen()
+    logger.progress(logtxt)
     i_ens = 0
     for i, ens_settings in enumerate(settings['ensemble']):
         i_ens += 1
@@ -330,20 +302,16 @@ def make_tis_files(_, settings, progress=False):
         ens_settings['simulation']['task'] = 'tis'
         ensf = generate_ensemble_name(i_ens)
         logtxt = f'Creating input for TIS ensemble: {i_ens} '
-        print_to_screen(logtxt)
-        logger.info(logtxt)
+        logger.progress(logtxt)
         infile = f'tis-{ensf}.rst'
         logtxt = f'Create file: "{infile}"'
-        logger.info(logtxt)
+        logger.progress(logtxt)
         exe_dir_file = os.path.join(ens_settings['engine']['exe_path'], infile)
         write_settings_file(ens_settings, exe_dir_file, backup=False)
         logtxt = 'Command for executing:'
-        print_to_screen(logtxt)
-        logger.info(logtxt)
+        logger.progress(logtxt)
         logtxt = f'pyretisrun -i {infile} -p -f {ensf}.log'
-        print_to_screen(logtxt, level='message')
-        logger.info(logtxt)
-        print_to_screen()
+        logger.progress(logtxt)
     return True
 
 
@@ -366,8 +334,7 @@ def run_generic_simulation(sim, sim_settings, progress=False):
 
     """
     logtxt = 'Running simulation'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
 
     tqd = use_tqdm(progress)
     sim.set_up_output(sim_settings, progress=progress)
@@ -414,11 +381,8 @@ def set_up_simulation(inputfile, runpath):
     if not os.path.isfile(inputfile):
         raise ValueError(f'Input file "{inputfile}" NOT found!')
 
-    print_to_screen(f'\nReading input settings from: {inputfile}',
-                    level='info')
-    logger.info('Reading input settings from: %s', inputfile)
-
-    print_to_screen('\nSetting up simulation', level='success')
+    logger.progress('Reading input settings from: %s', inputfile)
+    logger.progress('Setting up simulation')
 
     sim_settings = parse_settings_file(inputfile)
     # NB this is not transmitted to the ensembles
@@ -429,14 +393,12 @@ def set_up_simulation(inputfile, runpath):
         ens['engine']['exe_path'] = runpath
 
     logtxt = 'Set up and create simulation.'
-    print_to_screen(f'* {logtxt}')
     logger.info(logtxt)
 
     sim = create_simulation(sim_settings)
 
     task = sim_settings['simulation']['task'].lower()
-    print_to_screen(f'\nWill run simulation "{task}".', level='success')
-    logger.info('Setup for simulation "%s" is done.', task)
+    logger.progress('Setup for simulation "%s" is done.', task)
     runner = _RUNNERS.get(task, run_generic_simulation)
     return runner, sim, sim_settings
 
@@ -455,10 +417,6 @@ def store_simulation_settings(settings, indir, backup):
 
     """
     out_file = os.path.join(indir, 'out.rst')
-    rel_file = os.path.relpath(out_file)
-    print_to_screen(
-        f'\nFull settings used for simulation written to: {rel_file}',
-    )
     logger.info('Full simulation settings written to: %s', out_file)
     write_settings_file(settings, out_file, backup=backup)
 
@@ -478,7 +436,7 @@ def soft_exit_ignore(turn_keyboard_interruption_off=True, exe_dir=None):
     def soft_exit_handler(signum, frame):  # pragma: no cover
         """Handle with a keyboard interruption signal."""
         # pylint: disable=unused-argument
-        print_to_screen('Attempting soft exit - terminating soon...')
+        logger.progress('Attempting soft exit - terminating soon...')
         pathlib.Path(os.path.join(exe_dir, 'EXIT')).touch(exist_ok=True)
     if turn_keyboard_interruption_off:
         return signal.signal(signal.SIGINT, soft_exit_handler)
@@ -507,10 +465,10 @@ def main(infile, indir, exe_dir, progress, log_level):
 
     exit_file = os.path.join(exe_dir, 'EXIT')
     if os.path.isfile(exit_file):
-        logger.info('Exit file found - Remove it before to execute PyRETIS.')
-        print_to_screen(f'\n*        {exit_file} file found         *',
-                        level='error')
-        print_to_screen('Remove the file to execute PyRETIS\n', level='error')
+        logger.progress(
+            'Exit file found - Remove it before executing PyRETIS.')
+        logger.error('*        %s file found         *', exit_file)
+        logger.error('Remove the file to execute PyRETIS')
         bye_bye_world()
         return
 
@@ -524,10 +482,9 @@ def main(infile, indir, exe_dir, progress, log_level):
                          exe_dir=exe_dir)
     except Exception as error:  # Exceptions should be subclass BaseException.
         logger.error('"%s: %s".', error.__class__.__name__, error.args)
-        print_to_screen('ERROR - execution stopped.', level='error')
-        print_to_screen(
-            'Please see the LOG for the error message and traceback.',
-            level='error',
+        logger.error('ERROR - execution stopped.')
+        logger.error(
+            'Please see the LOG for the error message and traceback.'
         )
         # Print the traceback to the log-file, but not to the screen.
         screen = logger.handlers[0]
@@ -545,8 +502,7 @@ def main(infile, indir, exe_dir, progress, log_level):
             if end is not None:
                 settings['simulation']['endcycle'] = end
                 logtxt = f'Execution ended at step {end}'
-                print_to_screen(logtxt)
-                logger.info(logtxt)
+                logger.progress(logtxt)
         store_simulation_settings(settings, indir, False)
         bye_bye_world()
 

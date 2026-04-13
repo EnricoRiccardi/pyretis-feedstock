@@ -6,10 +6,12 @@ import sys
 import colorama
 from matplotlib import pyplot as plt
 import numpy as np
-from pyretis.inout import print_to_screen
 from pyretis.inout.formats.gromacs import (
     read_xvg_file,
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 plt.style.use('seaborn-v0_8-poster')
@@ -17,20 +19,19 @@ plt.style.use('seaborn-v0_8-poster')
 
 def main(energy_file, xvg_file, plot=False):
     """Perform the test."""
-    print_to_screen(f'Reading energy file: {energy_file}',
-                    level='info')
+    logger.info(f'Reading energy file: {energy_file}')
     energy = np.loadtxt(energy_file)
-    print_to_screen(f'Reading xvg file: {xvg_file}', level='info')
+    logger.info(f'Reading xvg file: {xvg_file}')
     energy_xvg = read_xvg_file(xvg_file)
 
     mse_ok = obtain_mses(energy, energy_xvg)
 
     if plot:
-        print_to_screen('\nPlotting for comparison', level='message')
+        logger.info('\nPlotting for comparison')
         plot_comparison(energy, energy_xvg, energy_file, xvg_file)
 
     if not mse_ok:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
         sys.exit(1)
 
 
@@ -48,7 +49,10 @@ def obtain_mses(energy, energy_xvg, tol=1.0e-5):
             tol_ok = abs(mse) < tol
             if not tol_ok:
                 level = 'error'
-        print_to_screen(f'MSE {pair[1]}: {mse}', level=level)
+        if level == 'error':
+            logger.error(f'MSE {pair[1]}: {mse}')
+        else:
+            logger.info(f'MSE {pair[1]}: {mse}')
         if not tol_ok:
             return False
     return True

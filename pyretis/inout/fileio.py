@@ -91,11 +91,11 @@ class FileIO(OutputBase):
             encoding = 'utf-8' if 'b' in self.file_mode else None
             self.fileh = open(self.filename, self.file_mode, encoding=encoding)
         except (OSError, IOError) as error:
-            logger.critical(
+            logger.warning(
                 'Could not open file "%s" for reading', self.filename
             )
-            logger.critical(
-                'I/O error ({%d}): {%s}', error.errno, error.strerror
+            logger.warning(
+                'I/O error (%d): %s', error.errno, error.strerror
             )
         return self.fileh
 
@@ -127,11 +127,11 @@ class FileIO(OutputBase):
             encoding = 'utf-8' if 'b' in self.file_mode else None
             self.fileh = open(self.filename, self.file_mode, encoding=encoding)
         except (OSError, IOError) as error:  # pragma: no cover
-            logger.critical(
+            logger.warning(
                 'Could not open file "%s" for writing', self.filename
             )
-            logger.critical(
-                'I/O error (%d): %d', error.errno, error.strerror
+            logger.warning(
+                'I/O error (%d): %s', error.errno, error.strerror
             )
         return self.fileh
 

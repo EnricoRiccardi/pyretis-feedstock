@@ -78,17 +78,33 @@ Input arguments
 .. table:: Possible settings for the ``LOG_LEVEL``.
    :class: table-striped table-hover
 
-   +-----------+---------------------------------------------------------+
-   | LOG_LEVEL | Description                                             |
-   +===========+=========================================================+
-   | CRITICAL  | Only display critical messages.                         |
-   +-----------+---------------------------------------------------------+
-   | ERROR     | Display critical and error messages.                    |
-   +-----------+---------------------------------------------------------+
-   | WARNING   | Display critical and error messages and warnings        |
-   +-----------+---------------------------------------------------------+
-   | INFO      | Display all of the above and some info messages.        |
-   +-----------+---------------------------------------------------------+
-   | DEBUG     | Display all of the above and additional debug messages. |
-   +-----------+---------------------------------------------------------+
+   +-----------+---------------------------------------------------------------+
+   | LOG_LEVEL | Description                                                   |
+   +===========+===============================================================+
+   | CRITICAL  | Only display critical messages.                               |
+   +-----------+---------------------------------------------------------------+
+   | ERROR     | Display critical and error messages.                          |
+   +-----------+---------------------------------------------------------------+
+   | WARNING   | Display critical and error messages and warnings.             |
+   +-----------+---------------------------------------------------------------+
+   | INFO      | Display all of the above and some info messages.              |
+   +-----------+---------------------------------------------------------------+
+   | DEBUG     | Display all of the above and additional debug messages.       |
+   +-----------+---------------------------------------------------------------+
+
+PyRETIS also defines three custom levels used internally for console output
+(they are not intended as ``-l`` arguments but are listed here for completeness):
+
+.. table:: Custom |pyretis| log levels.
+   :class: table-striped table-hover
+
+   +-----------+-------+---------------------------------------------------------------+
+   | LOG_LEVEL | Value | Description                                                   |
+   +===========+=======+===============================================================+
+   | PROGRESS  | 25    | Progress messages shown on the console (default level).       |
+   +-----------+-------+---------------------------------------------------------------+
+   | BANNER    | 26    | Logo and header messages displayed in cyan at startup.        |
+   +-----------+-------+---------------------------------------------------------------+
+   | REFERENCE | 27    | Citation and URL messages displayed at startup/shutdown.      |
+   +-----------+-------+---------------------------------------------------------------+
 

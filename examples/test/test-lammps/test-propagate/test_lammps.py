@@ -10,11 +10,13 @@ from matplotlib import pyplot as plt
 from pyretis.core.path import Path
 from pyretis.inout.common import make_dirs
 from pyretis.engines.lammps import LAMMPSEngine
-from pyretis.inout import print_to_screen
 from pyretis.core.random_gen import create_random_generator
 from pyretis.testing.helpers import clean_dir
 from pyretis.testing.systemhelp import create_system_ext
 from plotting import plot_compare, plot_xy
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -24,9 +26,7 @@ SUBCYCLES = 2
 
 def run_forward():
     """Use the LAMMPS engine to propagate a MD simulation forward in time."""
-    print_to_screen(
-        '\nTesting the LAMMPS engine by propagating forward & backward.',
-    )
+    logger.info('\nTesting LAMMPS engine: propagating forward & backward.')
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', SUBCYCLES)
     # Create a dummy system:
     system = create_system_ext(pos=('system.data', 0))
@@ -35,7 +35,7 @@ def run_forward():
     clean_dir(exe_dir)
     engine.exe_dir = exe_dir
     pathf = Path(rgen=None, maxlen=STEPS)
-    print_to_screen('-> Propagating forward....', level='info')
+    logger.info('-> Propagating forward....')
     ensemble = {
         'system': system,
         'order_function': None,
@@ -43,20 +43,17 @@ def run_forward():
     }
     engine.propagate(path=pathf, ensemble=ensemble, reverse=False)
     # Propagate from the last point, but backward:
-    print_to_screen(
-        '-> Setting system to last point in the forward path.',
-        level='info'
-    )
+    logger.info('-> Setting system to last point in the forward path.')
     last = pathf.phasepoints[-1]
     pathb = Path(rgen=None, maxlen=pathf.length)
-    print_to_screen('-> Propagating backward....', level='info')
+    logger.info('-> Propagating backward....')
     ensemble = {
         'system': last,
         'order_function': None,
         'interfaces': [-1, 0.0, 3.0]
     }
     engine.propagate(path=pathb, ensemble=ensemble, reverse=True)
-    print_to_screen('-> Comparing forward & backward:', level='info')
+    logger.info('-> Comparing forward & backward:')
     order_f = np.array([i.order for i in pathf.phasepoints])
     order_b = np.array([i.order for i in reversed(pathb.phasepoints)])
     data_sets = [
@@ -79,9 +76,7 @@ def run_forward():
 
 def run_backward():
     """Use the LAMMPS engine to propagate a MD simulation backward in time."""
-    print_to_screen(
-        '\nTesting the LAMMPS engine by propagating backward & forward.',
-    )
+    logger.info('\nTesting LAMMPS engine: propagating backward & forward.')
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', SUBCYCLES)
     # Create a dummy system:
     system = create_system_ext(pos=('system.data', 0))
@@ -97,7 +92,7 @@ def run_backward():
     vel_settings = {'aimless': True}
     engine.modify_velocities(ensemble, vel_settings)
     pathb = Path(rgen=None, maxlen=STEPS)
-    print_to_screen('-> Propagating backward....', level='info')
+    logger.info('-> Propagating backward....')
     ensemble = {
         'system': system,
         'order_function': None,
@@ -105,20 +100,17 @@ def run_backward():
     }
     engine.propagate(path=pathb, ensemble=ensemble, reverse=True)
     # Propagate from the last point, but forward:
-    print_to_screen(
-        '-> Setting system to last point in the backward path.',
-        level='info'
-    )
+    logger.info('-> Setting system to last point in the backward path.')
     last = pathb.phasepoints[-1]
     pathf = Path(rgen=None, maxlen=pathb.length)
-    print_to_screen('-> Propagating forward....', level='info')
+    logger.info('-> Propagating forward....')
     ensemble = {
         'system': last,
         'order_function': None,
         'interfaces': [1.0, 5.0, 12.0],
     }
     engine.propagate(path=pathf, ensemble=ensemble, reverse=False)
-    print_to_screen('-> Comparing backward & forward:', level='info')
+    logger.info('-> Comparing backward & forward:')
     order_f = np.array([i.order for i in reversed(pathf.phasepoints)])
     order_b = np.array([i.order for i in pathb.phasepoints])
     data_sets = [

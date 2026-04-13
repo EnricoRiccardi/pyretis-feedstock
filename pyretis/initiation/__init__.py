@@ -35,7 +35,6 @@ initiate_path_simulation (:py:func:`initiate_path_simulation`)
 
 """
 import logging
-from pyretis.inout import print_to_screen
 from .initiate_kick import initiate_kick
 from .initiate_load import initiate_load
 from .initiate_restart import initiate_restart
@@ -70,8 +69,7 @@ def get_initiation_method(settings):
         logger.error('Unknown initiation method "%s" requested', method)
         logger.error('Known methods: %s', _methods.keys())
         raise ValueError('Unknown initiation method requested!')
-    print_to_screen(f'Will initiate paths using method "{method}".')
-    logger.info('Initiation method "%s" selected', method)
+    logger.progress('Initiation method "%s" selected', method)
     return _methods[method]
 
 

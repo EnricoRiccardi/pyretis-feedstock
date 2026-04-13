@@ -32,7 +32,6 @@ from pyretis.core.tis import make_tis
 from pyretis.initiation import initiate_path_simulation
 from pyretis.inout.common import make_dirs
 from pyretis.inout.restart import write_ensemble_restart
-from pyretis.inout.screen import print_to_screen
 from pyretis.inout.simulationio import task_from_settings
 from pyretis.simulation.simulation import Simulation
 
@@ -245,8 +244,9 @@ class PathSimulation(Simulation):
             path_ensemble = ensemble['path_ensemble']
             directory = path_ensemble.directory['path_ensemble']
             idx = path_ensemble.ensemble_number
-            logger.info('Creating output directories for path_ensemble %s',
-                        path_ensemble.ensemble_name)
+            logger.progress(
+                'Creating output directories for path_ensemble %s',
+                path_ensemble.ensemble_name)
             for dir_name in path_ensemble.directories():
                 msg_dir = make_dirs(dir_name)
                 logger.info('%s', msg_dir)
@@ -287,18 +287,11 @@ class PathSimulation(Simulation):
 
         """
         init = initiate_path_simulation(self, settings)
-        print_to_screen('')
         for i_ens, (accept, path, status, path_ensemble) in enumerate(init):
-            print_to_screen(
-                f'Found initial path for {path_ensemble.ensemble_name}:',
-                level='success' if accept else 'warning',
-            )
-            for line in str(path).split('\n'):
-                print_to_screen(f'- {line}')
-            logger.info('Found initial path for %s',
-                        path_ensemble.ensemble_name)
-            logger.info('%s', path)
-            print_to_screen('')
+            logger.progress(
+                'Found initial path for %s',
+                path_ensemble.ensemble_name)
+            logger.progress('%s', path)
             idx = path_ensemble.ensemble_number
             path_ensemble_result = {
                 f'pathensemble-{idx}': path_ensemble,
@@ -426,7 +419,7 @@ class SimulationTIS(PathSimulation):
     def __str__(self):
         """Just a small function to return some info about the simulation."""
         msg = ['TIS simulation']
-        msg += ['Ensembles:']
+        msg += ['', 'Ensembles:']
         for ensemble in self.ensembles:
             path_ensemble = ensemble['path_ensemble']
             msg += [f'Path ensemble: {path_ensemble.ensemble_number}']
@@ -436,7 +429,7 @@ class SimulationTIS(PathSimulation):
             msg += [f'Engine: {ensemble["engine"]}']
 
         nstep = self.cycle['endcycle'] - self.cycle['startcycle']
-        msg += [f'Number of steps to do: {nstep}']
+        msg += ['', f'Number of steps to do: {nstep}']
         return '\n'.join(msg)
 
 
@@ -464,12 +457,12 @@ class SimulationRETIS(PathSimulation):
     def __str__(self):
         """Just a small function to return some info about the simulation."""
         msg = ['RETIS simulation']
-        msg += ['Ensembles:']
+        msg += ['', 'Ensembles:']
         for ensemble in self.ensembles:
             path_ensemble = ensemble['path_ensemble']
             msgtxt = (f'{path_ensemble.ensemble_name}: '
                       f'Interfaces: {path_ensemble.interfaces}')
             msg += [msgtxt]
         nstep = self.cycle['endcycle'] - self.cycle['startcycle']
-        msg += [f'Number of steps to do: {nstep}']
+        msg += ['', f'Number of steps to do: {nstep}']
         return '\n'.join(msg)

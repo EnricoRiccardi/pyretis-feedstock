@@ -12,9 +12,11 @@ from pyretis.core import create_box, System, Particles
 from pyretis.core.tis import shoot, time_reversal
 from pyretis.core.retis import retis_swap
 from pyretis.initiation import initiate_path_simulation
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.setup import create_simulation, create_force_field
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def plot_path(path, axi, axj, color, alphai=0.9, alphaj=0.9, lsj='-'):
@@ -180,28 +182,21 @@ class PlotHelper:
             move, ensemble, accept, trial, status, _ = self.last_result
             if move == 'Swap':
                 # idxs = (idx, idx + 1)
-                print_to_screen(
-                    'Swap: {} <-> {}'.format(
+                logger.info('Swap: {} <-> {}'.format(
                         ensemble[0]['path_ensemble'].ensemble_name,
                         ensemble[1]['path_ensemble'].ensemble_name
-                    ),
-                    level='message'
-                )
+                    ))
             else:
                 # idxs = (idx,)
                 ensemble['path_ensemble'].add_path_data(trial, status)
-                print_to_screen(
-                    f"In ensemble: {ensemble['path_ensemble'].ensemble_name}",
-                    level='message'
-                )
+                logger.info(
+                    f"In ensemble: {ensemble['path_ensemble'].ensemble_name}")
             if accept:
-                print_to_screen(f'\t{move} was accepted!',
-                                level='success')
-                print_to_screen(f'\t{status}', level='success')
+                logger.info(f'\t{move} was accepted!')
+                logger.info(f'\t{status}')
             else:
-                print_to_screen(f'\t{move} was rejected!',
-                                level='error')
-                print_to_screen(f'\t{status}', level='error')
+                logger.error(f'\t{move} was rejected!')
+                logger.error(f'\t{status}')
             self.axi.clear()
             self.axj.clear()
             self.plot_potential(self.axi, self.axj)
@@ -248,12 +243,10 @@ def set_up_simulation(settings):
     for i, _ in enumerate(initiate_path_simulation(simulation, settings)):
         ensemble = simulation.ensembles[i]['path_ensemble']
         name = ensemble.ensemble_name
-        print_to_screen(f'Info about ensemble {name}:',
-                        level='success')
-        print_to_screen(ensemble)
-        print_to_screen('Info about the initial path:', level='success')
-        print_to_screen(ensemble.last_path)
-        print_to_screen('')
+        logger.info(f'Info about ensemble {name}:')
+        logger.info(ensemble)
+        logger.info('Info about the initial path:')
+        logger.info(ensemble.last_path)
     return simulation
 
 

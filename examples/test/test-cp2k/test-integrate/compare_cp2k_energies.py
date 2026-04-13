@@ -6,7 +6,9 @@ import sys
 import colorama
 from matplotlib import pyplot as plt
 import numpy as np
-from pyretis.inout import print_to_screen
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 plt.style.use('seaborn-v0_8-poster')
@@ -14,21 +16,19 @@ plt.style.use('seaborn-v0_8-poster')
 
 def main(cp2k_file1, cp2k_file2, plot=False):
     """Perform the test."""
-    print_to_screen(f'Reading energy file: {cp2k_file1}',
-                    level='info')
+    logger.info(f'Reading energy file: {cp2k_file1}')
     energy_cp2k1 = np.loadtxt(cp2k_file1)
-    print_to_screen(f'Reading energy file: {cp2k_file2}',
-                    level='info')
+    logger.info(f'Reading energy file: {cp2k_file2}')
     energy_cp2k2 = np.loadtxt(cp2k_file2)
 
     mse_ok = obtain_mses(energy_cp2k1, energy_cp2k2)
 
     if plot:
-        print_to_screen('\nPlotting for comparison', level='message')
+        logger.info('\nPlotting for comparison')
         plot_comparison(energy_cp2k1, energy_cp2k2, cp2k_file1, cp2k_file2)
 
     if not mse_ok:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
         sys.exit(1)
 
 
@@ -47,7 +47,10 @@ def obtain_mses(energy_cp2k1, energy_cp2k2, tol=1.0e-5):
             tol_ok = abs(rse) < tol
             if not tol_ok:
                 level = 'error'
-        print_to_screen(f'RES {key}: {rse}', level=level)
+        if level == 'error':
+            logger.error(f'RES {key}: {rse}')
+        else:
+            logger.info(f'RES {key}: {rse}')
         if not tol_ok:
             return False
     return True

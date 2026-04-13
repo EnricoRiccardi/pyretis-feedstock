@@ -69,8 +69,6 @@ import importlib
 import os
 import sys
 import numpy as np
-from pyretis.inout import print_to_screen
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
@@ -931,8 +929,5 @@ def soft_partial_exit(exe_path=''):
         exit_file = os.path.join(exe_path, exit_file)
     if os.path.isfile(exit_file):
         logger.info('Exit file found - will exit between steps.')
-        print_to_screen('Exit file found - will exit between steps.',
-                        level='warning')
-
         return True
     return False

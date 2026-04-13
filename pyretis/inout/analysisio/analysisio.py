@@ -35,7 +35,6 @@ from pyretis.analysis import (analyse_flux, analyse_energies, analyse_orderp,
                               analyse_path_ensemble, analyse_repptis_ensemble,
                               match_probabilities, retis_flux, retis_rate,
                               perm_calculations)
-from pyretis.inout import print_to_screen
 from pyretis.inout.formats.formatter import format_number
 from pyretis.inout.plotting import create_plotter
 from pyretis.inout.plotting import TxtPlotter
@@ -234,10 +233,10 @@ def print_value_error(heading, value, rel_error, level=None):
     """Print out the matched probabilities."""
     val = format_number(value, 0.1, 100)
     msgtxt = f'{heading}: {val}'
-    print_to_screen(msgtxt.strip(), level=level)
+    logger.info(msgtxt.strip())
     fmt_scale = format_number(rel_error * 100, 0.1, 100)
     msgtxt = f'(Relative error: {fmt_scale.rstrip()} %)'
-    print_to_screen(msgtxt, level=level)
+    logger.info(msgtxt)
 
 
 def run_single_tis_analysis(settings, plotter, txt_plotter):
@@ -265,12 +264,10 @@ def run_single_tis_analysis(settings, plotter, txt_plotter):
         tis.get('detect', sim['interfaces'][-1]),
         sim['interfaces'])
     msgtxt = f"Analysing ensemble {tis['ensemble_number']}"
-    print_to_screen(msgtxt, level='info')
-    print_to_screen()
+    logger.info(msgtxt)
     result = run_analysis_files(sett, files, plotter, txt_plotter)
     report_txt = generate_report('tis', result, output='txt')[0]
-    print_to_screen(''.join(report_txt))
-    print_to_screen()
+    logger.progress(''.join(report_txt))
     return result
 
 
@@ -303,25 +300,21 @@ def run_tis_analysis(settings, plotter, txt_plotter):
             msgtxt = ('Initial flux is not calculated here.\n'
                       'Remember to calculate this separately!')
             logger.info(msgtxt)
-            print_to_screen(msgtxt, level='warning')
         else:
             msgtxt = f'Analysing ensemble {i} of {nens}'
-            print_to_screen(msgtxt, level='info')
-            print_to_screen()
+            logger.info(msgtxt)
             result = run_analysis_files(sett, files, plotter, txt_plotter)
             results['pathensemble'].append(result['pathensemble'])
             report_txt = generate_report('tis', result,
                                          output='txt')[0]
-            print_to_screen(''.join(report_txt))
-            print_to_screen()
+            logger.progress(''.join(report_txt))
     # match probabilities:
     out, fig, txt = analyse_and_output_matched(results['pathensemble'],
                                                plotter, txt_plotter,
                                                settings)
     results['matched'] = {'out': out, 'figures': fig, 'txtfile': txt}
-    print_to_screen('Overall results', level='success')
-    print_to_screen('===============', level='success')
-    print_to_screen()
+    logger.info('Overall results')
+    logger.info('===============')
     print_value_error('TIS Crossing probability',
                       out['prob'], out['relerror'], level='success')
     return results
@@ -349,24 +342,20 @@ def run_retis_analysis(settings, plotter, txt_plotter):
                'matched': None,
                'permeability': permeability}
     nens = len(all_settings) - 1
-    print_to_screen()
     for i, (sett, files) in enumerate(zip(all_settings, all_files)):
         msgtxt = f'Analysing ensemble {i} of {nens}'
-        print_to_screen(msgtxt, level='info')
-        print_to_screen()
+        logger.info(msgtxt)
         if i == 0:
             result = run_analysis_files(sett, files, plotter, txt_plotter)
             results['pathensemble0'] = result['pathensemble']
             report_txt = generate_report('retis0', result, output='txt')[0]
-            print_to_screen(''.join(report_txt))
-            print_to_screen()
+            logger.progress(''.join(report_txt))
         else:
             result = run_analysis_files(sett, files, plotter, txt_plotter)
             results['pathensemble'].append(result['pathensemble'])
             report_txt = generate_report('tis', result,
                                          output='txt')[0]
-            print_to_screen(''.join(report_txt))
-            print_to_screen()
+            logger.progress(''.join(report_txt))
     # flux first:
     time_subcycles = settings['engine'].get('subcycles', 1)
     timestep = settings['engine']['timestep'] * time_subcycles
@@ -398,24 +387,18 @@ def run_retis_analysis(settings, plotter, txt_plotter):
     results['perm'] = {'value': perm,
                        'error': perm_err}
 
-    print_to_screen('Overall results', level='success')
-    print_to_screen('===============', level='success')
-    print_to_screen()
+    logger.info('Overall results')
+    logger.info('===============')
     print_value_error('RETIS Crossing probability',
                       out['prob'], out['relerror'], level='success')
-    print_to_screen()
     print_value_error(f'Initial flux (units 1/{units})', flux,
                       flux_error, level='success')
-    print_to_screen()
     print_value_error(f'Rate constant (units 1/{units})', rate,
                       rate_error, level='success')
     if permeability:
-        print_to_screen()
         print_value_error('Xi', xi, xi_err, level='success')
-        print_to_screen()
         print_value_error(f'Tau/dz (unit: {units}/OP-unit)',
                           tau, tau_err, level='success')
-        print_to_screen()
         print_value_error(f'Permeability (unit: OP-unit/{units})',
                           perm, perm_err, level='success')
     return results
@@ -444,7 +427,6 @@ def run_repptis_analysis(settings, plotter, txt_plotter):
                'permeability': permeability,
                'reptis': {}}
     nens = len(all_settings) - 1
-    print_to_screen()
     probs = []
     ptypes = []
     for i, (sett, files) in enumerate(zip(all_settings, all_files)):
@@ -452,14 +434,12 @@ def run_repptis_analysis(settings, plotter, txt_plotter):
         # We change filetype to repptis instead of retis for anaylsis
         repptis_str = 'pathensemble_repptis'
         files0 = [(repptis_str, files[0][1])]
-        print_to_screen(msgtxt, level='info')
-        print_to_screen()
+        logger.info(msgtxt)
         if i == 0:
             result = run_analysis_files(sett, files0, plotter, txt_plotter)
             results['pathensemble0'] = result['pathensemble_repptis']
             report_txt = generate_report('retis0', result, output='txt')[0]
-            print_to_screen(''.join(report_txt))
-            print_to_screen()
+            logger.progress(''.join(report_txt))
         else:
             result = run_analysis_files(sett, files0, plotter, txt_plotter)
             results['pathensemble'].append(result['pathensemble_repptis'])
@@ -481,8 +461,7 @@ def run_repptis_analysis(settings, plotter, txt_plotter):
                                   "std": pp_lm_err}, })
 
             report_txt = generate_report('pptis', result, output='txt')[0]
-            print_to_screen(''.join(report_txt))
-            print_to_screen()
+            logger.progress(''.join(report_txt))
 
     # flux first:
     time_subcycles = settings['engine'].get('subcycles', 1)
@@ -527,25 +506,19 @@ def run_repptis_analysis(settings, plotter, txt_plotter):
     results['perm'] = {'value': perm,
                        'error': perm_err}
 
-    print_to_screen('Overall results', level='success')
-    print_to_screen('===============', level='success')
-    print_to_screen()
+    logger.info('Overall results')
+    logger.info('===============')
     print_value_error('REPPTIS Crossing probability',
                       results['pcrossrun'][-1],
                       results['pcrossrun_hav_rele'], level='success')
-    print_to_screen()
     print_value_error(f'Initial flux (units 1/{units})', flux,
                       flux_error, level='success')
-    print_to_screen()
     print_value_error(f'Rate constant (units 1/{units})', rate,
                       rate_error, level='success')
     if permeability:
-        print_to_screen()
         print_value_error('Xi', xi, xi_err, level='success')
-        print_to_screen()
         print_value_error(f'Tau/dz (unit: {units}/OP-unit)',
                           tau, tau_err, level='success')
-        print_to_screen()
         print_value_error(f'Permeability (unit: OP-unit/{units})',
                           perm, perm_err, level='success')
     return results
@@ -578,12 +551,10 @@ def run_mdflux_analysis(settings, plotter, txt_plotter):
         if os.path.isfile(os.path.join(exe_path, filename)):
             files.append((file_type, os.path.join(exe_path, filename)))
     msgtxt = 'Running analysis of a MD flux simulation...'
-    print_to_screen(msgtxt, level='info')
-    print_to_screen()
+    logger.info(msgtxt)
     result = run_analysis_files(settings, files, plotter, txt_plotter)
     report_txt = generate_report('md-flux', result, output='txt')[0]
-    print_to_screen(''.join(report_txt))
-    print_to_screen()
+    logger.progress(''.join(report_txt))
     return result
 
 

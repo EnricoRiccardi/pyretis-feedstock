@@ -1622,14 +1622,10 @@ def test_wire_fencing_fallback_zero_minus():
     }
 
     # Wire fencing should fall back to standard shooting, not return NSG.
-    accept, path, status = wire_fencing(ensemble, tis_settings,
-                                        start_cond='L')
+    accept, _, status = wire_fencing(ensemble, tis_settings,
+                                     start_cond='L')
     # The result should come from shoot(), not the old WF n_frames==0 path.
     assert status != 'NSG' or accept is False
-    # The key assertion: it should NOT warn about "between 20 and 20".
-    # It should behave like a normal shoot move (may accept or reject
-    # depending on mock dynamics, but must not fail with the degenerate
-    # WF logic).
 
 
 def test_wire_fencing_fallback_with_cap():
@@ -1658,9 +1654,8 @@ def test_wire_fencing_fallback_with_cap():
     }
 
     # Should attempt WF (not fall back), may succeed or fail.
-    accept, path, status = wire_fencing(ensemble, tis_settings,
-                                        start_cond='L')
-    # Status should be from the WF logic, not from shoot fallback.
+    accept, _, _ = wire_fencing(ensemble, tis_settings,
+                                start_cond='L')
     # With this mock setup, WF will likely get 0 frames and return NSG,
     # but the point is that it tried WF rather than falling back.
     assert isinstance(accept, bool)

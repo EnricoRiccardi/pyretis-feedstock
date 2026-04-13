@@ -26,6 +26,7 @@ from pyretis.inout.formats.pathensemble import PathEnsembleFile
 from pyretis.inout.formats.path import PathExtFile, PathIntFile
 from pyretis.inout.formats.snapshot import SnapshotFile
 from pyretis.inout.settings import parse_settings_file
+from contextlib import contextmanager
 from .help import (
     assert_equal_path_dict,
     create_external_path,
@@ -37,6 +38,27 @@ from .help import (
 
 
 logging.disable(logging.CRITICAL)
+
+
+@contextmanager
+def capture_log_output():
+    """Capture all logger output to a StringIO buffer."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(handler)
+    prev_disable = logging.root.manager.disable
+    prev_level = root_logger.level
+    logging.disable(logging.NOTSET)
+    root_logger.setLevel(logging.DEBUG)
+    try:
+        yield stream
+    finally:
+        root_logger.removeHandler(handler)
+        root_logger.setLevel(prev_level)
+        logging.disable(prev_disable)
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -164,10 +186,10 @@ class TestAnaIo:
                             f_o.write(line)
             settings['simulation']['exe-path'] = tempdir
             settings['analysis']['report-dir'] = tempdir
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 run_analysis(settings)
-            assert 'Pathensemble data' in stdout.getvalue().strip()
-            assert '99.000000' in stdout.getvalue().strip()
+            assert 'Pathensemble data' in log_out.getvalue().strip()
+            assert '99.000000' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             with open(os.path.join(tempdir, 'pathensemble.txt'), 'w',
@@ -194,10 +216,10 @@ class TestAnaIo:
             settings['simulation']['task'] = 'md-flux'
             settings['simulation']['endcycle'] = 8
             settings['simulation']['interfaces'] = [-0.9, -0.8]
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 run_analysis(settings)
-            assert '0.2500' in stdout.getvalue().strip()
-            assert '0.3750' in stdout.getvalue().strip()
+            assert '0.2500' in log_out.getvalue().strip()
+            assert '0.3750' in log_out.getvalue().strip()
 
         settings['simulation']['task'] = 'mistery'
         with pytest.raises(ValueError) as err:
@@ -218,12 +240,12 @@ class TestAnaIo:
             settings['simulation']['exe-path'] = tempdir
             settings['analysis']['report-dir'] = tempdir
             settings['simulation']['task'] = 'repptis'
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 run_analysis(settings)
             # flux
-            assert '0.862851052' in stdout.getvalue().strip()
+            assert '0.862851052' in log_out.getvalue().strip()
             # pcross
-            assert '2.213477168e-03' in stdout.getvalue().strip()
+            assert '2.213477168e-03' in log_out.getvalue().strip()
 
 
 class TestFileIO:

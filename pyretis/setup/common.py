@@ -174,7 +174,7 @@ def create_orderparameter(settings):
     if main_order is None:
         logger.info('No order parameter created')
         return None
-    logger.info('Created main order parameter:\n%s', main_order)
+    logger.progress('Created main order parameter:\n%s', main_order)
 
     extra_cv = []
     order_settings = settings.get('collective-variable', [])
@@ -186,13 +186,13 @@ def create_orderparameter(settings):
             ['calculate'],
             key_settings=order_setting
         )
-        logger.info('Created additional collective variable:\n%s', order)
+        logger.progress('Created additional collective variable:\n%s', order)
         extra_cv.append(order)
     if not extra_cv:
         return main_order
     all_order = [main_order] + extra_cv
     order = CompositeOrderParameter(order_parameters=all_order)
-    logger.info('Composite order parameter:\n%s', order)
+    logger.progress('Composite order parameter:\n%s', order)
     return order
 
 
