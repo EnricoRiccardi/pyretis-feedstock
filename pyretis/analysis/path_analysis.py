@@ -981,7 +981,7 @@ def perm_calculations(results0, pcross, pcross_err):
     data. It then calculates the permeability and its error based on the values
     of xi, tau, and the crossing probability pcross.
 
-    Paramaters
+    Parameters
     ----------
     results0 : dict
         Results from the analysis of ensemble [0^-]

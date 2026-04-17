@@ -438,7 +438,7 @@ def compare_objects(obj1, obj2, attrs, numpy_attrs=None):
     This method will compare two PyRETIS objects by checking
     the equality of the attributes. Some of these attributes
     might be numpy arrays in which case we use the
-    :py:function:`.numpy_allclose` defined in this module.
+    :func:`.numpy_allclose` defined in this module.
 
     Parameters
     ----------

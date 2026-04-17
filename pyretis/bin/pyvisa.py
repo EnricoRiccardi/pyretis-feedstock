@@ -7,16 +7,19 @@
 This script is a part of the PyRETIS library and can be used for
 analysing the result from simulations.
 
-usage: pyvisa.py [-h]
+Usage::
 
-optional arguments:
-  -cmp --pyvisa_compressor  use only the compressor tool without GUI.
-  -data --pyvisa-data       select the data source.
-  -h, --help                show this help message and exit.
-  -i INPUT, --input INPUT   location of PyRETIS input files
-                            or PyVisA compressed file.
-  -oo --only-order          read only the order.txt files.
-  -V, --version             show program's version number and exit.
+    pyvisa.py [-h]
+
+Optional arguments::
+
+    -cmp --pyvisa_compressor  use only the compressor tool without GUI.
+    -data --pyvisa-data       select the data source.
+    -h, --help                show this help message and exit.
+    -i INPUT, --input INPUT   location of PyRETIS input files
+                              or PyVisA compressed file.
+    -oo --only-order          read only the order.txt files.
+    -V, --version             show program's version number and exit.
 
 """
 # pylint: disable=invalid-name

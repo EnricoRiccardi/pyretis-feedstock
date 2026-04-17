@@ -59,10 +59,11 @@ class PairLennardJonesCut(PotentialFunction):
     _lj : dict of dict
         Lennard-Jones parameters used for calculation of the force.
         Keys are the pairs (particle types) that may interact.
-          [1] Calculated as: ``48.0 * epsilon * sigma**12``
-          [2] Calculated as: ``24.0 * epsilon * sigma**6``
-          [3] Calculated as: ``4.0 * epsilon * sigma**12``
-          [4] Calculated as: ``4.0 * epsilon * sigma**6``
+
+        [1] Calculated as: ``48.0 * epsilon * sigma**12``
+        [2] Calculated as: ``24.0 * epsilon * sigma**6``
+        [3] Calculated as: ``4.0 * epsilon * sigma**12``
+        [4] Calculated as: ``4.0 * epsilon * sigma**6``
     _offset : dict
         Potential values for shifting the potential if requested.
         This is the potential evaluated at the cut-off.
