@@ -18,7 +18,7 @@ settings = {'op1': 'op1', 'op2': 'op2', 'fol': '000'}
 colormap = 'viridis'
 
 
-@unittest.skipIf(HAS_PYVISA_REQ is False, "PyVisA reqs not installed")
+@pytest.mark.skipif(not HAS_PYVISA_REQ, reason="PyVisA reqs not installed")
 class TestMethods:
     """Testing class of pyretis.pyvisa.statistical_methods."""
 
