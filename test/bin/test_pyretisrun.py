@@ -10,6 +10,7 @@ import subprocess
 import types
 import tempfile
 import tqdm  # For a progress bar
+from contextlib import contextmanager
 from io import StringIO
 from unittest.mock import patch
 from collections.abc import Iterable
@@ -25,6 +26,27 @@ from pyretis.inout.settings import parse_settings_file
 
 logging.disable(logging.CRITICAL)
 HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+@contextmanager
+def capture_log_output():
+    """Capture all logger output to a StringIO buffer."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(handler)
+    prev_disable = logging.root.manager.disable
+    prev_level = root_logger.level
+    logging.disable(logging.NOTSET)
+    root_logger.setLevel(logging.DEBUG)
+    try:
+        yield stream
+    finally:
+        root_logger.removeHandler(handler)
+        root_logger.setLevel(prev_level)
+        logging.disable(prev_disable)
 
 
 class TestPyretisMainRunner:
@@ -65,12 +87,11 @@ class TestPyretisMainRunner:
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 open(tempdir + '/EXIT', 'w').close()
                 main(input_file, tempdir, tempdir,
                      progress=False, log_level=20)
-                asd = stdout.getvalue().strip()
-        assert 'EXIT file found' in asd
+            assert 'EXIT file found' in log_out.getvalue().strip()
 
     def test_main(self):
         """Test the main() function for a tis task."""
@@ -78,17 +99,15 @@ class TestPyretisMainRunner:
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 main(input_file, tempdir, tempdir, progress=False, log_level=9)
-                asd = stdout.getvalue().strip()
-            assert 'Execution ended' in asd
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            assert 'Execution ended' in log_out.getvalue().strip()
+            with capture_log_output() as log_out:
                 input_file = os.path.join(tempdir, 'does_not_exist.rst')
                 pytest.raises(ValueError, main, input_file, tempdir,
                               tempdir, progress=False,
                               log_level=9)
-                asd = stdout.getvalue().strip()
-            assert 'ERROR - execution stopped.' in asd
+            assert 'ERROR - execution stopped.' in log_out.getvalue().strip()
 
     def test_run_simulation(self):
         """Test all simulations functions."""
@@ -149,17 +168,17 @@ class TestPyretisMainRunner:
 
     def test_hello_world(self):
         """Test that we are polite."""
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             hello_world(infile='I_can_read_your_mind.rst',
                         rundir=HERE,
                         logfile='nothing_to_declare')
-        assert 'Start' in stdout.getvalue().strip()
+        assert 'Start' in log_out.getvalue().strip()
 
     def test_bye_world(self):
         """Test that we can die."""
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             bye_bye_world()
-        assert 'reference' in stdout.getvalue().strip()
+        assert 'reference' in log_out.getvalue().strip()
 
     def test_set_up_simulation(self):
         """Test that we know how to set up a simulation."""
@@ -169,6 +188,6 @@ class TestPyretisMainRunner:
         assert f'Input file "{inputfile}" NOT found!' == str(err.value)
 
         inputfile = os.path.join(HERE, 'dummy_input.rst')
-        with patch('sys.stdout', new=StringIO()) as stdout:
+        with capture_log_output() as log_out:
             set_up_simulation(inputfile, HERE)
-        assert 'Reading' in stdout.getvalue().strip()
+        assert 'Reading' in log_out.getvalue().strip()

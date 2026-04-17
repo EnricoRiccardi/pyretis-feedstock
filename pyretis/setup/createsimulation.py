@@ -44,9 +44,9 @@ prepare_engine (:py:func:`.prepare_engine`)
 """
 import logging
 import os
+import colorama
 from pyretis.core.pathensemble import get_path_ensemble_class
 from pyretis.setup.createforcefield import create_force_field
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import (add_default_settings,
                                     add_specific_default_settings,
                                     settings_from_restart)
@@ -71,6 +71,7 @@ from pyretis.inout.checker import (
     check_engine,
     check_ensemble,
 )
+from pyretis.inout.screen import REFERENCE
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -99,10 +100,6 @@ def create_ensemble(settings):
     """
     i_ens = settings['tis']['ensemble_number']
 
-    logtxt = f'\nCREATING  ENSEMBLE  {i_ens}\n====================='
-    print_to_screen(logtxt, level='message')
-    logger.info(logtxt)
-
     rgen_ens = create_random_generator(settings['tis'])
     rgen_path = create_random_generator(settings['system'])
 
@@ -112,6 +109,8 @@ def create_ensemble(settings):
     interfaces = settings['simulation']['interfaces']
     exe_dir = settings['simulation'].get('exe_path', os.path.abspath('.'))
     path_ensemble = klass(i_ens, interfaces, rgen=rgen_path, exe_dir=exe_dir)
+    logger.log(REFERENCE, '\n--- Creating ensemble: %s ---',
+               path_ensemble.ensemble_name)
 
     # for PPRETIS / PPTIS: correct the starting condition of the paths
     if settings['simulation']['task'] in ['pptis', 'repptis']:
@@ -125,7 +124,6 @@ def create_ensemble(settings):
         if change_start_cond:
             # adapt the starting condition of the paths
             logger.info("adapted start_condition to R/L in ensemble %s", i_ens)
-            print('booger')
             path_ensemble.start_condition = ['R', 'L']
             path_ensemble.must_cross_M = True  # used in the shooting move
 
@@ -419,18 +417,15 @@ def prepare_system(settings):
         return settings['system']['obj']
 
     logtxt = 'Initializing unit system.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     units_from_settings(settings)
 
     logtxt = 'Creating system from settings.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     system = create_system(settings)
 
     logtxt = 'Creating force field.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     system.forcefield = create_force_field(settings)
     system.particles.vpot = system.evaluate_potential()
 
@@ -456,14 +451,12 @@ def prepare_engine(settings):
         return settings['engine']['obj']
 
     logtxt = units_from_settings(settings)
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
 
     check_engine(settings)
     engine = create_engine(settings)
     logtxt = f'Created engine "{engine}" from settings.'
-    print_to_screen(logtxt, level='info')
-    logger.info(logtxt)
+    logger.progress(logtxt)
     return engine
 
 
@@ -525,7 +518,11 @@ def create_simulation(settings):
 
     simulation = sim_map[sim_type](settings)
     msgtxt = f'{simulation}'
-    logger.info('Created simulation:\n%s', msgtxt)
+    lines = msgtxt.split('\n')
+    sim_name = (colorama.Fore.BLUE + lines[0] +
+                colorama.Fore.WHITE)
+    rest = '\n'.join(lines[1:])
+    logger.reference('\nCreated simulation:\n%s\n%s', sim_name, rest)
 
     if settings['simulation'].get('restart', False):
         simulation.load_restart_info(info_restart)

@@ -80,10 +80,36 @@ from pyretis.pyvisa.statistical_methods import (pyvisa_pca,
                                                 random_forest,
                                                 decision_tree)
 
-warnings.filterwarnings('ignore', category=pd.io.pytables.PerformanceWarning)
+warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 # Hard-coded labels for energies and time/cycle steps
 ENERGYLABELS = ['time', 'cycle', 'potE', 'kinE', 'totE']
+
+
+def _set_tick_fontsize(axis, fontsize):
+    """Set major tick label font sizes across Matplotlib versions."""
+    for tick in axis.get_major_ticks():
+        labels = [getattr(tick, 'label1', None),
+                  getattr(tick, 'label2', None)]
+        if not any(labels):
+            labels = [getattr(tick, 'label', None)]
+        for label in labels:
+            if label is not None:
+                label.set_fontsize(fontsize)
+
+
+def _redraw_colorbar(colorbar):
+    """Refresh a Matplotlib colorbar across Matplotlib versions."""
+    if hasattr(colorbar, 'draw_all'):
+        colorbar.draw_all()
+    else:
+        colorbar.update_normal(colorbar.mappable)
+
+
+def _remove_last_line(ax):
+    """Remove the latest line from an axes across Matplotlib versions."""
+    if ax.lines:
+        ax.lines[-1].remove()
 
 
 UI_VW, QT_BC = uic.loadUiType(
@@ -370,10 +396,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.myfig.yaxis.set_fontsize(axesfont)
         self.myfig.zaxis.set_fontsize(axesfont)
         self.myfig.cbar.ax.tick_params(labelsize=axesfont)
-        for tick in self.myfig.ax.xaxis.get_major_ticks():
-            tick.label.set_fontsize(axesfont)
-        for tick in self.myfig.ax.yaxis.get_major_ticks():
-            tick.label.set_fontsize(axesfont)
+        _set_tick_fontsize(self.myfig.ax.xaxis, axesfont)
+        _set_tick_fontsize(self.myfig.ax.yaxis, axesfont)
         # Default pyplot tick size: lenght=3.5, width=1.0
         tick_l = round(axesfont / 4, 2)
         tick_w = round(axesfont / 10, 2)
@@ -1000,7 +1024,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         norm = mpl.colors.Normalize(vmin=self.settings['z-limits'][0],
                                     vmax=self.settings['z-limits'][1])
         self.myfig.cbar.mappable.set_norm(norm=norm)
-        self.myfig.cbar.draw_all()
+        _redraw_colorbar(self.myfig.cbar)
         self.myfig.fig.canvas.draw()
         self.statusbar.showMessage('Plot ready!')
 
@@ -1292,8 +1316,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             return
 
         # Remove old points
-        if self.myfig.ax.lines:
-            self.myfig.ax.lines.pop()
+        _remove_last_line(self.myfig.ax)
 
         # Avoid MemoryError from scipy cdist
         try:
@@ -1339,8 +1362,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                   'Black': 'k', 'White': 'w'}
 
         # Remove old figures in the plot
-        if self.myfig.ax.lines:
-            self.myfig.ax.lines.pop()
+        _remove_last_line(self.myfig.ax)
 
         if not self.xLine.text():
             self.display_message_box('Cannot draw...', 'Select a trajectory')
@@ -1968,7 +1990,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
             selected ensembled.
 
         """
-        dataframe = pd.DataFrame()
+        frames = []
         number_variables = len(self.infos['op_labels']) + 3
 
         selection_crit = {'stored': sim_settings['stored'],
@@ -1989,9 +2011,11 @@ class DataSlave(QtCore.QObject, PathVisualize):
                         if selection_crit.get(key, 1) != traj.info.get(key, 2):
                             break
                     else:
-                        dataframe = dataframe.append(traj.frames,
-                                                     ignore_index=True,
-                                                     sort=False)
+                        frames.append(traj.frames)
+        if frames:
+            dataframe = pd.concat(frames, ignore_index=True, sort=False)
+        else:
+            dataframe = pd.DataFrame()
         dataframe = dataframe.dropna()
         return dataframe
 
@@ -2010,7 +2034,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
             True if the frame is reactive, False if unreactive.
 
         """
-        reactive_data = pd.DataFrame()
+        reactive_values = []
         number_variables = len(self.infos['op_labels']) + 3
 
         selection_crit = {'stored': sim_settings['stored'],
@@ -2028,15 +2052,13 @@ class DataSlave(QtCore.QObject, PathVisualize):
             for cycle in self.traj_data[ensemble_name].keys():
                 traj = self.traj_data[ensemble_name][int(cycle)]
                 if len(traj.frames.columns) == number_variables:
-                    for key in selection_crit.items():
-                        if selection_crit[key] != traj.info[key]:
+                    for key in selection_crit:
+                        if selection_crit.get(key, 1) != traj.info.get(key, 2):
                             break
                     else:
-                        reactive_list = \
-                            [traj.info['reactive']] * traj.info['length']
-                        reactive_data = reactive_data.append(
-                            reactive_list, ignore_index=True, sort=False)
-        return reactive_data
+                        reactive_values.extend(
+                            [traj.info['reactive']] * traj.info['length'])
+        return pd.DataFrame(reactive_values)
 
     def remove_values(self, sim_settings, min_op, max_op):
         """Remove values below and above chosen values in a dataframe.

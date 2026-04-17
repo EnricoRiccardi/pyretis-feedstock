@@ -46,7 +46,15 @@ class TestFluxAnalysis:
                                           settings=settings)
 
         results = results_all['flux']
-        assert not results['eff_cross']
+        assert results['eff_cross'] == [[]]
+        assert results['ncross'] == [0]
+        assert results['neffcross'] == [0]
+        assert results['times'] == {'A': 250000, 'B': 0,
+                                    'OA': 250000, 'OB': 0}
+        assert np.allclose(results['runflux'][0], [0.0])
+        assert results['pMD'] == [0.0]
+        assert np.isinf(results['cross_time'][0])
+        assert np.isnan(results['errflux'][0][2])
 
         correct_file = os.path.join(HERE, 'flux-results.dat')
         for i in data:

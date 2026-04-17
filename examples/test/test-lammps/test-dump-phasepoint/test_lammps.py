@@ -8,9 +8,11 @@ import colorama
 import numpy as np
 from pyretis.inout.common import make_dirs
 from pyretis.engines.lammps import LAMMPSEngine
-from pyretis.inout import print_to_screen
 from pyretis.testing.helpers import clean_dir
 from pyretis.testing.systemhelp import create_system_ext
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -67,7 +69,7 @@ def read_lammpstrj(filename):
 
 def dump_phasepoint():
     """Use the LAMMPS engine to run a MD simulation forward in time."""
-    print_to_screen('\nTesting that we can dump phase points.\n')
+    logger.info('\nTesting that we can dump phase points.\n')
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', 2,
                           extra_files=['dw-wca.in'])
     # Create a dummy system:
@@ -80,16 +82,16 @@ def dump_phasepoint():
     dumped_files = []
     for i in (0, 2, 4, 6, 8, 10):
         newpos = (TRAJ, i)
-        print_to_screen(f'\t-> Dumping: {newpos}')
+        logger.info(f'\t-> Dumping: {newpos}')
         system.particles.set_pos(newpos)
         engine.dump_phasepoint(system, f'dump-{i:02d}')
         pos = system.particles.get_pos()
         assert pos[1] == 0
         dumped_files.append(pos[0])
-    print_to_screen('\nRunning some comparisons:\n')
+    logger.info('\nRunning some comparisons:\n')
     for i, frame in enumerate(read_lammpstrj(TRAJ)):
         traj = dumped_files[i]
-        print_to_screen(f'\t-> Comparing for dumped frame: {traj}')
+        logger.info(f'\t-> Comparing for dumped frame: {traj}')
         frame_dump = [i for i in read_lammpstrj(traj)]
         assert len(frame_dump) == 1
         assert frame['number'] == frame_dump[0]['number']
@@ -97,9 +99,8 @@ def dump_phasepoint():
             assert np.allclose(frame[key], frame_dump[0][key])
         assert frame_dump[0]['timestep'] == 0
         assert frame['timestep'] == engine.subcycles * i
-        print_to_screen('\t\t->Frame was ok!', level='success')
-    print_to_screen('\nConclusion: We can dump phase points.',
-                    level='success')
+        logger.info('\t\t->Frame was ok!')
+    logger.info('\nConclusion: We can dump phase points.')
 
 
 def main():

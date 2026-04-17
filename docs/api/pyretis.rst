@@ -54,7 +54,7 @@ into sub-packages:
 * :ref:`pyretis.tools <api-tools>` for performing some simple
   tasks useful for setting up simulations.
 
-* :ref:`pyretis.pyvisa <api-analysis>` for visualizing and
+* :ref:`pyretis.pyvisa <api-pyvisa>` for visualizing and
   analysing the simulation outputs. 
 
 

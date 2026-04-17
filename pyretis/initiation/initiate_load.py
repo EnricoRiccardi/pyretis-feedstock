@@ -19,7 +19,7 @@ from pyretis.core.common import compute_weight
 from pyretis.core.path import Path, paste_paths
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.initiation.initiate_kick import initiate_path_ensemble_kick
-from pyretis.inout import print_to_screen
+from pyretis.inout.screen import REFERENCE
 from pyretis.inout.common import make_dirs, TRJ_FORMATS
 from pyretis.inout.formats.order import OrderPathFile, OrderFile
 from pyretis.inout.formats.energy import EnergyPathFile
@@ -53,7 +53,7 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
     folder = settings['initial-path'].get('load_folder', 'load')
 
     if not os.path.exists(folder):
-        logger.critical('Load folder "%s" not found!', folder)
+        logger.warning('Load folder "%s" does not exist.', folder)
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
                                 folder)
 
@@ -90,8 +90,7 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         system = ensemble['system']
         order_function = ensemble['order_function']
         name = path_ensemble.ensemble_name
-        logger.info('Loading data for path path ensemble %s:', name)
-        print_to_screen(f'Loading data for path path ensemble {name}')
+        logger.log(REFERENCE, '\n--- Loading path ensemble: %s ---', name)
         engine.exe_dir = path_ensemble.directory['generate']
         path = Path(simulation.rgen, maxlen=None)
         path.generated = ('re', 0, 0, 0)  # It remains for formatted loads.
@@ -99,9 +98,8 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
             folder,
             generate_ensemble_name(path_ensemble.ensemble_number))
         if not os.path.exists(os.path.join(edir, 'order.txt')):
-            logger.info('Input Load missing')
-            print_to_screen('No order.txt file found in %, attempt generate!',
-                            edir)
+            logger.info('No order.txt found in %s, attempting to generate.',
+                        edir)
             # Make sure the files are where they are supposed to be:
             _do_the_dirty_load_job(folder, edir)
             path.set_move('ld')
@@ -132,7 +130,6 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         # of the defined region. So even if accepted, we need to clean if the
         # path type is 'ld'.
         simtype = set_ens['simulation']['task']
-        print("I am this simtype:", simtype)
         if accept and path.get_move() == 'ld':  # Some cleaning if needed
             clean_path(path, path_ensemble, simtype=simtype)
             # The path should still be checked, as something funny might occur
@@ -146,7 +143,6 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         elif not accept:  # Let's try to fix the path
             msg = 'Sorting input files'
             logger.info(msg)
-            print_to_screen(msg)
             path, (accept, status) = reorderframes(path, path_ensemble)
             clean_path(path, path_ensemble, simtype=simtype)
             path.set_move('ld')
@@ -156,11 +152,11 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
                 msg += 'definition. \n The given path has a min of '
                 msg += f'{path.ordermin[0]} and a max of {path.ordermax[0]} '
                 msg += 'while the relative interface are located at '
-                msg += '{}, {}, and {}.\n'.format(*path_ensemble.interfaces)
+                left, mid, right = path_ensemble.interfaces
+                msg += f'{left}, {mid}, and {right}.\n'
                 if set_ens['initial-path'].get('load_and_kick', False):
                     msg += 'Initialising load_and_kick procedure.'
                     logger.info(msg)
-                    print_to_screen(msg)
                     best_frame = path.phasepoints[0]
                     target = ensemble['path_ensemble'].interfaces[1]
                     for phasepoint in path.phasepoints:
@@ -406,7 +402,7 @@ def _do_the_dirty_load_job(mainfolder, edir):
 
         # If we pass the following, it means no input exist.
         if not traj_files_ens and not traj_ens_acc and not traj_files:
-            logger.critical('No files to load in %s', edir)
+            logger.warning('No files to load in %s', edir)
             raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
                                     edir)
 
@@ -430,7 +426,7 @@ def _do_the_dirty_load_job(mainfolder, edir):
     # If we arrived here, it means that we have to use the files
     # present in the main folder. So let's do the dirty copy.
     if not traj_files:
-        logger.critical('No files to load in %s', mainfolder)
+        logger.warning('No files to load in %s', mainfolder)
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
                                 mainfolder)
 
@@ -539,13 +535,12 @@ def _load_order_parameters(traj, dirname, system, order_function):
     order_file_name = os.path.join(dirname, 'order.txt')
     try:
         with OrderPathFile(order_file_name, 'r') as orderfile:
-            print_to_screen('Loading order parameters.')
+            logger.info('Loading order parameters.')
             order = next(orderfile.load())
             return order['data'][:, 1:]
     except FileNotFoundError:
-        print_to_screen(f'Could not read file: {order_file_name}')
+        logger.info('Could not read file: %s', order_file_name)
     orderdata = []
-    print_to_screen('Recalculating order parameters for input path.')
     logger.info('Recalculating order parameters for input path.')
     for snapshot in traj['data']:
         system.particles.pos = snapshot['pos']
@@ -585,14 +580,13 @@ def _load_order_parameters_ext(traj, dirname, order_function, engine):
     order_file_name = os.path.join(dirname, 'order.txt')
     if os.path.isfile(order_file_name):
         with OrderPathFile(order_file_name, 'r') as orderfile:
-            print_to_screen('Loading order parameters.')
+            logger.info('Loading order parameters.')
             order = next(orderfile.load())
             return order['data'][:, 1:]
     else:
-        print_to_screen('Could not read file: {order_file_name}')
+        logger.info('Could not read file: %s', order_file_name)
 
     orderdata = []
-    print_to_screen('Recalculating order parameters for input path.')
     logger.info('Recalculating order parameters for input path.')
     # First get unique files and indices for them:
     files = collections.OrderedDict()
@@ -647,13 +641,13 @@ def _load_energies_for_path(path, dirname):
     energy_file_name = os.path.join(dirname, 'energy.txt')
     try:
         with EnergyPathFile(energy_file_name, 'r') as energyfile:
-            print_to_screen('Loading energy data.')
+            logger.info('Loading energy data.')
             energy = next(energyfile.load())
             path.update_energies(energy['data']['ekin'],
                                  energy['data']['vpot'])
     except FileNotFoundError:
-        print_to_screen(f'Could not read file: {energy_file_name}')
-        print_to_screen('Energies are not set.')
+        logger.info('Could not read file: %s', energy_file_name)
+        logger.info('Energies are not set.')
 
 
 def _check_path(path, path_ensemble, warning=True):
@@ -690,11 +684,13 @@ def _check_path(path, path_ensemble, warning=True):
 
     if not accept:
         msg = ' '.join(messages)
+        msg += ' (status: %s). Attempting to fix.'
         name = path_ensemble.ensemble_name
+        args = [name] * len(messages) + [status]
         if warning:
-            logger.critical(msg, *([name] * len(messages)))
+            logger.warning(msg, *args)
         else:
-            logger.debug(msg, *([name] * len(messages)))
+            logger.debug(msg, *args)
 
     path.status = status
     return accept, status
@@ -754,8 +750,7 @@ def read_path_files(path, dirname, ensemble):
     orderdata = _load_order_parameters(traj, dirname, system, order_function)
 
     # Add to path:
-    print_to_screen('Creating path from files.')
-    logger.debug('Creating path from files.')
+    logger.info('Creating path from files.')
     for snapshot, orderi in zip(traj['data'], orderdata):
         snapshot = {'order': orderi, 'pos': snapshot['pos'],
                     'vel': snapshot['vel']}
@@ -803,10 +798,11 @@ def _load_external_trajectory(dirname, engine, copy=True):
         # **correct** names from the traj.txt file!
         files = set([])
         for snapshot in traj['data']:
+            basename = os.path.basename(snapshot[1])
             filename = os.path.join(os.path.abspath(dirname),
-                                    'accepted', snapshot[1])
+                                    'accepted', basename)
             files.add(filename)
-        print_to_screen('Copying trajectory files.')
+        logger.info('Copying trajectory files.')
 
         # If the files are not copied, the location has to be consistent (loc)
         loc = dirname
@@ -817,7 +813,7 @@ def _load_external_trajectory(dirname, engine, copy=True):
                 shutil.copy(filename, engine.exe_dir)
         # Update trajectory to use full path names:
         for i, snapshot in enumerate(traj['data']):
-            config = os.path.join(loc, snapshot[1])
+            config = os.path.join(loc, os.path.basename(snapshot[1]))
             traj['data'][i][1] = config
             reverse = int(snapshot[3]) == -1
             idx = int(snapshot[2])
@@ -859,8 +855,7 @@ def read_path_files_ext(path, dirname, ensemble):
     orderdata = _load_order_parameters_ext(traj, dirname,
                                            order_function, engine)
     # Add to path:
-    print_to_screen('Creating path from files.')
-    logger.debug('Creating path from files.')
+    logger.info('Creating path from files.')
     for snapshot, order in zip(traj['data'], orderdata):
         snapshot = {'order': order,
                     'pos': (snapshot[1], snapshot[2]),

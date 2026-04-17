@@ -164,7 +164,7 @@ def k_means(n_clusters, data, settings, cmap):
         Matplotlib colormap.
 
     """
-    model = MiniBatchKMeans(n_clusters)
+    model = MiniBatchKMeans(n_clusters=n_clusters)
     labels = model.fit_predict(data)
     fig = plt.figure()
     axis = fig.add_subplot(111)
@@ -265,7 +265,7 @@ def gaussian_mixture(n_clusters, data, settings, cmap):
         Matplotlib colormap.
 
     """
-    model = GaussianMixture(n_clusters)
+    model = GaussianMixture(n_components=n_clusters)
     labels = model.fit_predict(data)
     fig = plt.figure()
     axis = fig.add_subplot(111)

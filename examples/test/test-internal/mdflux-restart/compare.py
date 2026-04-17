@@ -12,11 +12,13 @@ import colorama
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from pyretis.inout import print_to_screen
 from pyretis.testing.simulation_comparison import (
     compare_restarted_text_files,
     compare_restarted_cross_files
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 plt.style.use('seaborn-v0_8')
 
@@ -139,17 +141,17 @@ def main(args):
         The number of comparison failures.
     """
     result = 0
-    print_to_screen('Comparing crossings...', level='info')
+    logger.info('Comparing crossings...')
     equal, msg = compare_restarted_cross_files(
         os.path.join('run-step1', 'cross.txt'),
         os.path.join('run-step2', 'cross.txt'),
         os.path.join('run-full', 'cross.txt'),
     )
     if not equal:
-        print_to_screen(f'Crossing files mismatch: {msg}', level='error')
+        logger.error(f'Crossing files mismatch: {msg}')
         result += 1
     else:
-        print_to_screen('Crossing files match!', level='success')
+        logger.info('Crossing files match!')
 
     pairs = [
         ('energy.txt', 'Comparing energy files'),
@@ -157,18 +159,17 @@ def main(args):
     ]
 
     for fname, msg_header in pairs:
-        print_to_screen(f'\n{msg_header}:', level='info')
+        logger.info(f'\n{msg_header}:')
         equal, msg = compare_restarted_text_files(
             os.path.join('run-step1', fname),
             os.path.join('run-step2', fname),
             os.path.join('run-full', fname)
         )
         if not equal:
-            print_to_screen(f'Restarted {fname} mismatch: {msg}',
-                            level='error')
+            logger.error(f'Restarted {fname} mismatch: {msg}')
             result += 1
         else:
-            print_to_screen(f'Restarted {fname} match!', level='success')
+            logger.info(f'Restarted {fname} match!')
 
     if 'make_plot' in args:
         fig = make_plots()
@@ -176,9 +177,9 @@ def main(args):
         plt.show()
 
     if result != 0:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
     else:
-        print_to_screen('\nComparison was successful!', level='success')
+        logger.info('\nComparison was successful!')
     return result
 
 

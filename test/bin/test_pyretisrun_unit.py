@@ -3,7 +3,7 @@
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Unit tests for the pyretisrun binary script."""
 import os
-from unittest.mock import MagicMock, patch, ANY
+from unittest.mock import MagicMock, patch
 import pytest
 from pyretis.bin.pyretisrun import (
     hello_world, bye_bye_world, use_tqdm,
@@ -15,22 +15,18 @@ from pyretis.bin.pyretisrun import (
 )
 
 
-@patch('pyretis.bin.pyretisrun.print_to_screen')
 @patch('pyretis.bin.pyretisrun.logger')
-def test_hello_world(mock_logger, mock_print):
+def test_hello_world(mock_logger):
     """Test hello_world function."""
     hello_world('input.rst', 'rundir', 'logfile.log')
-    mock_print.assert_called()
-    mock_logger.info.assert_called()
+    mock_logger.banner.assert_called()
 
 
-@patch('pyretis.bin.pyretisrun.print_to_screen')
 @patch('pyretis.bin.pyretisrun.logger')
-def test_bye_bye_world(mock_logger, mock_print):
+def test_bye_bye_world(mock_logger):
     """Test bye_bye_world function."""
     bye_bye_world()
-    mock_print.assert_called()
-    mock_logger.info.assert_called()
+    mock_logger.log.assert_called()
 
 
 def test_use_tqdm():
@@ -164,34 +160,34 @@ def test_main_func(mock_bye, mock_soft, mock_store, mock_setup):
     mock_setup.return_value = (mock_run, mock_sim, {'simulation': {}})
 
     with patch('os.path.isfile', return_value=False):  # No EXIT file
-        main('infile', 'indir', 'exe_dir', False, 20)
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 0
         mock_setup.assert_called_with('infile', 'exe_dir')
         mock_run.assert_called()
         mock_bye.assert_called()
 
 
-@patch('pyretis.bin.pyretisrun.print_to_screen')
+@patch('pyretis.bin.pyretisrun.logger')
 @patch('pyretis.bin.pyretisrun.bye_bye_world')
-def test_main_exit_file(mock_bye, mock_print):
+def test_main_exit_file(mock_bye, mock_logger):
     """Test main function when EXIT file exists."""
     with patch('os.path.isfile', return_value=True):
-        main('infile', 'indir', 'exe_dir', False, 20)
-        # Verify it prints error and calls bye_bye_world
-        mock_print.assert_any_call(ANY, level='error')
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 1
+        # Verify it logs progress and error, then calls bye_bye_world
+        mock_logger.progress.assert_called()
+        mock_logger.error.assert_called()
         mock_bye.assert_called()
 
 
 @patch('pyretis.bin.pyretisrun.set_up_simulation')
 @patch('pyretis.bin.pyretisrun.store_simulation_settings')
-@patch('pyretis.bin.pyretisrun.print_to_screen')
 @patch('pyretis.bin.pyretisrun.logger')
-def test_main_exception(mock_logger, mock_print, mock_store, mock_setup):
+def test_main_exception(mock_logger, mock_store, mock_setup):
     """Test main function exception handling."""
     mock_setup.side_effect = Exception("Test Error")
     with patch('os.path.isfile', return_value=False):
         # We test with log_level = 20 (INFO) so it doesn't re-raise
-        main('infile', 'indir', 'exe_dir', False, 20)
-        mock_print.assert_any_call('ERROR - execution stopped.', level='error')
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 1
+        mock_logger.error.assert_called()
 
     # Test with DEBUG level to see it re-raises
     with patch('os.path.isfile', return_value=False):

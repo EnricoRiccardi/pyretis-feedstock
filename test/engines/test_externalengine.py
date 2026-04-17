@@ -238,21 +238,16 @@ class TestExternalEngine:
         cmd.append('arg')
         with pytest.raises(RuntimeError):
             engine.execute_command(cmd, cwd=HERE, inputs=b'')
-        # The outputs should be reatined after the previous error:
-        with open(os.path.join(HERE, 'stdout.txt'), 'r',
+        # The outputs should be retained after the previous error:
+        with open(os.path.join(HERE, 'engine.log'), 'r',
                   encoding="utf8") as stdout:
-            lines = stdout.readlines()
-            assert len(lines) == 1
-            assert (lines[0].strip() ==
-                    'This is a program for testing external commands.')
-        with open(os.path.join(HERE, 'stderr.txt'), 'r',
-                  encoding="utf8") as stdout:
-            lines = stdout.readlines()
-            assert len(lines) == 2
-            assert (lines[0].strip() ==
-                    'ERROR: Program got arguments:')
-            assert (lines[1].strip() ==
-                    ' '.join(cmd))
-        for fname in ('stdout.txt', 'stderr.txt'):
+            content = stdout.read()
+            assert 'This is a program for testing external' in content
+        with open(os.path.join(HERE, 'engine.err'), 'r',
+                  encoding="utf8") as stderr:
+            content = stderr.read()
+            assert 'ERROR: Program got arguments:' in content
+            assert ' '.join(cmd) in content
+        for fname in ('engine.log', 'engine.err'):
             # pylint: disable=protected-access
             engine._removefile(os.path.join(HERE, fname))

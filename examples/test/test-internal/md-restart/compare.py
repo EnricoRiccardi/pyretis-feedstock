@@ -13,11 +13,13 @@ import colorama
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from pyretis.inout import print_to_screen
 from pyretis.inout.formats.snapshot import SnapshotFile
 from pyretis.testing.simulation_comparison import (
     compare_restarted_text_files
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 plt.style.use('seaborn-v0_8')
 
@@ -72,8 +74,8 @@ def compare_traj(traj11, traj12, traj2, tol=1e-12):
     status : int
         0 if comparison matches, 1 otherwise.
     """
-    print_to_screen('Comparing trajectories', level='info')
-    print_to_screen('Checking mean squared error...')
+    logger.info('Comparing trajectories')
+    logger.info('Checking mean squared error...')
     file11 = SnapshotFile(traj11, 'r').load()
     file12 = SnapshotFile(traj12, 'r').load()
     # Skip the first configuration in the restart file
@@ -87,8 +89,7 @@ def compare_traj(traj11, traj12, traj2, tol=1e-12):
         error.append(pose)
         error_v.append(vele)
     if next(file1, False) or next(file2, False):
-        print_to_screen('Number of lines are incorrect ',
-                        level='error')
+        logger.error('Number of lines are incorrect ')
         return 1
     val1 = print_error_assessment(np.mean(error), 'positions', tol)
     val2 = print_error_assessment(np.mean(error_v), 'velocities', tol)
@@ -118,8 +119,10 @@ def print_error_assessment(error, what, tol):
     else:
         lev = 'error'
         val = 1
-    print_to_screen(f'Mean error - {what}: {error}',
-                    level=lev)
+    if lev == 'error':
+        logger.error(f'Mean error - {what}: {error}')
+    else:
+        logger.info(f'Mean error - {what}: {error}')
     return val
 
 
@@ -232,11 +235,10 @@ def main(args):
             os.path.join('run-full', pf)
         )
         if not equal:
-            print_to_screen(f'Restarted files mismatch ({p1}): {msg}',
-                            level='error')
+            logger.error(f'Restarted files mismatch ({p1}): {msg}')
             val2 += 1
         else:
-            print_to_screen(f'Restarted files match ({pf})', level='success')
+            logger.info(f'Restarted files match ({pf})')
 
     if 'make_plot' in args:
         fig = make_plots()

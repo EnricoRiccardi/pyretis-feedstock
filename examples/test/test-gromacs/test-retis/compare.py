@@ -10,9 +10,11 @@ import os
 import sys
 import tarfile
 import colorama
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 RESULTS = 'results'
@@ -122,20 +124,19 @@ def compare_ensemble_results(settings, root, results_tgz):
             reference_data = read_tarfile_content(tar_path, ref_path)
 
             current_path = os.path.join(root, ens_name, fname)
-            print_to_screen(f'Comparing: {current_path}')
+            logger.info(f'Comparing: {current_path}')
 
             if reference_data is None:
-                print_to_screen(f'\t-> *Reference missing: {ref_path}*',
-                                level='error')
+                logger.error(f'\t-> *Reference missing: {ref_path}*')
                 return False
 
             with open(current_path, 'rb') as current_file:
                 if current_file.read() != reference_data:
-                    print_to_screen('\t-> *Files differ!*', level='error')
+                    logger.error('\t-> *Files differ!*')
                     return False
-            print_to_screen('\t-> Files are equal!', level='success')
+            logger.info('\t-> Files are equal!')
 
-    print_to_screen('All files are equal!', level='success')
+    logger.info('All files are equal!')
     return True
 
 
@@ -152,28 +153,26 @@ def main(argv):
     except (IndexError, AttributeError):
         gmx_version = '5.1.4'
 
-    print_to_screen(f'GROMACS version family: {gmx_version}', level='info')
+    logger.info(f'GROMACS version family: {gmx_version}')
     correct_tgz = RESULTS_TGZ.get(gmx_version)
 
     if not correct_tgz:
-        print_to_screen(
-            f'GROMACS version {gmx_version} is not supported '
-            'for result comparison.'
-        )
-        print_to_screen('Supported versions:')
+        logger.info(f'GROMACS version {gmx_version} is not supported '
+                    'for result comparison.')
+        logger.info('Supported versions:')
         for ver in RESULTS_TGZ:
-            print_to_screen(f'- {ver}')
+            logger.info(f'- {ver}')
         sys.exit(0)
 
-    print_to_screen(f'Using results from: {correct_tgz}', level='info')
+    logger.info(f'Using results from: {correct_tgz}')
 
     for dirname in ('gromacs1', 'gromacs2'):
         if not os.path.isdir(dirname):
             continue
         sets = parse_settings_file(os.path.join(dirname, 'retis.rst'))
         header = f'Comparing files for: {dirname}'
-        print_to_screen(f'\n{header}', level='message')
-        print_to_screen('=' * len(header), level='message')
+        logger.info(f'\n{header}')
+        logger.info('=' * len(header))
 
         if not compare_ensemble_results(sets, dirname, correct_tgz):
             sys.exit(1)

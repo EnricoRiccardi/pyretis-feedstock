@@ -16,10 +16,33 @@ from pyretis.setup.createsimulation import create_ensembles
 from pyretis.simulation.path_simulation import (PathSimulation,
                                                 SimulationTIS,
                                                 SimulationRETIS,)
+from contextlib import contextmanager
 from unittest.mock import patch
 from .help import TEST_SETTINGS
 
 logging.disable(logging.CRITICAL)
+
+
+@contextmanager
+def capture_log_output():
+    """Capture all logger output to a StringIO buffer."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    root_logger = logging.getLogger('')
+    root_logger.addHandler(handler)
+    prev_disable = logging.root.manager.disable
+    prev_level = root_logger.level
+    logging.disable(logging.NOTSET)
+    root_logger.setLevel(logging.DEBUG)
+    try:
+        yield stream
+    finally:
+        root_logger.removeHandler(handler)
+        root_logger.setLevel(prev_level)
+        logging.disable(prev_disable)
+
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -222,12 +245,12 @@ class TestSimulationRETIS:
             simulation.set_up_output(settings)
             simulation.cycle['endcycle'] = 1
             exit_file = os.path.join(tempdir, 'EXIT')
-            with patch('sys.stdout', new=StringIO()) as stdout:
+            with capture_log_output() as log_out:
                 assert simulation.initiate(settings)
                 pathlib.Path(exit_file).touch()
                 for _ in enumerate(simulation.run()):
                     pass
-                assert 'soft exit' in stdout.getvalue().strip()
+                assert 'soft exit' in log_out.getvalue().strip()
                 restart_file = os.path.join(tempdir, 'pyretis.restart')
                 assert os.path.exists(restart_file)
                 assert simulation.cycle['step'] == 1

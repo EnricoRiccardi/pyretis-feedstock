@@ -482,8 +482,8 @@ class GromacsRunner:
         """Start execution of GROMACS and wait for output file creation."""
         logger.debug('Starting GROMACS execution in %s', self.exe_dir)
 
-        self.stdout_name = os.path.join(self.exe_dir, 'stdout.txt')
-        self.stderr_name = os.path.join(self.exe_dir, 'stderr.txt')
+        self.stdout_name = os.path.join(self.exe_dir, 'engine.log')
+        self.stderr_name = os.path.join(self.exe_dir, 'engine.err')
         # pylint: disable=consider-using-with
         self.stdout = open(self.stdout_name, 'wb')
         # pylint: disable=consider-using-with

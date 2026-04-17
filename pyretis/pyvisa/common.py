@@ -42,17 +42,21 @@ find_data  (:py:func: `.find_data`)
     Find suitable frames/trajectories to recompute the orderp parameter on.
 
 """
+import logging
 import os
 import timeit
 
 import scipy
 
 from pyretis.initiation.initiate_load import write_order_parameters
-from pyretis.inout import print_to_screen, settings
+from pyretis.inout import settings
 from pyretis.inout.common import create_backup, TRJ_FORMATS
 from pyretis.inout.formats.path import PathExtFile
 from pyretis.setup.common import create_orderparameter
 from pyretis.tools.recalculate_order import recalculate_order
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 __all__ = ['find_rst_file', 'read_traj_txt_file',
            'shift_data', 'try_data_shift', 'where_from_to',
@@ -301,17 +305,17 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
     input_settings = settings.parse_settings_file(io_file)
     trj_dict = find_data(runfolder, ensemble_names, data=data)
 
-    print_to_screen('Re-computing the collective variables.', level='message')
+    logger.progress('Re-computing the collective variables.')
     tic = timeit.default_timer()
     if not trj_dict:
-        print_to_screen('No data to re-compute from', level='warning')
+        logger.warning('No data to re-compute from')
         return False
 
     try:
         functions = create_orderparameter(input_settings)
     except (ImportError, ValueError):
         msg = 'Invalid Order Parameter'
-        print_to_screen(msg, level='warning')  # pragma: no cover
+        logger.warning(msg)  # pragma: no cover
         return False  # pragma: no cover
 
     # Create the composite order parameter (Avoid circular reference)
@@ -328,7 +332,7 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
                     for order_p in recalculate_order(functions, trj, {}):
                         results_dict.append(order_p)  # pragma: no cover
                 except (KeyError, AttributeError):
-                    print_to_screen(f'File {trj} not valid', level='warning')
+                    logger.warning('File %s not valid', trj)
 
             local_order = cycles.get('o_txt', new_o)
             create_backup(local_order)
@@ -340,9 +344,8 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
                         open(main_order, 'ab') as dst:
                     dst.write(src.read())
 
-    print_to_screen('# Data successfully recomputed!', level='success')
-    print_to_screen(f'# Time spent: {timeit.default_timer() - tic:.2f}s',
-                    level='success')
+    logger.progress('# Data successfully recomputed!')
+    logger.progress('# Time spent: %.2fs', timeit.default_timer() - tic)
     return True
 
 

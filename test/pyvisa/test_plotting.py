@@ -10,6 +10,7 @@ from matplotlib import pyplot
 from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D  # It is needed
 from pyretis.pyvisa.plotting import (
+    _add_colorbar,
     plot_regline,
     plot_int_plane,
     gen_surface,
@@ -91,6 +92,13 @@ class TestMethods:
                         method='scatter')
         ax.clear()
 
+        _ = gen_surface(x, y, z, fig, ax, cbar_ax=None, dim=2,
+                        method='scatter')
+        ax.clear()
+        _ = gen_surface(x, y, z, fig, ax, cbar_ax=None, dim=2,
+                        method='contour')
+        ax.clear()
+
     def test_grid_it_up(self):
         """Test grid method"""
         x = np.array([1, 1, 1, 1, 1, 2, 9])
@@ -100,3 +108,25 @@ class TestMethods:
         mins = _grid_it_up([x, y, z], res_x=20, res_y=20, fill='max')
         maxs = _grid_it_up([x, y, z], res_x=20, res_y=20, fill='min')
         assert not np.allclose(mins, maxs)
+
+    def test_add_colorbar_with_explicit_axis(self):
+        """Add a colorbar using an explicit colorbar axis."""
+        fig = pyplot.figure()
+        ax = fig.add_subplot(111)
+        cbar_ax = fig.add_axes([0.86, 0.1, 0.03, 0.8])
+        image = ax.imshow([[0.0, 1.0], [1.0, 0.0]])
+
+        colorbar = _add_colorbar(fig, image, ax, cbar_ax=cbar_ax)
+
+        assert colorbar.ax is cbar_ax
+
+    def test_add_colorbar_without_explicit_axis(self):
+        """Add a colorbar by giving Matplotlib the parent axes."""
+        fig = pyplot.figure()
+        ax = fig.add_subplot(111)
+        image = ax.imshow([[0.0, 1.0], [1.0, 0.0]])
+
+        colorbar = _add_colorbar(fig, image, ax, cbar_ax=None)
+
+        assert colorbar.ax in fig.axes
+        assert colorbar.ax is not ax

@@ -48,9 +48,12 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pyretis.inout import print_to_screen
+import logging
 from pyretis.inout.settings import parse_settings_file
 from pyretis.pyvisa.common import where_from_to, get_cv_names
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 # Hard-coded labels for energies and time/cycle steps
 ENERGYLABELS = ['time', 'cycle', 'potE', 'kinE', 'totE']
@@ -86,7 +89,7 @@ def pyvisa_unzip(origin, destination=None):
     msg += '# File type recognized as `.zip`, unzipping to tmp file \n'
     msg += f'# {destination} before loading.\n'
     msg += '###################################################\n'
-    print_to_screen(msg, level='message')
+    logger.info(msg)
     with zipfile.ZipFile(origin) as zipped:
         zipped.extractall(path=os.path.dirname(os.path.abspath(origin)))
         # We here assume that only a file is stored in 'zipped'.
@@ -344,27 +347,21 @@ class PathDensity:
 
         """
         tic = [timeit.default_timer(), None]
-        print_to_screen('###################################################',
-                        level='message')
-        print_to_screen('# PathDensity performing "walk" in \n# ' +
-                        f'{os.getcwd()}/',
-                        level='message')
-        print_to_screen('# Number of subfolders (0**) = ' +
-                        str(len(self.infos['ensemble_names'])),
-                        level='message')
-        print_to_screen((f'# Found {self.infos["num_op"]} order parameters in '
-                         'output'),
-                        level='message')
-        print_to_screen('###################################################'
-                        + '\n', level='message')
+        logger.info('###################################################')
+        logger.info('# PathDensity performing "walk" in \n# %s/',
+                    os.getcwd())
+        logger.info('# Number of subfolders (0**) = %s',
+                    len(self.infos['ensemble_names']))
+        logger.info('# Found %s order parameters in output',
+                    self.infos['num_op'])
+        logger.info('###################################################')
 
         # Looping over folders, reading energy and orderP
         cmax, cmin = 0, 0
         for ensemble_name in self.infos['ensemble_names']:
 
             tic[1] = timeit.default_timer()
-            print_to_screen(f'Reading data from {ensemble_name}',
-                            level='message')
+            logger.info('Reading data from %s', ensemble_name)
             self.get_traj_op(ensemble_name)
             if not only_ops:
                 self.get_traj_energy(ensemble_name)
@@ -383,30 +380,23 @@ class PathDensity:
                         traj.frames[self.order_parameter])
                     traj.info['length'] = len(traj.frames.index)
             line = ('Done with folder, time used: '
-                    f'{timeit.default_timer() - tic[1]:4.4f}s, proceeding.\n')
-            print_to_screen('=' * len(line) + '\n' + line, level='success')
+                    f'{timeit.default_timer() - tic[1]:4.4f}s, proceeding.')
+            logger.info('=' * len(line) + '\n' + line)
 
         self.infos['cycles'] = [cmin, cmax]
 
-        print_to_screen('###################################################',
-                        level='success')
-        print_to_screen('# Data successfully retrieved, in cycles:',
-                        level='success')
-        print_to_screen((f'# {self.infos["cycles"][0]} to '
-                         f'{self.infos["cycles"][1]}'),
-                        level='success')
-        print_to_screen(
-            f'# Time spent: {timeit.default_timer() - tic[0]:.2f}s',
-            level='success'
-        )
-        print_to_screen('###################################################'
-                        + '\n', level='success')
+        logger.info('###################################################')
+        logger.info('# Data successfully retrieved, in cycles:')
+        logger.info('# %s to %s',
+                    self.infos['cycles'][0], self.infos['cycles'][1])
+        logger.info('# Time spent: %.2fs',
+                    timeit.default_timer() - tic[0])
+        logger.info('###################################################')
 
     def hdf5_data(self):
         """Compress the data to a .hdf5 file."""
-        print_to_screen('###################################################',
-                        level='message')
-        print_to_screen('# Compress dictionaries to file', level='message')
+        logger.info('###################################################')
+        logger.info('# Compress dictionaries to file')
 
         data = pd.Series(self.traj_dict)
         infos = pd.Series(self.infos)
@@ -416,11 +406,10 @@ class PathDensity:
                               category=pd.errors.PerformanceWarning)
         data.to_hdf(pfile, key='data', mode='w')
         infos.to_hdf(pfile, key='infos')
-        print_to_screen(f'# {pfile}', level='message')
+        logger.info('# %s', pfile)
         pyvisa_zip(pfile)
-        print_to_screen(f'# {pfile}.zip', level='message')
-        print_to_screen('###################################################'
-                        + '\n', level='message')
+        logger.info('# %s.zip', pfile)
+        logger.info('###################################################')
 
     def get_traj_op(self, ensemble_name):
         """Read order.txt files and collects data OP data.

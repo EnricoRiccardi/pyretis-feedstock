@@ -38,7 +38,7 @@ from pyretis.tools import generate_lattice
 from pyretis.core.box import create_box
 from pyretis.core.system import System
 from pyretis.core.particles import Particles, get_particle_type
-from pyretis.core.units import CONVERT
+from pyretis.core.units import CONVERT, create_conversion_factors
 from pyretis.inout.settings import look_for_input_files
 from pyretis.inout.formats.snapshot import read_txt_snapshots
 from pyretis.inout.formats.xyz import read_xyz_file
@@ -160,6 +160,8 @@ def guess_particle_mass(particle_no, particle_type, unit):
         logger.info(('-> Could not find mass. '
                      'Assuming %f (internal units)'), particle_mass)
     else:
+        if ('g/mol', unit) not in CONVERT['mass']:
+            create_conversion_factors(unit)
         particle_mass = CONVERT['mass']['g/mol', unit] * mass
         logger.info(('-> Using a mass of %f g/mol '
                      '(%f in internal units)'), mass, particle_mass)
@@ -289,14 +291,14 @@ def _get_snapshot_from_file(pos_settings, units):
         filename,
         fmt,
     )
-    snaps = [snap for snap in reader(filename)]
+    snaps = list(reader(filename))
 
     snapshot = None
     if len(snaps) == 1:
         snapshot = snaps[0]
     elif len(snaps) > 1:
-        msg = ('Found several frames ({}) in input file.'
-               ' Will use the last one!').format(len(snaps))
+        msg = (f'Found several frames ({len(snaps)}) in input file.'
+               ' Will use the last one!')
         logger.warning(msg)
         snapshot = snaps[-1]
     else:

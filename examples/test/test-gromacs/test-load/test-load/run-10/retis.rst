@@ -1,11 +1,11 @@
-Retis 1D example
-================
+Retis 3D gromacs example
+========================
 
 Simulation
 ----------
 task = retis
 steps = 10
-interfaces = [-0.26, -0.24, -0.22, -0.20]
+interfaces = [-0.26, -0.24, -0.22, -0.21]
 zero_left = -0.28
 
 System

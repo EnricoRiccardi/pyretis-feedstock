@@ -36,7 +36,7 @@ import logging
 from pyretis.core.common import compute_weight
 from pyretis.core.path import paste_paths, Path
 from pyretis.core.tis import shoot, time_reversal
-from pyretis.inout.screen import print_to_screen
+from pyretis.inout.screen import REFERENCE
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
@@ -60,10 +60,10 @@ def initiate_kick(simulation, settings, cycle):
     init_settings = settings['initial-path']
     start = init_settings.get('kick-from', 'initial').lower()
     if start == 'previous':
-        logger.info('Kick-initiate using previous configuration')
+        logger.progress('Kick-initiate using previous configuration')
         return initiate_kick_max(simulation, settings, cycle)
     if start == 'initial':
-        logger.info('Kick-initiate using initial configuration')
+        logger.progress('Kick-initiate using initial configuration')
         return initiate_kicki(simulation, settings, cycle)
     errtxt = f'Unknown argument {start} for kick-from'
     logger.error(errtxt)
@@ -78,9 +78,8 @@ def initiate_kicki(simulation, settings, cycle):
     """
     for ensemble, set_ens in zip(simulation.ensembles, settings['ensemble']):
         ens_name = ensemble['path_ensemble'].ensemble_name
-        print_to_screen(f'Running "kick" initiation in: {ens_name}')
-        logger.info('Initiating path ensemble: %s',
-                    ensemble['path_ensemble'].ensemble_name)
+        logger.log(REFERENCE, '\n--- Initiating path ensemble: %s ---',
+                   ens_name)
         accept, initial_path, status = initiate_path_ensemble_kick(
             ensemble,
             set_ens['tis'],
@@ -101,9 +100,9 @@ def initiate_kick_max(simulation, settings, cycle):
     last_paths = []
     for ensemble, set_ens in zip(simulation.ensembles, settings['ensemble']):
         path_ensemble = ensemble['path_ensemble']
-        logger.info('Initiating path ensemble %s', path_ensemble.ensemble_name)
         ens_name = path_ensemble.ensemble_name
-        print_to_screen(f'Running kick-max initiation in: {ens_name}')
+        logger.log(REFERENCE, '\n--- Initiating path ensemble: %s ---',
+                   ens_name)
         if last_paths:
             # Look for the phase point closest to the middle interface.
             middle = path_ensemble.interfaces[1]

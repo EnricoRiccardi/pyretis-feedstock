@@ -7,10 +7,12 @@ from matplotlib import gridspec
 import numpy as np
 import colorama
 from tqdm import tqdm, trange
-from pyretis.inout import print_to_screen
 from pyretis.setup import create_simulation, create_force_field
 from pyretis.core import System, Particles
 from pyretis.analysis.histogram import histogram, match_all_histograms
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 UMBRELLA_WINDOWS = [
@@ -121,7 +123,7 @@ def run_umbrella_simulation(window, overlap):
         success.append(result['displace_step'][3])
         ener.append(simulation.system.particles.vpot)
     nstep = simulation.cycle['step'] - simulation.cycle['startcycle']
-    print_to_screen(f'Done. Cycles: {nstep}', level='success')
+    logger.info(f'Done. Cycles: {nstep}')
     return np.array(pos), np.array(trial), success, np.array(ener)
 
 
@@ -132,9 +134,9 @@ def run_simulation():
     msg = '\nRunning umbrella no: {} of {}. Location: {}'
     # We run all the umbrella simulations by looping over
     # the different umbrellas we defined:
-    print_to_screen('Starting simulations:', level='info')
+    logger.info('Starting simulations:')
     for i, window in enumerate(UMBRELLA_WINDOWS):
-        print_to_screen(msg.format(i + 1, numb, window))
+        logger.info(msg.format(i + 1, numb, window))
         # Get position that must be crossed:
         over = UMBRELLA_WINDOWS[min(i + 1, numb - 1)][0]
         pos, trial, success, ener = run_umbrella_simulation(
@@ -143,7 +145,7 @@ def run_simulation():
         )
         trajectory.append([pos, trial, success])
         energy.append(ener)
-    print_to_screen('Data collection done!', level='info')
+    logger.info('Data collection done!')
     return trajectory, energy
 
 
@@ -304,7 +306,7 @@ def plot_trials(fig, axes, plot_obj, system, forcefield, trajectory, energy):
     tot_step = 0  # Total number of steps done.
     all_histograms = []  # For storing all histograms.
     all_normed_histograms = []  # For storing all normed histograms.
-    print_to_screen('Making plots for windows', level='success')
+    logger.info('Making plots for windows')
     for i in trange(len(UMBRELLA_WINDOWS), bar_format=BAR_FMT['window']):
         pos, trial, success = (trajectory[i][0], trajectory[i][1],
                                trajectory[i][2])

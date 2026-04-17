@@ -95,8 +95,7 @@ class SnapshotFormatter(OutputFormatter):
             The system we are generating output for.
 
         """
-        for lines in self.format_snapshot(step, data):
-            yield lines
+        yield from self.format_snapshot(step, data)
 
     def _format_without_vel(self, particles):
         """Format positions of particles for output.
@@ -190,9 +189,7 @@ class SnapshotFormatter(OutputFormatter):
             This dict contains the snapshot.
 
         """
-        for snapshot in read_txt_snapshots(filename,
-                                           data_keys=self.data_keys):
-            yield snapshot
+        yield from read_txt_snapshots(filename, data_keys=self.data_keys)
 
 
 def read_txt_snapshots(filename, data_keys=None):

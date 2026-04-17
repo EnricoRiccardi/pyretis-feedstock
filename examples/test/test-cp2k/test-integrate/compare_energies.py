@@ -6,11 +6,13 @@ import sys
 import colorama
 from matplotlib import pyplot as plt
 import numpy as np
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.inout.formats.cp2k import (
     read_cp2k_energy,
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 plt.style.use('seaborn-v0_8-poster')
@@ -22,11 +24,9 @@ def main(energy_file, cp2k_file, plot=False):
     timestep = settings['engine']['timestep']
     subcycles = settings['engine']['subcycles']
 
-    print_to_screen(f'Reading energy file: {energy_file}',
-                    level='info')
+    logger.info(f'Reading energy file: {energy_file}')
     energy = np.loadtxt(energy_file)
-    print_to_screen(f'Reading CP2K energies from file: {cp2k_file}',
-                    level='info')
+    logger.info(f'Reading CP2K energies from file: {cp2k_file}')
     energy_cp2k = read_cp2k_energy(cp2k_file)
 
     energy_cp2k_mse = {key: val[::subcycles] for
@@ -35,12 +35,12 @@ def main(energy_file, cp2k_file, plot=False):
     mse_ok = obtain_mses(energy, energy_cp2k_mse)
 
     if plot:
-        print_to_screen('\nPlotting for comparison', level='message')
+        logger.info('\nPlotting for comparison')
         plot_comparison(energy, energy_cp2k, energy_file, cp2k_file,
                         timestep*subcycles)
 
     if not mse_ok:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
         sys.exit(1)
 
 
@@ -58,7 +58,10 @@ def obtain_mses(energy, energy_cp2k, tol=1.0e-5):
             tol_ok = abs(mse) < tol
             if not tol_ok:
                 level = 'error'
-        print_to_screen(f'MSE {pair[1]}: {mse}', level=level)
+        if level == 'error':
+            logger.error(f'MSE {pair[1]}: {mse}')
+        else:
+            logger.info(f'MSE {pair[1]}: {mse}')
         if not tol_ok:
             return False
     return True

@@ -7,9 +7,8 @@ Obtaining and installing |pyretis|
 installed :ref:`using pip <user-guide-install-pip>`
 or :ref:`using conda <user-guide-install-conda>`
 as described below.
-We also describe how |pyretis| can be installed in a 
-:ref:`virtual environment <user-guide-install-virtual-environment>` and how it
-can be installed directly from the source code :ref:`using git <user-guide-install-git>`.
+We also describe how it can be installed directly from the source code
+:ref:`using git <user-guide-install-develop>`.
 
 |
 
@@ -18,7 +17,7 @@ can be installed directly from the source code :ref:`using git <user-guide-insta
 Prerequisites
 -------------
 
-|pyretis| requires **Python 3.9** or higher. Please make sure that you have
+|pyretis| requires **Python 3.11** or higher. Please make sure that you have
 an updated version of Python installed on your system. |pyretis| depends on several
 other Python packages, however, these should be installed automatically as part
 of the installation of |pyretis|. A  list of the dependencies :ref:`can be found below <user-guide-install-requirements>`.
@@ -51,7 +50,7 @@ To install them via pip:
     python -m pip install pyqt5 mdtraj gravitz
 
 **Note:** Please make sure that you are using a Python environment
-of version 3.9 or newer. On some systems, **Python 2** may still be the default
+of version 3.11 or newer. On some systems, **Python 2** may still be the default
 version and ``pip`` might actually try to install for **Python 2**.
 In this case, use ``pip3`` in the command above.
 
@@ -80,7 +79,7 @@ PyQt5, mdtraj, and gravitz to be executed. To install them via conda:
     python -m pip install gravitz
 
 
-**Note:** Since |pyretis| will **only work with Python 3.9 or newer**,
+**Note:** Since |pyretis| will **only work with Python 3.11 or newer**,
 please make sure that you are using an environment with a recent version
 of Python.
 

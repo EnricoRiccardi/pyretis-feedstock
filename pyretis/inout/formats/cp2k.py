@@ -523,11 +523,11 @@ def cp2k_settings(settings, input_path):
                                                 default_files[key]))
     nodes = read_cp2k_input(
         settings['engine']['input_files']['template'])
-    MD_data = set_parents(nodes)['MOTION->MD'].data
+    md_data = set_parents(nodes)['MOTION->MD'].data
 
     # Checks temperature
     cp2k_temp_inp = False
-    for lines in MD_data:
+    for lines in md_data:
         if lines.startswith('TEMPERATURE'):
             cp2k_temp_inp = True
             cp2k_temp = float(lines.split()[1])

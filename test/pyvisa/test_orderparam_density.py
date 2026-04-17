@@ -76,6 +76,13 @@ def init_pathvisualize(base=BASE, pfile=INPUTFILE):
     return visual
 
 
+@pytest.fixture
+def isolated_cwd(monkeypatch, tmp_path):
+    """Run file-producing PyVisA tests in a private directory."""
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
 def compare_keys(dict1, correct):
     """Test if given dictionary contains the correct set of keys."""
     check = True
@@ -84,6 +91,7 @@ def compare_keys(dict1, correct):
     return check
 
 
+@pytest.mark.xdist_group(name="pyvisa_orderparam")
 class TestMethods:
     """Testing class of pyretis.pyvisa.orderparam_density."""
 
@@ -134,7 +142,7 @@ class TestMethods:
         with mock.patch('sys.stdout', new=StringIO()):
             pe_d.walk_dirs()
 
-    def test_pyvisa_compress(self):
+    def test_pyvisa_compress(self, isolated_cwd):
         """Testing the compression of input files."""
         pyvisa_dict_hdf5 = {'only_order': True}
         with mock.patch('sys.stdout', new=StringIO()):
@@ -154,7 +162,7 @@ class TestMethods:
         os.remove('pyvisa_compressed_data.hdf5.zip')
         os.remove('pyvisa_compressed_data.hdf5')
 
-    def test_hdf5(self):
+    def test_hdf5(self, isolated_cwd):
         """Testing the saving of a hdf5 file."""
         pe_d = init_pathdensity()
         with mock.patch('sys.stdout', new=StringIO()):
@@ -165,7 +173,7 @@ class TestMethods:
         assert os.path.isfile('pyvisa_compressed_data.hdf5.zip')
         os.remove('pyvisa_compressed_data.hdf5.zip')
 
-    def test_hdf5ing_and_loading(self):
+    def test_hdf5ing_and_loading(self, isolated_cwd):
         """Test for hdf5ing data to file and load with PathVisualize."""
         re_d = init_pathdensity()
         with mock.patch('sys.stdout', new=StringIO()):
@@ -244,7 +252,7 @@ class TestMethods:
             assert traj.info['status'] == STATUS['005'][cyc]
             assert traj.info['MC-move'] == MOVES['005'][cyc]
 
-    def test_load_traj_acc_rej_both_hdf5(self):
+    def test_load_traj_acc_rej_both_hdf5(self, isolated_cwd):
         """Load ACC, REJ and BOTH trajectories from hdf5."""
         pe_d = init_pathdensity()
         with mock.patch('sys.stdout', new=StringIO()):

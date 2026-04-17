@@ -123,7 +123,7 @@ pyretis.core.retis module
 -------------------------
 
 .. automodule:: pyretis.core.retis
-    :members: make_retis_step, retis_tis_moves, retis_moves,
+    :members: make_retis_step, retis_moves,
               retis_swap, retis_swap_zero, null_move
     :undoc-members:
     :show-inheritance:

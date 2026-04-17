@@ -113,7 +113,7 @@ In addition, an analysis can be defined using:
    :class: table-hover table-striped
 
    +----------------------+---------------------------------------------------+
-   | Section              | Useage                                            |
+   | Section              | Usage                                             |
    +======================+===================================================+
    | |sec_analysis|       | For defining an analysis.                         |
    +----------------------+---------------------------------------------------+

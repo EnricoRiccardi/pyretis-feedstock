@@ -14,8 +14,8 @@ import logging
 import os
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.core.random_gen import create_random_generator
-from pyretis.inout import print_to_screen
 from pyretis.inout.restart import read_restart_file
+from pyretis.inout.screen import REFERENCE
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
@@ -39,11 +39,7 @@ def initiate_restart(simulation, settings, cycle):
     for idx, ensemble in enumerate(simulation.ensembles):
         path_ensemble = ensemble['path_ensemble']
         name = path_ensemble.ensemble_name
-        logger.info('Loading restart data for path ensemble %s:', name)
-        print_to_screen(
-            f'Loading restart data for path ensemble {name}:',
-            level='warning'
-        )
+        logger.log(REFERENCE, '\n--- Restarting path ensemble: %s ---', name)
         restart_file = os.path.join(
             generate_ensemble_name(path_ensemble.ensemble_number),
             'ensemble.restart')

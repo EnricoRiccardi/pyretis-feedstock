@@ -6,7 +6,6 @@ import argparse
 import os
 import sys
 import colorama
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.testing.simulation_comparison import (
@@ -15,6 +14,9 @@ from pyretis.testing.simulation_comparison import (
     compare_path_ensemble_data,
     compare_traj_archive,
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 TRAJ = 'traj'
@@ -86,9 +88,9 @@ def compare_ensemble(run1, run2, ensemble,
     status : bool
         True if the comparison was successful, False otherwise.
     """
-    print_to_screen(f'Comparing for "{ensemble}"', level='info')
+    logger.info(f'Comparing for "{ensemble}"')
     for filei in ('energy.txt', 'order.txt', 'pathensemble.txt'):
-        print_to_screen(f'\tComparing {filei} files...')
+        logger.info(f'\tComparing {filei} files...')
         file1 = os.path.join(run1, ensemble, filei)
         file2 = os.path.join(run2, ensemble, filei)
         if filei == 'pathensemble.txt':
@@ -104,12 +106,15 @@ def compare_ensemble(run1, run2, ensemble,
                 file1, file2, mode='numerical'
             )
         lvl = 'success' if equal else 'error'
-        print_to_screen(f'\t\t-> {msg}', level=lvl)
+        if lvl == 'error':
+            logger.error(f'\t\t-> {msg}')
+        else:
+            logger.info(f'\t\t-> {msg}')
         if not equal:
             return False
 
     if not traj_skip:
-        print_to_screen('\tComparing for trajectory archive:')
+        logger.info('\tComparing for trajectory archive:')
         # Check folders like 0_traj and 1_traj
         for i in {'0_', '1_'}:
             archive_errors = soft_archive_comparison(
@@ -117,11 +122,11 @@ def compare_ensemble(run1, run2, ensemble,
                 os.path.join(run2, ensemble, i + TRAJ),
             )
             if archive_errors:
-                print_to_screen('\t\t-> Archives differ', level='error')
+                logger.error('\t\t-> Archives differ')
                 return False
-        print_to_screen('\t\t-> Archives are equal', level='success')
+        logger.info('\t\t-> Archives are equal')
     else:
-        print_to_screen('\tSkipping comparison for trajectory archive.')
+        logger.info('\tSkipping comparison for trajectory archive.')
 
     return True
 
@@ -160,10 +165,7 @@ def main():
             traj_skip=args.traj_skip,
         )
         if not result:
-            print_to_screen(
-                f'Comparison failed for {ensemble_dir}. Aborting!',
-                level='error',
-            )
+            logger.error(f'Comparison failed for {ensemble_dir}. Aborting!')
             return 1
     return 0
 

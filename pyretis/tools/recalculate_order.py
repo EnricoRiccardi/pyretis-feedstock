@@ -25,7 +25,6 @@ import os
 import numpy as np
 from pyretis.core import System, ParticlesExt
 from pyretis.core.box import box_matrix_to_list
-from pyretis.inout import print_to_screen
 from pyretis.inout.formats.gromacs import (
     read_trr_file,
     read_gromos96_file,
@@ -75,8 +74,7 @@ def recalculate_from_trj(order_parameter, trr_file, options):
 
     """
     system = System(box=None)  # Add dummy system.
-    msg = (f'Re-calculate from {os.path.basename(trr_file)}:' +
-           ' Step {}, time {}')
+    msg = 'Re-calculate from %s: Step %s, time %s'
     minidx, maxidx = options.get('minidx'), options.get('maxidx')
     if options.get('idx', False):
         maxidx = options['idx']
@@ -86,7 +84,8 @@ def recalculate_from_trj(order_parameter, trr_file, options):
             break
         if minidx is not None and i < minidx:
             continue
-        print_to_screen(msg.format(header['step'], header['time']))
+        logger.info(msg, os.path.basename(trr_file),
+                    header['step'], header['time'])
         if system.particles is None:
             system.particles = ParticlesExt(dim=data['x'].shape[1])
         system.particles.pos = data['x']
@@ -137,8 +136,7 @@ def recalculate_from_xyz(order_parameter, traj_file, options):
 
     """
     system = System(box=None)
-    msg = (f'Re-calculate from {os.path.basename(traj_file)}:' +
-           ' Step {}')
+    msg = 'Re-calculate from %s: Step %s'
     minidx, maxidx = options.get('minidx'), options.get('maxidx')
     reverse = options.get('reverse')
 
@@ -147,7 +145,7 @@ def recalculate_from_xyz(order_parameter, traj_file, options):
             break
         if minidx is not None and i < minidx:
             continue
-        print_to_screen(msg.format(i))
+        logger.info(msg, os.path.basename(traj_file), i)
         box, xyz, vel, _ = convert_snapshot(snapshot)
         if box is None:
             box = options.get('box')
@@ -190,7 +188,7 @@ def recalculate_from_frame(order_parameter, frame_file, options):
     """
     system = System(box=None)
     msg = f'Re-calculate from {os.path.basename(frame_file)}:'
-    print_to_screen(msg)
+    logger.info(msg)
     if options['ext'] == '.g96':
         _, xyz, vel, box = read_gromos96_file(frame_file)
     elif options['ext'] == '.gro':

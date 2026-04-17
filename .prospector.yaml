@@ -1,0 +1,7 @@
+# Prospector configuration for PyRETIS.
+# PyRETIS follows D212 (summary on same line as opening quotes).
+# D213 (summary on second line) conflicts with D212 and must be suppressed.
+pydocstyle:
+  options:
+    add-ignore:
+      - D213

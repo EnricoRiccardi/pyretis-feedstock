@@ -21,7 +21,7 @@ Welcome to |pyretis|!
   and :ref:`replica exchange transition interface sampling <user-guide-retis-theory>`.
 
   |pyretis| contains |pyvisa|, a Python library for visualizing
-  analysize and plot path sampling results with a GUI interface.
+  and analysing path sampling results with a GUI interface.
 
   |pyretis| is :ref:`open source <pyretis-license>`, easy to use
   and can be interfaced with other simulation packages such as GROMACS, LAMMPS

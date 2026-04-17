@@ -59,7 +59,7 @@ def add_some_paths(ensemble, raw_data):
 class TestAnalysePathEnsemble:
     """Test that we run the analysis for PathEnsemble results."""
 
-    def test_no_accept_ens_1(self):
+    def test_no_accept_ens_1(self, caplog):
         """Test when no accepted paths are available in 0+."""
         ens = {
             'ensemble_number': 1,
@@ -71,11 +71,12 @@ class TestAnalysePathEnsemble:
         settings['tis'] = {'detect': -0.9}
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with pytest.raises(AssertionError) as err:
-            analyse_path_ensemble(raw_data, settings)
-        assert "1" in str(err.value)
+        with caplog.at_level(logging.WARNING):
+            result = analyse_path_ensemble(raw_data, settings)
+        assert 'pathlength' not in result
+        assert 'No accepted paths' in caplog.text
 
-    def test_no_accept_ens_0(self):
+    def test_no_accept_ens_0(self, caplog):
         """Test when no accepted paths are available in 0-."""
         ens = {
             'ensemble_number': 0,
@@ -87,9 +88,10 @@ class TestAnalysePathEnsemble:
         settings['tis'] = {'detect': -0.9}
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with pytest.raises(AssertionError) as err:
-            analyse_path_ensemble(raw_data, settings)
-        assert "0" in str(err.value)
+        with caplog.at_level(logging.WARNING):
+            result = analyse_path_ensemble(raw_data, settings)
+        assert 'pathlength' not in result
+        assert 'No accepted paths' in caplog.text
 
     def test_path_analysis(self):
         """Test the path ensemble analysis."""
@@ -152,7 +154,7 @@ class TestAnalysePathEnsemble:
         res = analyse_path_ensemble(raw_data, settings)
         assert val[-1] == pytest.approx(res[key][val[0]])
 
-    def test_skipping(self):
+    def test_skipping(self, caplog):
         """Test the skip_lines funcionality."""
         ens = {
             'ensemble_number': 0,
@@ -167,8 +169,10 @@ class TestAnalysePathEnsemble:
         settings['analysis']['skip'] = 10000
         filename = os.path.join(HERE, ens['file'])
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
-        with pytest.raises(AssertionError, match="No accepted paths"):
-            analyse_path_ensemble(raw_data, settings)
+        with caplog.at_level(logging.WARNING):
+            result = analyse_path_ensemble(raw_data, settings)
+        assert 'pathlength' not in result
+        assert 'No accepted paths' in caplog.text
         # Make sure we can skip all trajectories
         settings['analysis']['skip'] = 49
         _ = analyse_path_ensemble(raw_data, settings)
@@ -184,8 +188,11 @@ class TestAnalysePathEnsemble:
         ens['ensemble_number'] = 1
         raw_data = PathEnsembleFile(filename, 'r', ensemble_settings=ens)
         settings['analysis']['skip'] = 10000
-        with pytest.raises(AssertionError, match="No accepted paths"):
-            analyse_path_ensemble(raw_data, settings)
+        caplog.clear()
+        with caplog.at_level(logging.WARNING):
+            result = analyse_path_ensemble(raw_data, settings)
+        assert 'pathlength' not in result
+        assert 'No accepted paths' in caplog.text
 
     def test_permeability_path_analysis_interfaces(self, caplog):
         """Test the permeability calculations."""

@@ -295,13 +295,12 @@ class TestLAMMPSEngine:
                   '-l lammps_test.log -screen '
                   'lammps_test.screen')]
             ]
-            for filei, correcti in zip(('stdout.txt', 'stderr.txt'), correct):
+            for filei, correcti in zip(('engine.log', 'engine.err'), correct):
                 with open(os.path.join(tempdir, filei), 'r',
                           encoding="utf8") as output:
-                    lines = output.readlines()
-                    assert len(lines) == len(correcti)
-                    for i, j in zip(lines, correcti):
-                        assert i.strip() == j
+                    content = output.read()
+                    for expected_line in correcti:
+                        assert expected_line in content
 
     def test_add_files(self):
         """Test that the LAMMPS engine adds input files."""

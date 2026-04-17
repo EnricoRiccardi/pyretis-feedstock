@@ -242,8 +242,7 @@ def read_gromacs_file(filename):
 
     """
     with open(filename, 'r', encoding='utf-8') as fileh:
-        for snapshot in read_gromacs_lines(fileh):
-            yield snapshot
+        yield from read_gromacs_lines(fileh)
 
 
 def read_gromacs_gro_file(filename):
@@ -686,7 +685,7 @@ def skip_trr_data(fileh, header):
         The header read from the TRR file.
 
     """
-    offset = sum([header[key] for key in TRR_DATA_ITEMS])
+    offset = sum(header[key] for key in TRR_DATA_ITEMS)
     fileh.seek(offset, 1)
 
 
@@ -844,7 +843,7 @@ def reverse_trr(filename, outname, print_progress=True):
             if print_progress:  # pragma: no cover
                 print(f'Processing step {header["step"]} '
                       f'time {header["time"]}')
-            data_size = sum([header[key] for key in TRR_DATA_ITEMS])
+            data_size = sum(header[key] for key in TRR_DATA_ITEMS)
             start = header_loc - header_size
             infile.seek(start)
             end = start + header_size + data_size

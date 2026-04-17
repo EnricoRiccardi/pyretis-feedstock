@@ -18,7 +18,6 @@ import colorama
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
-from pyretis.inout import print_to_screen
 from pyretis.inout.formats.snapshot import SnapshotFile
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.units import (
@@ -26,6 +25,9 @@ from pyretis.core.units import (
     generate_system_conversions,
     CONVERT
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 plt.style.use('seaborn-colorblind')
 
 
@@ -69,7 +71,7 @@ def compare_traj(traj1, traj2, unit1, unit2, tol=1e-12):
 
     """
     retval = 1
-    print_to_screen('Comparing trajectories', level='info')
+    logger.info('Comparing trajectories')
     print('Checking mean squared error...')
     file1 = SnapshotFile(traj1, 'r').load()
     file2 = SnapshotFile(traj2, 'r').load()
@@ -87,16 +89,20 @@ def compare_traj(traj1, traj2, unit1, unit2, tol=1e-12):
     else:
         lev = 'error'
         return 1
-    print_to_screen(f'Mean error - positions: {error}',
-                    level=lev)
+    if lev == 'error':
+        logger.error(f'Mean error - positions: {error}')
+    else:
+        logger.info(f'Mean error - positions: {error}')
     if abs(error_v) < tol:
         lev = 'success'
         retval = 0
     else:
         lev = 'error'
         return 1
-    print_to_screen(f'Mean error - velocities: {error_v}',
-                    level=lev)
+    if lev == 'error':
+        logger.error(f'Mean error - velocities: {error_v}')
+    else:
+        logger.info(f'Mean error - velocities: {error_v}')
     return retval
 
 

@@ -10,7 +10,6 @@ import os
 import sys
 import colorama
 import numpy as np
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.inout.formats.path import PathIntFile
@@ -19,6 +18,9 @@ from pyretis.testing.simulation_comparison import (
     compare_data_by_columns,
     compare_numerical_data
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def snapshot_difference(snap1, snap2):
@@ -65,9 +67,9 @@ def compare_traj(traj1, traj2, tol=1e-12):
     status : int
         0 if comparison matches, 1 otherwise.
     """
-    print_to_screen('Comparing trajectories', level='info')
-    print_to_screen(f'Loading files: {traj1} & {traj2}')
-    print_to_screen('Checking mean squared error...')
+    logger.info('Comparing trajectories')
+    logger.info(f'Loading files: {traj1} & {traj2}')
+    logger.info('Checking mean squared error...')
     file1 = PathIntFile(traj1, 'r').load()
     file2 = PathIntFile(traj2, 'r').load()
     error, error_v = [], []
@@ -77,8 +79,7 @@ def compare_traj(traj1, traj2, tol=1e-12):
             error.append(pose)
             error_v.append(vele)
     if next(file1, False) or next(file2, False):
-        print_to_screen('Number of lines are incorrect ',
-                        level='error')
+        logger.error('Number of lines are incorrect ')
         return 1
     ret1 = print_error_assessment(np.mean(error), 'positions', tol)
     ret2 = print_error_assessment(np.mean(error_v), 'velocities', tol)
@@ -108,8 +109,10 @@ def print_error_assessment(error, what, tol):
     else:
         lev = 'error'
         ret = 1
-    print_to_screen(f'Mean error - {what}: {error}',
-                    level=lev)
+    if lev == 'error':
+        logger.error(f'Mean error - {what}: {error}')
+    else:
+        logger.info(f'Mean error - {what}: {error}')
     return ret
 
 
@@ -126,10 +129,9 @@ def compare_ensemble(ensemble):
     status : int
         Combined status of comparisons.
     """
-    print_to_screen(f'Comparing for "{ensemble}"', level='info')
+    logger.info(f'Comparing for "{ensemble}"')
     traj1 = os.path.join('run-10-20', ensemble, 'traj.txt')
     traj2 = os.path.join('run-full', ensemble, 'traj.txt')
-    print_to_screen()
     ret1 = compare_traj(traj1, traj2, tol=1e-12)
 
     retval = ret1
@@ -137,7 +139,7 @@ def compare_ensemble(ensemble):
         ('energy.txt', 'energy', 'Comparing energies'),
         ('order.txt', None, 'Comparing order parameters'),
     ]:
-        print_to_screen(f'\n{msg}', level='info')
+        logger.info(f'\n{msg}')
         f1 = os.path.join('run-10-20', ensemble, fname)
         f2 = os.path.join('run-full', ensemble, fname)
         if ftype == 'energy':
@@ -145,10 +147,10 @@ def compare_ensemble(ensemble):
         else:
             equal, res_msg = compare_numerical_data(f1, f2)
         if not equal:
-            print_to_screen(f'\t-> *Files differ: {res_msg}*', level='error')
+            logger.error(f'\t-> *Files differ: {res_msg}*')
             retval += 1
         else:
-            print_to_screen('\t-> Files are equal!', level='success')
+            logger.info('\t-> Files are equal!')
 
     return retval
 
@@ -159,9 +161,9 @@ def main():
     ens = generate_ensemble_name(settings['tis'].get('ensemble_number'))
     ret = compare_ensemble(ens)
     if ret == 0:
-        print_to_screen('\nAll seems fine!', level='success')
+        logger.info('\nAll seems fine!')
     else:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
     return ret
 
 

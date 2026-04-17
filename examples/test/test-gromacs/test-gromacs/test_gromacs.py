@@ -23,10 +23,12 @@ import numpy as np
 from pyretis.core import System, create_box, ParticlesExt, Path
 from pyretis.orderparameter.orderparameter import PositionVelocity
 from pyretis.inout.common import make_dirs
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.inout.formats.gromacs import read_trr_file
 from pyretis.engines import GromacsEngine, GromacsEngine2
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 plt.style.use('seaborn-v0_8-deep')
@@ -63,9 +65,8 @@ def run_in_steps(engine, system, order_parameter, interfaces,
         Selects the time direction.
 
     """
-    print_to_screen(f'\nRunning {steps} steps in "{exe_dir}"',
-                    level='message')
-    print_to_screen(f'(Reverse = {reverse})')
+    logger.info(f'\nRunning {steps} steps in "{exe_dir}"')
+    logger.info(f'(Reverse = {reverse})')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
@@ -75,7 +76,7 @@ def run_in_steps(engine, system, order_parameter, interfaces,
                      {'system': system, 'order_function': order_parameter,
                       'interfaces': interfaces},
                      reverse=reverse)
-    print_to_screen('Propagation done!')
+    logger.info('Propagation done!')
     return path
 
 
@@ -101,10 +102,7 @@ def run_plain_gromacs(engine, system, order_parameter, input_conf,
         Selects the time direction.
 
     """
-    print_to_screen(
-        f'\nRunning {steps} plain GROMACS steps in "{exe_dir}"',
-        level='message'
-    )
+    logger.info(f'\nRunning {steps} plain GROMACS steps in "{exe_dir}"')
     make_dirs(exe_dir)
     folder = os.path.abspath(exe_dir)
     clean_dir(folder)
@@ -121,11 +119,11 @@ def run_plain_gromacs(engine, system, order_parameter, input_conf,
     tpr_file = os.path.join(folder, 'topol.tpr')
     grompp = [engine.gmx, 'grompp', '-c', input_file, '-f', mdp,
               '-p', engine.input_files['topology'], '-o', tpr_file]
-    print_to_screen(f'Running grompp in {exe_dir}')
+    logger.info(f'Running grompp in {exe_dir}')
     engine.execute_command(grompp, cwd=exe_dir)
     conf_out = f'run.{engine.ext}'
     exe = engine.mdrun.format('topol.tpr', 'run', conf_out).split()
-    print_to_screen(f"Running \"{' '.join(exe)}\"")
+    logger.info(f"Running \"{' '.join(exe)}\"")
     engine.execute_command(exe, cwd=exe_dir)
     energy_file = os.path.join(folder, 'run.edr')
     energy = engine.get_energies(energy_file)
@@ -166,10 +164,10 @@ def main(select=1, plot=False):
                             maxwarn=0,
                             gmx_format=engine.get('gmx_format', 'g96'),
                             write_vel=True, write_force=True)
-    print_to_screen(f'Testing for: {gro}', level='info')
-    print_to_screen(f'Time step: {gro.timestep}')
-    print_to_screen(f'Subcycles: {gro.subcycles}')
-    print_to_screen(f'GMX format: {gro.ext}')
+    logger.info(f'Testing for: {gro}')
+    logger.info(f'Time step: {gro.timestep}')
+    logger.info(f'Subcycles: {gro.subcycles}')
+    logger.info(f'GMX format: {gro.ext}')
     # Create dummy variables for the test:
     system = System(units='gromacs',
                     box=create_box(cell=[100, 100, 100]),
@@ -186,7 +184,7 @@ def main(select=1, plot=False):
                          exe_dir=f'{select}-forward-step',
                          reverse=False)
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
 
     # Set state to last point in trajectory:
     phase_point = pathf.phasepoints[-1]
@@ -197,7 +195,7 @@ def main(select=1, plot=False):
                          exe_dir=f'{select}-backward-step',
                          reverse=True)
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
 
     # Run plain GROMACS:
     start = time.perf_counter()
@@ -206,7 +204,7 @@ def main(select=1, plot=False):
                                exe_dir=f'{select}-forward-plain',
                                reverse=False)
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
     last_c = plainf[-1]
     last_r = os.path.join(
         os.path.dirname(last_c),
@@ -219,16 +217,16 @@ def main(select=1, plot=False):
                                exe_dir=f'{select}-backward-plain',
                                reverse=True)
     end = time.perf_counter()
-    print_to_screen(f'Time spent: {end - start}', level='info')
+    logger.info(f'Time spent: {end - start}')
 
     mse_ok = obtain_mses(pathf, pathb, plainf, plainb)
 
     if plot:
-        print_to_screen('\nPlotting for comparison', level='message')
+        logger.info('\nPlotting for comparison')
         plot_path_comparison(pathf, pathb, plainf, plainb)
 
     if not mse_ok:
-        print_to_screen('\nComparison failed!', level='error')
+        logger.error('\nComparison failed!')
         sys.exit(1)
 
 
@@ -245,10 +243,10 @@ def mse_combinations(text, var, tol=None):
                 tol_ok = abs(mse) < tol
             if not tol_ok:
                 level = 'error'
-        print_to_screen(
-            f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}',
-            level=level
-        )
+        if level == 'error':
+            logger.error(f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}')
+        else:
+            logger.info(f'MSE {text}: {comb[0][1]} vs {comb[1][1]} = {mse}')
         if not tol_ok:
             return False
     return True

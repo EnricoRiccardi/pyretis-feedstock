@@ -137,7 +137,8 @@ class PathEnsembleFormatter(OutputFormatter):
             path_dict['weight'],
         )
 
-    def parse(self, line):
+    @staticmethod
+    def parse(line):
         """Parse a line to a simplified representation of a path.
 
         Parameters
@@ -214,9 +215,9 @@ class PathEnsembleFormatter(OutputFormatter):
                         path_data['filename'] = filename
                         yield path_data
         except IOError as error:
-            logger.critical('I/O error (%d): %s', error.errno, error.strerror)
+            logger.warning('I/O error (%d): %s', error.errno, error.strerror)
         except Exception as error:  # pragma: no cover
-            logger.critical('Error: %s', error)
+            logger.warning('Error: %s', error)
             raise
 
 

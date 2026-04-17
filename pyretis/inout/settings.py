@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
 __all__ = ['parse_settings_file', 'write_settings_file', 'SECTIONS',
+           'RESTART_OVERRIDE_KEYWORDS',
            'fill_up_tis_and_retis_settings', 'add_default_settings',
            'add_specific_default_settings']
 
@@ -202,6 +203,14 @@ SECTIONS['analysis'] = {
 
 SPECIAL_KEY = {'parameter'}
 
+# Section aliases: alternate section-header names that are silently mapped
+# to a canonical section.  Listed here so they are not flagged as unknown.
+# Keys are the alias (first word of a section header, lower-cased);
+# values are the canonical SECTIONS key they merge into.
+SECTION_ALIASES = {
+    'md': 'simulation',
+}
+
 # This dictionary contains sections where the keywords
 # can not be defined before we parse the input. The reason
 # for this is that we support user-defined external modules
@@ -223,6 +232,51 @@ SPECIAL_MULTIPLE = {
     'collective-variable',
     'ensemble',
     'potential',
+}
+
+# Keywords that may be overridden from the new input file when restarting.
+# When a value in the new input differs from the one stored in the restart
+# file, a WARNING is emitted and the new value replaces the restarted one.
+# Keys are section names; values are lists of allowed keyword names.
+RESTART_OVERRIDE_KEYWORDS = {
+    'simulation': [
+        'steps',
+        'interfaces',
+        'seed',
+        'priority_shooting',
+    ],
+    'output': [
+        'screen',
+        'backup',
+        'trajectory-file',
+        'energy-file',
+        'order-file',
+        'cross-file',
+        'restart-file',
+        'pathensemble-file',
+    ],
+    'tis': [
+        # General shooting
+        'freq',
+        'sigma_v',
+        'aimless',
+        'allowmaxlength',
+        'maxlength',
+        'shooting_move',
+        'shooting_moves',
+        # wt / ss / wf specific
+        'high_accept',
+        'n_jumps',
+        'mirror_freq',
+        'target_freq',
+        'target_indices',
+        'nullmoves',
+    ],
+    'retis': [
+        'swapfreq',
+        'swapsimul',
+        'nullmoves',
+    ],
 }
 
 
@@ -517,6 +571,10 @@ def _parse_raw_section(raw_section, section):
         A dict with keys corresponding to the settings.
 
     """
+    if section in SECTION_ALIASES:
+        # Parse against the canonical section's keyword list.
+        canonical = SECTION_ALIASES[section]
+        return _parse_raw_section(raw_section, canonical)
     if section not in SECTIONS:
         # Unknown section, just ignore it and give a warning.
         msgtxt = f'Ignoring unknown input section "{section}"'
@@ -558,10 +616,12 @@ def _parse_all_raw_sections(raw_sections):
             new_setting = _parse_raw_section(val, key)
             if new_setting is None:
                 continue
-            if key not in settings:
-                settings[key] = {}
+            # Aliases (e.g. 'md') are merged into their canonical section.
+            dest_key = SECTION_ALIASES.get(key, key)
+            if dest_key not in settings:
+                settings[dest_key] = {}
             for sub_key in new_setting:
-                settings[key][sub_key] = new_setting[sub_key]
+                settings[dest_key][sub_key] = new_setting[sub_key]
     return settings
 
 
@@ -659,7 +719,7 @@ def add_specific_default_settings(settings):
 
     """
     task = settings['simulation'].get('task')
-    if task not in settings:
+    if task not in settings and task in SECTIONS:
         settings[task] = {}
 
     if 'exp' in task:
@@ -693,6 +753,58 @@ def add_specific_default_settings(settings):
         settings['engine']['type'] = settings['engine'].get('type', 'internal')
 
 
+def _apply_restart_overrides(new_set, settings):
+    """Apply allowed keyword overrides from a new input onto restart settings.
+
+    For every section and key listed in :data:`RESTART_OVERRIDE_KEYWORDS`,
+    if the value supplied in the new input file differs from the one stored
+    in the restart, a WARNING is logged and the new value replaces the old
+    one.  Sections or keys absent from *settings* are silently skipped.
+
+    Parameters
+    ----------
+    new_set : dict
+        Settings loaded from the restart file (modified in-place).
+    settings : dict
+        Settings parsed from the new input file.
+
+    """
+    for section, keys in RESTART_OVERRIDE_KEYWORDS.items():
+        if section not in settings or section not in new_set:
+            continue
+        for key in keys:
+            if key not in settings[section]:
+                continue
+            new_val = settings[section][key]
+            old_val = new_set[section].get(key)
+            if new_val != old_val:
+                logger.warning(
+                    'Restart override: "%s.%s" changed from %r to %r.',
+                    section, key, old_val, new_val,
+                )
+                new_set[section][key] = new_val
+
+    for i, ens_new in enumerate(settings.get('ensemble', [])):
+        if i >= len(new_set.get('ensemble', [])):
+            break
+        ens_restart = new_set['ensemble'][i]
+        for section, keys in RESTART_OVERRIDE_KEYWORDS.items():
+            if section not in ens_new or section not in ens_restart:
+                continue
+            for key in keys:
+                if key not in ens_new[section]:
+                    continue
+                new_val = ens_new[section][key]
+                old_val = ens_restart[section].get(key)
+                if new_val != old_val:
+                    logger.warning(
+                        'Restart override (ensemble %i): "%s.%s" '
+                        'changed from %r to %r.',
+                        i, section, key, old_val, new_val,
+                    )
+                    ens_restart[section][key] = new_val
+
+
 def settings_from_restart(settings):
     """Overwrite the settings with restart info.
 
@@ -701,6 +813,10 @@ def settings_from_restart(settings):
     NOTE: This structure doesn't allow modifications to a simulation
           with a restart. That is, restart ONLY extends one simulation.
           Load should be used for any other purpose.
+
+    Keywords listed in :data:`RESTART_OVERRIDE_KEYWORDS` are an exception:
+    when their value in the new input differs from the restarted value, a
+    WARNING is emitted and the new value is applied.
 
     Parameters
     ----------
@@ -725,6 +841,7 @@ def settings_from_restart(settings):
         new_set = copy_settings(settings)
     else:
         new_set = restart.pop('settings')
+        _apply_restart_overrides(new_set, settings)
     new_set['restart'] = restart
     new_set['simulation']['startcycle'] = new_set['simulation']['steps']
     new_set['simulation']['steps'] = cycle

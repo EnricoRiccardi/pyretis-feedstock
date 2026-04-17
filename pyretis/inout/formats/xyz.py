@@ -97,8 +97,7 @@ def read_xyz_file(filename):
 
     """
     xyz_keys = ('atomname', 'x', 'y', 'z', 'vx', 'vy', 'vz')
-    for snapshot in read_txt_snapshots(filename, data_keys=xyz_keys):
-        yield snapshot
+    yield from read_txt_snapshots(filename, data_keys=xyz_keys)
 
 
 def convert_snapshot(snapshot):

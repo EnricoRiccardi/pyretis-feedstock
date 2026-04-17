@@ -27,6 +27,7 @@ from pyretis.initiation.initiate_load import (
     reorderframes,
     _check_path,
     _do_the_dirty_load_job,
+    _load_external_trajectory,
 )
 from pyretis.inout.common import make_dirs
 from pyretis.inout.formats.path import PathExtFile, PathIntFile
@@ -1307,3 +1308,136 @@ class TestInitiateLoad:
             for i in grofiles:
                 assert os.path.isfile(os.path.join(accepted, i))
                 assert not os.path.isfile(os.path.join(tempdir, i))
+
+
+class TestLoadExternalTrajectoryNoDuplicatePath:
+    """Regression test: _load_external_trajectory must not double dirname.
+
+    When traj.txt contains filenames with a path prefix (e.g. 'load/frame.gro'
+    instead of just 'frame.gro'), _load_external_trajectory must strip the
+    prefix before joining with dirname, so we get 'load/frame.gro' — not
+    'load/load/frame.gro'.
+    """
+
+    GRO_CONTENT = (
+        'MD of 2 waters, t= 0.0\n'
+        '    6\n'
+        '    1WATER  OW     1   0.126   1.624   1.679'
+        '  0.1227 -0.0580  0.0434\n'
+        '    1WATER  HW1    2   0.190   1.661   1.747'
+        '  0.8085  0.3191 -0.7791\n'
+        '    1WATER  HW2    3   0.177   1.568   1.613'
+        ' -0.9045 -2.6469  1.3180\n'
+        '    2WATER  OW     4   2.275   0.053   0.622'
+        '  0.2519  0.3140 -0.1734\n'
+        '    2WATER  HW1    5   2.337   0.002   0.680'
+        ' -1.0641 -1.1349  0.0257\n'
+        '    2WATER  HW2    6   2.326   0.120   0.568'
+        '  1.9427 -0.8216 -0.0244\n'
+        '   9.82060   9.82060   9.82060\n'
+    )
+
+    @staticmethod
+    def _write_traj_txt(filepath, filenames):
+        """Write a traj.txt with the given filenames."""
+        with open(filepath, 'w', encoding='utf-8') as fh:
+            fh.write('# Cycle: 0, status: ACC\n')
+            fh.write('#     Step              Filename'
+                     '       index    vel\n')
+            for i, name in enumerate(filenames):
+                fh.write(f'{i:>10}  {name:>20s}  {i:>10}  {1:>5}\n')
+
+    def test_no_double_prefix_copy_false(self):
+        """Paths must not be doubled when copy=False."""
+        with tempfile.TemporaryDirectory() as tempdir:
+            load_dir = os.path.join(tempdir, 'load')
+            accepted_dir = os.path.join(load_dir, 'accepted')
+            os.makedirs(accepted_dir)
+
+            # Create frame files in accepted/
+            frames = ['frame_001.gro', 'frame_002.gro']
+            for frame in frames:
+                with open(os.path.join(accepted_dir, frame),
+                          'w', encoding='utf-8') as fh:
+                    fh.write(self.GRO_CONTENT)
+
+            # Write traj.txt with path-prefixed filenames (the bug trigger)
+            prefixed = [os.path.join('load', f) for f in frames]
+            self._write_traj_txt(os.path.join(load_dir, 'traj.txt'),
+                                 prefixed)
+
+            engine = type('E', (), {'exe_dir': None})()
+            with patch('sys.stdout', new=StringIO()):
+                traj = _load_external_trajectory(load_dir, engine,
+                                                 copy=False)
+
+            for snapshot in traj['data']:
+                path = snapshot[1]
+                # The path must be load/frame_XXX.gro, never
+                # load/load/frame_XXX.gro
+                assert path.count('load') == 1, \
+                    f'Doubled dirname in path: {path}'
+                assert os.path.basename(path) in frames
+
+    def test_no_double_prefix_copy_true(self):
+        """Paths must not be doubled when copy=True."""
+        with tempfile.TemporaryDirectory() as tempdir:
+            load_dir = os.path.join(tempdir, 'load')
+            accepted_dir = os.path.join(load_dir, 'accepted')
+            exe_dir = os.path.join(tempdir, 'exe')
+            os.makedirs(accepted_dir)
+            os.makedirs(exe_dir)
+
+            frames = ['frame_001.gro', 'frame_002.gro']
+            for frame in frames:
+                with open(os.path.join(accepted_dir, frame),
+                          'w', encoding='utf-8') as fh:
+                    fh.write(self.GRO_CONTENT)
+
+            # Write traj.txt with path-prefixed filenames (the bug trigger)
+            prefixed = [os.path.join('load', f) for f in frames]
+            self._write_traj_txt(os.path.join(load_dir, 'traj.txt'),
+                                 prefixed)
+
+            engine = type('E', (), {'exe_dir': exe_dir})()
+            with patch('sys.stdout', new=StringIO()):
+                traj = _load_external_trajectory(load_dir, engine,
+                                                 copy=True)
+
+            for snapshot in traj['data']:
+                path = snapshot[1]
+                # Filenames must point into exe_dir with no extra prefix
+                assert path.startswith(exe_dir), \
+                    f'Path does not start with exe_dir: {path}'
+                assert os.path.basename(path) in frames
+            # Files must have been copied to exe_dir
+            for frame in frames:
+                assert os.path.isfile(os.path.join(exe_dir, frame))
+
+    def test_basenames_still_work(self):
+        """Normal traj.txt with bare basenames must keep working."""
+        with tempfile.TemporaryDirectory() as tempdir:
+            load_dir = os.path.join(tempdir, 'load')
+            accepted_dir = os.path.join(load_dir, 'accepted')
+            os.makedirs(accepted_dir)
+
+            frames = ['frame_001.gro', 'frame_002.gro']
+            for frame in frames:
+                with open(os.path.join(accepted_dir, frame),
+                          'w', encoding='utf-8') as fh:
+                    fh.write(self.GRO_CONTENT)
+
+            # Write traj.txt with bare basenames (normal case)
+            self._write_traj_txt(os.path.join(load_dir, 'traj.txt'),
+                                 frames)
+
+            engine = type('E', (), {'exe_dir': None})()
+            with patch('sys.stdout', new=StringIO()):
+                traj = _load_external_trajectory(load_dir, engine,
+                                                 copy=False)
+
+            for snapshot in traj['data']:
+                path = snapshot[1]
+                expected = os.path.join(load_dir, os.path.basename(path))
+                assert path == expected, \
+                    f'Unexpected path: {path} != {expected}'

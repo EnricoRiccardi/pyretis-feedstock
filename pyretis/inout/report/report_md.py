@@ -41,7 +41,10 @@ def generate_report_mdflux(analysis, output='rst'):
     report = {'figures': {}, 'tables': {}}
     # generate some tables:
     cross_out = analysis['cross']['out']
-    report['figures']['flux'] = analysis['cross']['figures']
+    report['figures']['flux'] = [
+        figure for figure in analysis['cross']['figures']
+        if figure.get('runflux') and figure.get('errflux')
+    ]
     report['figures']['energy'] = analysis['energy']['figures']
     report['figures']['order'] = analysis['order']['figures']
     report['tables']['md-flux'] = _table_md_flux(cross_out, fmt=output)[1]

@@ -28,6 +28,8 @@ get_log_formatter (:py:func:`.get_log_formatter`)
 
 """
 import logging
+import sys
+import colorama
 from pyretis.inout.fileio import read_some_lines
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -39,8 +41,9 @@ LOG_DEBUG_FMT = ('[%(levelname)s] [%(name)s, %(funcName)s() at'
                  ' line %(lineno)d]: %(message)s')
 
 
-__all__ = ['OutputFormatter', 'PyretisLogFormatter', 'apply_format',
-           'format_number', 'get_log_formatter',
+__all__ = ['OutputFormatter', 'PyretisLogFormatter',
+           'ColoredLogFormatter', 'apply_format',
+           'format_number', 'get_log_formatter', 'setup_console_logging',
            'LOG_FMT', 'LOG_DEBUG_FMT']
 
 
@@ -317,3 +320,76 @@ class PyretisLogFormatter(logging.Formatter):  # pragma: no cover
             else:
                 out = out.replace('\n', '\n' + ' ' * 4)
         return out
+
+
+class ColoredLogFormatter(logging.Formatter):  # pragma: no cover
+    """Colored formatter for console output.
+
+    Maps logging levels to ANSI colors via colorama for colored
+    console output via the standard ``logger``.
+    """
+
+    COLORS = {
+        logging.DEBUG: colorama.Fore.CYAN,
+        logging.INFO: colorama.Fore.BLUE,
+        25: colorama.Fore.GREEN,   # PROGRESS level
+        26: colorama.Fore.CYAN,    # BANNER level (logo, version)
+        27: colorama.Fore.WHITE,   # REFERENCE level (citations, URLs)
+        logging.WARNING: colorama.Fore.YELLOW,
+        logging.ERROR: colorama.Fore.RED,
+        logging.CRITICAL: colorama.Fore.RED + colorama.Style.BRIGHT,
+    }
+
+    # Levels that show only the message (no [LEVEL]: prefix) on console
+    _CLEAN_LEVELS = {25, 26, 27}  # PROGRESS, BANNER, REFERENCE
+
+    def format(self, record):
+        """Apply color based on the log level."""
+        color = self.COLORS.get(record.levelno, '')
+        if record.levelno in self._CLEAN_LEVELS:
+            # Show just the message, no prefix, for progress/banner/reference
+            out = record.getMessage()
+        else:
+            out = logging.Formatter.format(self, record)
+        if color:
+            return color + out + colorama.Style.RESET_ALL
+        return out
+
+
+def setup_console_logging(level: int = None):
+    """Set up the root logger with a colored console handler.
+
+    This configures the root logger at DEBUG level (so all messages
+    are passed to handlers) and attaches a colored StreamHandler to
+    stdout that displays only PROGRESS (25) and above on the console.
+    INFO and DEBUG messages are suppressed on the console and are
+    intended for file handlers added separately.
+
+    Parameters
+    ----------
+    level : int, optional
+        The minimum log level for the console handler.
+        Defaults to PROGRESS (25) if not specified.
+
+    Returns
+    -------
+    root_logger : logging.Logger
+        The configured root logger.
+
+    """
+    # Import here to avoid circular imports at module level
+    from pyretis.inout.screen import PROGRESS  # noqa: PLC0415
+    if level is None:
+        level = PROGRESS
+    root_logger = logging.getLogger('')
+    root_logger.setLevel(logging.DEBUG)
+    # Guard against duplicate handlers when multiple modules call this:
+    for handler in root_logger.handlers:
+        if (isinstance(handler, logging.StreamHandler) and
+                getattr(handler, 'stream', None) is sys.stdout):
+            return root_logger
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(level)
+    console.setFormatter(ColoredLogFormatter(LOG_FMT))
+    root_logger.addHandler(console)
+    return root_logger

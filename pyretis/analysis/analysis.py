@@ -187,6 +187,9 @@ def block_error_corr(data, maxblock=None, blockskip=1):
     """
     blen, bavg, berr, berr_avg = block_error(data, maxblock=maxblock,
                                              blockskip=blockskip)
+    if len(bavg) == 0 or abs(bavg[0]) == 0:
+        nan = np.full_like(berr, np.nan)
+        return blen, berr, berr_avg, nan, np.nan, nan, np.nan
     # also calculate some relative errors:
     rel_err = np.divide(berr, abs(bavg[0]))
     avg_rel_err = np.divide(berr_avg, abs(bavg[0]))

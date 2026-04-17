@@ -75,7 +75,9 @@ Block error and distribution of temperature:
 \begin{center}
 \includegraphics[width=0.30\linewidth]{@{{ figures['order']['orderdist'] }}@}%
 \includegraphics[width=0.30\linewidth]{@{{ figures['order']['ordermsd'] }}@}%
+@{% if figures['order'].get('orderv') %}@
 \includegraphics[width=0.30\linewidth]{@{{ figures['order']['orderv'] }}@}%
+@{% endif %}@
 \end{center}
 \subsection{MD flux data}
 @{% for figure in figures['flux'] %}@

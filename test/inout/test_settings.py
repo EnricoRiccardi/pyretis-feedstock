@@ -31,10 +31,13 @@ from pyretis.inout.settings import (
     write_settings_file,
     add_default_settings,
     add_specific_default_settings,
+    settings_from_restart,
+    _apply_restart_overrides,
     _clean_settings,
     _parse_raw_section,
     _parse_all_raw_sections,
     _parse_sections,
+    RESTART_OVERRIDE_KEYWORDS,
     SECTIONS
 )
 from pyretis.orderparameter import (
@@ -1068,3 +1071,172 @@ class TestKeywordEnsemble:
                 ['velocity']['generate'] == 'maxwell')
         assert len(settings['ensemble']) == 8
         assert settings['simulation']['zero_left'] == -99
+
+
+class TestRestartOverride:
+    """Test the restart keyword override mechanism."""
+
+    def _make_settings(self, steps=100, shooting_move='sh'):
+        """Build a minimal settings dict for testing."""
+        return {
+            'simulation': {
+                'steps': steps,
+                'task': 'retis',
+                'exe_path': '/tmp',
+            },
+            'tis': {
+                'shooting_move': shooting_move,
+                'freq': 0.5,
+                'high_accept': True,
+            },
+            'retis': {
+                'swapfreq': 0.05,
+            },
+        }
+
+    def test_restart_override_keywords_structure(self):
+        """RESTART_OVERRIDE_KEYWORDS must be a non-empty dict of lists."""
+        assert isinstance(RESTART_OVERRIDE_KEYWORDS, dict)
+        assert len(RESTART_OVERRIDE_KEYWORDS) > 0
+        for section, keys in RESTART_OVERRIDE_KEYWORDS.items():
+            assert isinstance(section, str)
+            assert isinstance(keys, list)
+            assert len(keys) > 0
+
+    def test_restart_override_keywords_contains_wf_ss_wt(self):
+        """tis section must include wf/ss/wt-specific keywords."""
+        tis_keys = RESTART_OVERRIDE_KEYWORDS.get('tis', [])
+        for kw in ('high_accept', 'n_jumps', 'mirror_freq',
+                   'target_freq', 'target_indices'):
+            assert kw in tis_keys, f'Missing wf/ss/wt keyword: {kw}'
+
+    def test_apply_no_warning_when_values_match(self, caplog):
+        """No warning when restarted and new values are identical."""
+        new_set = self._make_settings(steps=100, shooting_move='sh')
+        settings = self._make_settings(steps=100, shooting_move='sh')
+        with turn_on_logging():
+            with caplog.at_level(logging.WARNING):
+                _apply_restart_overrides(new_set, settings)
+        assert 'Restart override' not in caplog.text
+
+    def test_apply_warning_on_mismatch(self, caplog):
+        """A WARNING is logged when an allowed keyword value changes."""
+        new_set = self._make_settings(steps=100, shooting_move='sh')
+        settings = self._make_settings(steps=200, shooting_move='wf')
+        with turn_on_logging():
+            with caplog.at_level(logging.WARNING):
+                _apply_restart_overrides(new_set, settings)
+        assert 'Restart override' in caplog.text
+
+    def test_apply_overrides_value(self):
+        """The new value replaces the restarted one for allowed keywords."""
+        new_set = self._make_settings(steps=100)
+        settings = self._make_settings(steps=999)
+        _apply_restart_overrides(new_set, settings)
+        assert new_set['simulation']['steps'] == 999
+
+    def test_apply_override_shooting_move(self):
+        """shooting_move override works for wf/ss/wt keywords."""
+        new_set = self._make_settings(shooting_move='sh')
+        settings = self._make_settings(shooting_move='wf')
+        _apply_restart_overrides(new_set, settings)
+        assert new_set['tis']['shooting_move'] == 'wf'
+
+    def test_apply_skips_missing_section(self):
+        """Sections absent from either dict are silently skipped."""
+        new_set = {'simulation': {'steps': 10}}
+        settings = {'tis': {'freq': 0.5}}
+        _apply_restart_overrides(new_set, settings)
+        assert new_set == {'simulation': {'steps': 10}}
+
+    def test_apply_skips_key_absent_from_new_input(self):
+        """Keys absent from the new input are not touched in the restart."""
+        new_set = {'simulation': {'steps': 10, 'interfaces': [0.1, 0.5]}}
+        settings = {'simulation': {'steps': 20}}
+        _apply_restart_overrides(new_set, settings)
+        assert new_set['simulation']['steps'] == 20
+        # interfaces is not in the new input, so the restart value is kept
+        assert new_set['simulation']['interfaces'] == [0.1, 0.5]
+
+    def test_apply_ensemble_override_warning(self, caplog):
+        """Ensemble-level overrides emit a warning when values differ."""
+        new_set = {
+            'ensemble': [
+                {'tis': {'shooting_move': 'sh', 'freq': 0.5}},
+            ]
+        }
+        settings = {
+            'ensemble': [
+                {'tis': {'shooting_move': 'wf', 'freq': 0.5}},
+            ]
+        }
+        with turn_on_logging():
+            with caplog.at_level(logging.WARNING):
+                _apply_restart_overrides(new_set, settings)
+        assert 'Restart override (ensemble 0)' in caplog.text
+        assert new_set['ensemble'][0]['tis']['shooting_move'] == 'wf'
+
+    def test_apply_ensemble_override_no_warning_match(self, caplog):
+        """No warning when ensemble values already match."""
+        new_set = {
+            'ensemble': [
+                {'tis': {'shooting_move': 'sh'}},
+            ]
+        }
+        settings = {
+            'ensemble': [
+                {'tis': {'shooting_move': 'sh'}},
+            ]
+        }
+        with turn_on_logging():
+            with caplog.at_level(logging.WARNING):
+                _apply_restart_overrides(new_set, settings)
+        assert 'Restart override' not in caplog.text
+
+    def test_settings_from_restart_applies_overrides(self, tmp_path):
+        """settings_from_restart honours new input values for allowed keys."""
+        import pickle
+        # Build a restart dict that looks like what pyretis stores.
+        restarted_settings = {
+            'simulation': {
+                'steps': 50,
+                'task': 'retis',
+                'exe_path': str(tmp_path),
+                'startcycle': 0,
+                'restart': str(tmp_path / 'pyretis.restart'),
+                'priority_shooting': False,
+            },
+            'engine': {
+                'class': 'velocityverlet',
+                'input_path': '.',
+                'exe_path': str(tmp_path),
+            },
+            'tis': {'shooting_move': 'sh'},
+        }
+        restart = {
+            'cycle': 50,
+            'settings': restarted_settings,
+        }
+        restart_file = tmp_path / 'pyretis.restart'
+        with open(restart_file, 'wb') as fh:
+            pickle.dump(restart, fh)
+
+        # New input requests more steps and a different shooting_move.
+        new_settings = {
+            'simulation': {
+                'steps': 200,
+                'task': 'retis',
+                'exe_path': str(tmp_path),
+                'restart': str(restart_file),
+                'priority_shooting': False,
+            },
+            'engine': {
+                'class': 'velocityverlet',
+                'input_path': '.',
+                'exe_path': str(tmp_path),
+            },
+            'tis': {'shooting_move': 'wf'},
+        }
+        result, _ = settings_from_restart(new_settings)
+        assert result['simulation']['steps'] == 200
+        assert result['tis']['shooting_move'] == 'wf'

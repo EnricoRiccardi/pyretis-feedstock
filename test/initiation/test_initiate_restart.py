@@ -163,7 +163,6 @@ class TestInitiateRestart:
                                             restart=True)
 
             os.chdir(target_dir3)
-
             self._run_simulation(settings3, simulation3)
             os.chdir(startdir)
             del simulation3
@@ -237,7 +236,6 @@ class TestInitiateRestart:
                                             files_to_copy=files_to_copy,
                                             restart=True)
             os.chdir(target_dir3)
-
             self._run_simulation(settings3, simulation3)
             os.chdir(startdir)
             # Check that new paths have been made.

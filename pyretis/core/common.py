@@ -69,8 +69,6 @@ import importlib
 import os
 import sys
 import numpy as np
-from pyretis.inout import print_to_screen
-
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
@@ -121,13 +119,14 @@ def import_from(module_path, function_name):
         sys.modules[module_name] = module
         logger.debug('Imported module: %s', module)
         return getattr(module, function_name)
-    except (ImportError, IOError):
+    except (ImportError, IOError) as err:
         msg = f'Could not import module: {module_path}'
-        logger.critical(msg)
-    except AttributeError:
+        logger.critical('%s: %s', msg, err)
+        raise ValueError(msg) from err
+    except AttributeError as err:
         msg = f'Could not import "{function_name}" from "{module_path}"'
-        logger.critical(msg)
-    raise ValueError(msg)
+        logger.critical('%s: %s', msg, err)
+        raise ValueError(msg) from err
 
 
 def _arg_kind(arg):
@@ -316,9 +315,9 @@ def _pick_out_arg_kwargs(klass, settings):
         try:
             args.append(settings[arg])
             used.add(arg)
-        except KeyError:
+        except KeyError as exc:
             msg = f'Required argument "{arg}" for "{klass}" not found!'
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
     for arg in info['kwargs']:
         if arg == 'self':
             continue
@@ -439,7 +438,7 @@ def compare_objects(obj1, obj2, attrs, numpy_attrs=None):
     This method will compare two PyRETIS objects by checking
     the equality of the attributes. Some of these attributes
     might be numpy arrays in which case we use the
-    :py:function:`.numpy_allclose` defined in this module.
+    :func:`.numpy_allclose` defined in this module.
 
     Parameters
     ----------
@@ -558,8 +557,9 @@ def relative_shoots_select(ensembles, rgen, relative):
             break
     try:
         ensemble = ensembles[idx]
-    except TypeError:
-        raise ValueError('Error in relative shoot frequencies! Aborting!')
+    except TypeError as exc:
+        raise ValueError(
+            'Error in relative shoot frequencies! Aborting!') from exc
     return idx, ensemble
 
 
@@ -812,7 +812,7 @@ def wirefence_weight_and_pick(path, intf_l, intf_r, return_seg=False):
             key_l, key_r = False, False
             path_arr.append((isave, i+1, i-isave))
 
-    n_frames = sum([i[2] for i in path_arr]) if path_arr else 0
+    n_frames = sum(i[2] for i in path_arr) if path_arr else 0
     if return_seg and n_frames:
         sum_frames = 0
         subpath_select = path.rgen.rand()
@@ -930,8 +930,5 @@ def soft_partial_exit(exe_path=''):
         exit_file = os.path.join(exe_path, exit_file)
     if os.path.isfile(exit_file):
         logger.info('Exit file found - will exit between steps.')
-        print_to_screen('Exit file found - will exit between steps.',
-                        level='warning')
-
         return True
     return False

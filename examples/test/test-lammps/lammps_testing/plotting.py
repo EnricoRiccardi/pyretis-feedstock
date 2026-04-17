@@ -6,7 +6,9 @@ from math import ceil
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
-from pyretis.inout import print_to_screen
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 def plot_compare(data_sets, ylabels):
@@ -86,13 +88,7 @@ def plot_xy(data_sets):
         axi.set_xlim([minxy, maxxy])
         axi.set_ylim([minxy, maxxy])
         if not np.allclose(data[0], data[1]):
-            print_to_screen(
-                f'Comparison: "{data[2]}" & "{data[3]}" failed.',
-                level='error',
-            )
+            logger.error(f'Comparison: "{data[2]}" & "{data[3]}" failed.')
         else:
-            print_to_screen(
-                f'Comparison: "{data[2]}" & "{data[3]}" is OK.',
-                level='success',
-            )
+            logger.info(f'Comparison: "{data[2]}" & "{data[3]}" is OK.')
     fig.tight_layout()

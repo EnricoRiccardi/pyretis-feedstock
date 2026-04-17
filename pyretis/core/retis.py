@@ -14,9 +14,6 @@ Methods defined here
 make_retis_step (:py:func:`.make_retis_step`)
     Function to select and execute the RETIS move.
 
-retis_tis_moves (:py:func:`.retis_tis_moves`)
-    Function to execute the TIS steps in the RETIS algorithm.
-
 retis_moves (:py:func:`.retis_moves`)
     Function to perform RETIS swapping moves - it selects what scheme
     to use, i.e. ``[0^-] <-> [0^+], [1^+] <-> [2^+], ...`` or

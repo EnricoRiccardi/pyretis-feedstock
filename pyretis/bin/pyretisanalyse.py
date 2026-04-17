@@ -17,6 +17,7 @@ optional arguments:
 """
 # pylint: disable=invalid-name
 import argparse
+import datetime
 import logging
 import os
 import sys
@@ -33,17 +34,15 @@ from pyretis.inout.common import (
     make_dirs,
     name_file,
 )
-from pyretis.inout.formats.formatter import (
-    LOG_FMT,
-    PyretisLogFormatter,
-)
-from pyretis.inout import print_to_screen
+from pyretis.inout.formats.formatter import setup_console_logging
 from pyretis.inout.report import generate_report
 from pyretis.inout.settings import parse_settings_file
+from pyretis.inout.screen import PROGRESS, REFERENCE  # registers custom levels
+
+_DATE_FMT = '%d.%m.%Y %H:%M:%S'
 
 # Set up for logging:
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
+logger = setup_console_logging()
 
 runpath = os.getcwd()
 
@@ -72,25 +71,22 @@ def hello_world(infile, run_dir, report_dir):
         String showing the location of where we write the output.
 
     """
+    timestart = datetime.datetime.now().strftime(_DATE_FMT)
     pyversion = sys.version.split()[0]
-    msgtxt = [LOGO]
-    msgtxt += ['                                                    Starting']
-    msgtxt += ['analysis tool!']
-    msgtxt += [f'{PROGRAM_NAME} version: {VERSION}']
-    msgtxt += [f'Python version: {pyversion}']
-    msgtxt += [f'Running in directory: {run_dir}']
-    msgtxt += [f'Report directory: {report_dir}']
-    msgtxt += [f'Input file: {infile}']
-    print_to_screen('\n'.join(msgtxt), level='message')
-    logger.info('\n'.join(msgtxt))
+    logger.banner('\n'.join([LOGO]))
+    logger.banner('%s version: %s', PROGRAM_NAME, VERSION)
+    logger.banner('Start of analysis: %s', timestart)
+    logger.banner('Python version: %s', pyversion)
+    logger.progress('\nRunning in directory: %s', run_dir)
+    logger.progress('Report directory: %s', report_dir)
+    logger.progress('Input file: %s\n', infile)
 
 
 def bye_bye_world():
     """Print out the goodbye message for PyRETIS."""
-    msgtxt = f'End of {PROGRAM_NAME} analysis execution.'
-    logger.info(msgtxt)
-    print_to_screen('')
-    print_to_screen(msgtxt, level='info')
+    timeend = datetime.datetime.now().strftime(_DATE_FMT)
+    msgtxt = f'End of {PROGRAM_NAME} analysis: {timeend}'
+    logger.progress(msgtxt)
     # display some references:
     references = [f'{PROGRAM_NAME} references:']
     references.append(('-') * len(references[0]))
@@ -98,13 +94,9 @@ def bye_bye_world():
         if line:
             references.append(line)
     reftxt = '\n'.join(references)
-    logger.info(reftxt)
-    print_to_screen('')
-    print_to_screen(reftxt)
+    logger.log(REFERENCE, '\n' + reftxt)
     urltxt = f'{URL}'
-    logger.info(urltxt)
-    print_to_screen('')
-    print_to_screen(urltxt, level='info')
+    logger.log(REFERENCE, urltxt)
 
 
 def write_traceback(filename):
@@ -214,13 +206,14 @@ def main(input_file, run_path, report_dir):
         The location where we will write the report.
 
     """
+    exit_status = 0
     try:
         if input_file is None:
             raise FileNotFoundError('Input file required (-i filename).')
         if not os.path.isfile(os.path.join(run_path, input_file)):
             raise FileNotFoundError(f'Input file "{input_file}" NOT found!')
         # Run analysis
-        print_to_screen(f'Reading input file "{input_file}"')
+        logger.progress('Reading input file "%s"', input_file)
         settings = parse_settings_file(input_file)
         # override exe-path to the one we are executing in now:
         settings['simulation']['exe-path'] = run_path
@@ -230,27 +223,29 @@ def main(input_file, run_path, report_dir):
                                       CONSTANTS['kB'][units]) ** -1
         settings['analysis']['report-dir'] = report_dir
         msg_dir = make_dirs(report_dir)
-        print_to_screen(msg_dir)
+        if msg_dir:
+            logger.progress(msg_dir)
         task = settings['simulation']['task']
-        print_to_screen(f'Simulation task was: "{task}"')
-        print_to_screen()
+        sep = '=' * (len(task) + 28)
+        logger.banner('\n%s\n  Running %s analysis.\n%s', sep, task, sep)
 
         results = run_analysis(settings)
-        print_to_screen()
+
+        logger.progress('\nAnalysis complete. Creating reports:')
         for outfile in create_reports(settings, results, report_dir):
             relfile = os.path.relpath(outfile, start=run_path)
-            print_to_screen(f'Report created: {relfile}',
-                            level='info')
+            logger.progress('  Report created: %s', relfile)
 
     except Exception as error:  # Exceptions should subclass BaseException.
+        exit_status = 1
         errtxt = f'{type(error).__name__}: {error.args}'
-        print_to_screen(errtxt, level='error')
-        print_to_screen('Execution failed!', level='error')
-        print_to_screen(f'Error traceback is written to: {ERROR_FILE}',
-                        level='error')
+        logger.error(errtxt)
+        logger.error('Execution failed!')
+        logger.error('Error traceback is written to: %s', ERROR_FILE)
         write_traceback(os.path.join(run_path, ERROR_FILE))
     finally:
         bye_bye_world()
+    return exit_status
 
 
 def entry_point():  # pragma: no cover
@@ -269,19 +264,13 @@ def entry_point():  # pragma: no cover
 
     args_dict = vars(parser.parse_args())
 
-    # Define a console logger. This will log to sys.stderr:
-    console = logging.StreamHandler()
-    console.setLevel(logging.WARNING)
-    console.setFormatter(PyretisLogFormatter(LOG_FMT))
-    logger.addHandler(console)
-
     check_python_version()
 
     inputfile = args_dict['input']
     reportdir = os.path.join(runpath, 'report')
 
     hello_world(inputfile, runpath, reportdir)
-    main(inputfile, runpath, reportdir)
+    sys.exit(main(inputfile, runpath, reportdir))
 
 
 if __name__ == '__main__':  # pragma: no cover

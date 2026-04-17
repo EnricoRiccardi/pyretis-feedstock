@@ -9,33 +9,59 @@ Important classes defined here
 ScreenOutput (:py:class:`.FileIO`)
     A generic class for handling output to the screen.
 
-Important methods defined here
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Important constants defined here
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-print_to_screen (:py:func:`.print_to_screen`)
-    A method used for printing messages to screen.
+PROGRESS : int
+    Custom log level (25) between INFO (20) and WARNING (30).
+    Used for user-facing progress messages (green on console).
+
+BANNER : int
+    Custom log level (26) between PROGRESS (25) and WARNING (30).
+    Used for decorative/banner text (cyan on console): logo,
+    version info, references.
 
 """
 import logging
-import colorama
 from pyretis.inout.common import OutputBase
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
+# Custom log levels for user-facing console output.
+# Console handler is set to PROGRESS so only PROGRESS, BANNER,
+# WARNING, ERROR, CRITICAL appear on screen.
+# logger.info() and logger.debug() go to the log file only.
+PROGRESS = 25
+BANNER = 26
+REFERENCE = 27
+logging.addLevelName(PROGRESS, 'PROGRESS')
+logging.addLevelName(BANNER, 'BANNER')
+logging.addLevelName(REFERENCE, 'REFERENCE')
 
-# Colors for printing:
-_PRINT_COLORS = {
-    'error': colorama.Fore.RED,
-    'info': colorama.Fore.BLUE,
-    'warning': colorama.Fore.YELLOW,
-    'message': colorama.Fore.CYAN,
-    'success': colorama.Fore.GREEN
-}
+
+def log_progress(self, message, *args, **kwargs):
+    """Log a message at the PROGRESS level."""
+    self.log(PROGRESS, message, *args, **kwargs)
 
 
-__all__ = ['ScreenOutput', 'print_to_screen']
+def log_banner(self, message, *args, **kwargs):
+    """Log a message at the BANNER level."""
+    self.log(BANNER, message, *args, **kwargs)
+
+
+def log_reference(self, message, *args, **kwargs):
+    """Log a message at the REFERENCE level (white on console)."""
+    self.log(REFERENCE, message, *args, **kwargs)
+
+
+logging.Logger.progress = log_progress
+logging.Logger.banner = log_banner
+logging.Logger.reference = log_reference
+
+
+__all__ = ['ScreenOutput', 'PROGRESS', 'BANNER', 'REFERENCE']  # noqa: F401
 
 
 class ScreenOutput(OutputBase):
@@ -66,29 +92,3 @@ class ScreenOutput(OutputBase):
             return True
         print(towrite)
         return True
-
-
-def print_to_screen(txt=None, level=None):  # pragma: no cover
-    """Print output to standard out.
-
-    This method is included to ensure that output from PyRETIS to the
-    screen is written out in a uniform way across the library and
-    application(s).
-
-    Parameters
-    ----------
-    txt : string, optional
-        The text to write to the screen.
-    level : string, optional
-        The level can be used to color the output.
-
-    """
-    if txt is None:
-        print()
-    else:
-        out = f'{txt}'
-        color = _PRINT_COLORS.get(level, None)
-        if color is None:
-            print(out)
-        else:
-            print(color + out)

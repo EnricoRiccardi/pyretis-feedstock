@@ -10,13 +10,15 @@ tries to generate new valid paths.
 import os
 import sys
 import colorama
-from pyretis.inout import print_to_screen
 from pyretis.inout.settings import parse_settings_file
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.testing.simulation_comparison import (
     compare_path_ensemble_data,
     compare_numerical_data
 )
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 RESULTS = 'results'
@@ -30,8 +32,8 @@ def print_underline(msg):
     msg : string
         The message to print.
     """
-    print_to_screen(f'\n{msg}', level='message')
-    print_to_screen('=' * len(msg), level='message')
+    logger.info(f'\n{msg}')
+    logger.info('=' * len(msg))
 
 
 def compare_files(settings):
@@ -56,7 +58,7 @@ def compare_files(settings):
         ensemble_dir = generate_ensemble_name(i)
         print_underline(f'Comparing for ensemble: {ensemble_dir}')
         for file_name in files:
-            print_to_screen(f'* Comparing {file_name} files...')
+            logger.info(f'* Comparing {file_name} files...')
             result_old = os.path.join(RESULTS, ensemble_dir, file_name)
             result_new = os.path.join(ensemble_dir, file_name)
 
@@ -70,10 +72,10 @@ def compare_files(settings):
                 )
 
             if not equal:
-                print_to_screen(f'\t-> *Files differ: {msg}*', level='error')
+                logger.error(f'\t-> *Files differ: {msg}*')
                 return False
-            print_to_screen('\t-> Files are equal!', level='success')
-    print_to_screen('All files are equal!', level='success')
+            logger.info('\t-> Files are equal!')
+    logger.info('All files are equal!')
     return True
 
 

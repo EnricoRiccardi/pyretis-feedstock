@@ -332,7 +332,10 @@ def analyse_path_ensemble(path_ensemble, settings):
     # Update the weights for skipped paths
     weights, nacc = skip_paths(weights, nacc, skip_weight)
     # Check if we have enough data to do analysis:
-    assert nacc != 0, f'No accepted paths to analyse in ensemble {ens_number}'
+    if nacc == 0:
+        logger.warning('No accepted paths to analyse in ensemble %s',
+                       ens_number)
+        return result
     # When restarting a simulations, or by stacking together different
     # simulations, the cycles might not be in order. We thus reset the counter.
     result['cycle'] = np.arange(len(result['cycle']))
@@ -533,7 +536,10 @@ def analyse_path_ensemble0(path_ensemble, settings):
 
     # Check if we have enough data to do analysis:
     ens_number = 0
-    assert nacc != 0, f'No accepted paths to analyse in ensemble {ens_number}'
+    if nacc == 0:
+        logger.warning('No accepted paths to analyse in ensemble %s',
+                       ens_number)
+        return result
 
     # Perform the different analysis tasks:
 
@@ -648,6 +654,7 @@ def analyse_repptis_ensemble(path_ensemble, settings):
     ordermin = []
     intfs000 = path_ensemble.interfaces
     ptypes = [[0, 0, 0, 0]]  # LML, LMR, RMR, RML amounts
+    ptype = [0, 0, 0, 0]  # initialise before loop; updated on each ACC path
     for i, path in enumerate(path_ensemble.get_paths()):  # loop over all paths
         # we skip the first number of lines that should not be part of
         # the analysis.
@@ -715,7 +722,10 @@ def analyse_repptis_ensemble(path_ensemble, settings):
     result['ptypes'] = np.cumsum(np.array(ptypes), axis=0)
 
     # Check if we have enough data to do analysis:
-    assert nacc != 0, f'No accepted paths to analyse in ensemble {ens_number}'
+    if nacc == 0:
+        logger.warning('No accepted paths to analyse in ensemble %s',
+                       ens_number)
+        return result
     # When restarting a simulations, or by stacking together different
     # simulations, the cycles might not be in order. We thus reset the counter.
     result['cycle'] = np.arange(len(result['cycle']))
@@ -856,7 +866,13 @@ def match_probabilities(path_results, detect, settings=None):
     accprob = 1.0
     accprob_err = 0.0
     minlen_pdata, minlen_prun = float('inf'), float('inf')
+    active_results = []
     for idet, result in zip(detect, path_results):
+        if 'pcross' not in result:
+            logger.warning('Skipping ensemble %s in probability matching: '
+                           'no accepted paths', result.get('ensemble', '?'))
+            continue
+        active_results.append(result)
         # do match only in part left of idetect:
         idx = np.where(result['pcross'][0] <= idet)[0]
         results['overall-prob'][0].extend(result['pcross'][0][idx])
@@ -872,11 +888,20 @@ def match_probabilities(path_results, detect, settings=None):
         minlen_pdata = min(minlen_pdata, len(result['pdata']))
         minlen_prun = min(minlen_prun, len(result['prun']))
 
+    if not active_results:
+        results['overall-cycle'] = np.array([])
+        results['overall-prun'] = np.array([])
+        results['overall-pdata'] = np.array([])
+        results['overall-prob'] = np.array([[], []])
+        results['prob'] = np.nan
+        results['relerror'] = np.nan
+        return results
+
     # Finally Construct the cumulative output now
     results['overall-cycle'] = np.arange(minlen_prun)
     results['overall-prun'] = [1]*minlen_prun
     results['overall-pdata'] = [[1, 1]]*minlen_pdata
-    for result in path_results:
+    for result in active_results:
         results['overall-prun'] = np.multiply(result['prun'][-minlen_prun:],
                                               results['overall-prun'])
         results['overall-pdata'] = np.multiply(result['pdata'][-minlen_pdata:],
@@ -957,7 +982,7 @@ def perm_calculations(results0, pcross, pcross_err):
     data. It then calculates the permeability and its error based on the values
     of xi, tau, and the crossing probability pcross.
 
-    Paramaters
+    Parameters
     ----------
     results0 : dict
         Results from the analysis of ensemble [0^-]
@@ -1026,7 +1051,7 @@ def _calc_tau(op_data, bin_edges=None, timestep=1):
     order = op_data[1]
     bin_l, bin_r = tuple(bin_edges)
     delta = bin_r-bin_l
-    count = sum([1 for i in order if bin_l < i <= bin_r])
+    count = sum(1 for i in order if bin_l < i <= bin_r)
     return count*timestep/delta
 
 

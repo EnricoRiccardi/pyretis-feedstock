@@ -17,8 +17,10 @@ from matplotlib import pyplot as plt
 from matplotlib.cm import get_cmap
 from pyretis.core import RandomGenerator, System, Particles
 from pyretis.setup import create_simulation, create_force_field
-from pyretis.inout import print_to_screen
 from pyretis.analysis import histogram, match_all_histograms
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 UMBRELLA_WINDOWS = [
@@ -109,12 +111,12 @@ def run_umbrellas(windows):
     """
     msg = '\nRunning umbrella no: {} of {}. Location: {}'
     n_umb = len(windows)
-    print_to_screen('Starting simulations:', level='info')
+    logger.info('Starting simulations:')
     trajectories = []
     energies = []
     system = None
     for i, window in enumerate(windows):
-        print_to_screen(msg.format(i + 1, n_umb, window))
+        logger.info(msg.format(i + 1, n_umb, window))
         over = windows[min(i + 1, n_umb - 1)][0]
         initial_positions = None if system is None else system.particles.pos
         simulation = set_up_simulation(
@@ -132,7 +134,7 @@ def run_umbrellas(windows):
         trajectories.append(traj)
         energies.append(ener)
         nstep = simulation.cycle['step'] - simulation.cycle['startcycle']
-        print_to_screen(f'Done. Cycles: {nstep}', level='success')
+        logger.info(f'Done. Cycles: {nstep}')
     return system, trajectories, energies
 
 
@@ -146,7 +148,7 @@ def analysis_and_plot(system, trajectory, windows):
     bin_x = histograms[0][-1]
     dbin = bin_x[1] - bin_x[0]
     # We are going to match these histograms:
-    print_to_screen('Matching histograms...', level='info')
+    logger.info('Matching histograms...')
     histograms_s, _, hist_avg = match_all_histograms(histograms, windows)
     # Let us create some simple plots using matplotlib:
     plot_histograms(histograms_s, hist_avg, bin_x, dbin)
@@ -168,7 +170,7 @@ def plot_histograms(histograms_s, hist_avg, bin_x, dbin):
         The histogram width.
 
     """
-    print_to_screen('Plotting matched histograms', level='info')
+    logger.info('Plotting matched histograms')
     fig = plt.figure()
     axs = fig.add_subplot(111)
     axs.set_yscale('log')
@@ -229,7 +231,7 @@ def plot_free_energy(hist_avg, bin_x, system):
         sampling.
 
     """
-    print_to_screen('Plotting the free energy', level='info')
+    logger.info('Plotting the free energy')
     fig = plt.figure()
     axi = fig.add_subplot(111)
     xpos = np.linspace(-2, 2, 1000)

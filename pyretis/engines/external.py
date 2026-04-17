@@ -21,7 +21,6 @@ import subprocess
 import shutil
 import sys
 from pyretis.core.common import counter
-from pyretis.inout import print_to_screen
 from pyretis.inout.fileio import FileIO
 from pyretis.engines.engine import EngineBase
 from pyretis.inout.formats.cp2k import read_cp2k_box
@@ -293,16 +292,19 @@ class ExternalMDEngine(EngineBase):
         if inputs is not None:
             logger.debug('With input: %s', inputs)
 
-        out_name = 'stdout.txt'
-        err_name = 'stderr.txt'
-
-        if cwd:
-            out_name = os.path.join(cwd, out_name)
-            err_name = os.path.join(cwd, err_name)
+        # Route engine stdout/stderr to a per-ensemble log file.
+        # Priority: cwd (step directory), then exe_dir (ensemble directory).
+        log_dir = cwd or self.exe_dir
+        if log_dir:
+            out_name = os.path.join(log_dir, 'engine.log')
+            err_name = os.path.join(log_dir, 'engine.err')
+        else:
+            out_name = 'engine.log'
+            err_name = 'engine.err'
 
         return_code = None
 
-        with open(out_name, 'wb') as fout, open(err_name, 'wb') as ferr:
+        with open(out_name, 'ab') as fout, open(err_name, 'ab') as ferr:
             # Check if we are running a python script:
             if cmd[0].endswith('.py'):
                 cmd = [sys.executable] + cmd
@@ -326,14 +328,14 @@ class ExternalMDEngine(EngineBase):
                     logger.error('Input to external program was: %s', inputs)
                 logger.error('Return code from external program: %i',
                              return_code)
-                logger.error('STDOUT, see file: %s', out_name)
-                logger.error('STDERR, see file: %s', err_name)
+                logger.error('Engine stdout/stderr: %s, %s', out_name,
+                             err_name)
                 msg = (f'Execution of external program ({self.description}) '
                        f'failed with command:\n {cmd2}.\n'
                        f'Return code: {return_code}')
                 raise RuntimeError(msg)
+        # Keep engine.log (per-ensemble record); remove err on success.
         if return_code is not None and return_code == 0:
-            self._removefile(out_name)
             self._removefile(err_name)
         return return_code
 
@@ -491,8 +493,7 @@ class ExternalMDEngine(EngineBase):
         # Update so that we use the prev_file:
         ensemble['system'].particles.set_pos((prev_file, None, None))
         logger.info('Searching for crossing with: %9.6g', middle)
-        print_to_screen(f'Searching for crossing with: {middle}')
-        print_to_screen(f'Writing progress to: {msg_file_name}')
+        logger.info('Writing progress to: %s', msg_file_name)
 
         while True:
             msg_file.write('New kick:')

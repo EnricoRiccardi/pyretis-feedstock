@@ -17,7 +17,6 @@ import logging
 import copy
 import os
 from pyretis.simulation.simulation_task import SimulationTask
-from pyretis.inout.screen import print_to_screen
 from pyretis.inout.simulationio import task_from_settings
 from pyretis.inout.restart import write_restart_file
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -337,8 +336,6 @@ class Simulation:
             exit_file = os.path.join(self.exe_dir, exit_file)
         if os.path.isfile(exit_file):
             logger.info('Exit file found - will do a soft exit.')
-            print_to_screen('Exit file found - will do a soft exit.',
-                            level='warning')
             # Write restart file...
             self.write_restart(now=True)
             # Close output files...

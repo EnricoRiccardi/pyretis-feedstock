@@ -41,14 +41,22 @@ The overall crossing rate as a function of cycles
 and its relative error block analysis are reported in the two following
 plots, respectively.
 
+@{% if figures['total'] %}@
 .. image:: @{{ figures['total'] }}@
    :width: 45%
+@{% endif %}@
+@{% if figures['matched'] %}@
 .. image:: @{{ figures['matched']}}@
    :width: 45%
+@{% endif %}@
+@{% if figures['progress'] %}@
 .. image:: @{{ figures['progress'] }}@
    :width: 45%
+@{% endif %}@
+@{% if figures['error'] %}@
 .. image:: @{{ figures['error']}}@
    :width: 45%
+@{% endif %}@
 
 @{% if (numbers['permeability'] is defined) and numbers['permeability'] %}@
 Results for [0^-']
@@ -56,16 +64,26 @@ Results for [0^-']
 @{% endif %}@
 
 @{% if (numbers['permeability'] is defined) and numbers['permeability'] %}@
+@{% if figures['xi'] %}@
 .. image:: @{{ figures['xi'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figures['xierror'] %}@
 .. image:: @{{ figures['xierror'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figures['tau'] %}@
 .. image:: @{{ figures['tau'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figures['tauerror'] %}@
 .. image:: @{{ figures['tauerror'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figures['tauref'] %}@
 .. image:: @{{ figures['tauref'] }}@
    :width: 30%
+@{% endif %}@
 
 
 @{% endif %}@
@@ -91,12 +109,18 @@ Crossing probabilities
 ----------------------
 
 @{% for figure in figures['tis'] %}@
+@{% if figure.get('pcross') %}@
 .. image:: @{{ figure['pcross'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figure.get('prun') %}@
 .. image:: @{{ figure['prun'] }}@
    :width: 30%
+@{% endif %}@
+@{% if figure.get('perror') %}@
 .. image:: @{{ figure['perror'] }}@
    :width: 30%
+@{% endif %}@
 @{% endfor %}@
 
 
@@ -109,15 +133,22 @@ The average path lengths in the different ensembles are given in
 the table below and some distributions for the path lengths and
 shooting moves can also be found here:
 
+@{% if figures['path0'].get('lpath') %}@
 .. image:: @{{ figures['path0']['lpath'] }}@
    :width: 45%
+@{% endif %}@
+@{% if figures['path0'].get('shoots') %}@
 .. image:: @{{ figures['path0']['shoots'] }}@
    :width: 45%
+@{% endif %}@
 
 @{% for figure in figures['tis'] %}@
+@{% if figure.get('lpath') %}@
 .. image:: @{{ figure['lpath'] }}@
    :width: 45%
+@{% endif %}@
+@{% if figure.get('shoots') %}@
 .. image:: @{{ figure['shoots'] }}@
    :width: 45%
+@{% endif %}@
 @{% endfor %}@
-

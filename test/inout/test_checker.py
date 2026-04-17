@@ -12,7 +12,8 @@ from pyretis.core.system import System
 from pyretis.inout.checker import (check_for_bullshitt,
                                    check_engine,
                                    check_ensemble,
-                                   check_interfaces)
+                                   check_interfaces,
+                                   _check_wire_fencing_zero_minus)
 from pyretis.inout.settings import fill_up_tis_and_retis_settings
 from unittest.mock import patch
 
@@ -101,7 +102,8 @@ class TestMethods:
 
         play_set['engine']['input_path'] = 'Hahaha'
         del play_set['engine']['cp2k_format']
-        assert not check_engine(play_set)
+        # cp2k_format is now auto-detected (defaults to 'xyz' if not found)
+        assert check_engine(play_set)
 
         play_set['engine']['cp2k_format'] = 'xyz'
         del play_set['engine']['cp2k']
@@ -168,3 +170,55 @@ class TestMethods:
             with pytest.raises(ValueError) as err:
                 check_for_bullshitt(settings)
         assert 'in the simulation interface' in str(err.value)
+
+    def test_check_wf_zero_minus_global(self):
+        """WF + flux must override [0^-] shooting_move to 'sh'."""
+        settings = {
+            'simulation': {'task': 'retis',
+                           'interfaces': [-1.0, -0.5, 0, 0.5, 1],
+                           'zero_ensemble': True,
+                           'flux': True},
+            'tis': {'shooting_move': 'wf'},
+            'ensemble': [{'interface': -1.0}, {'interface': -0.5},
+                         {'interface': 0}, {'interface': 0.5}],
+        }
+        with patch('sys.stdout', new=StringIO()):
+            _check_wire_fencing_zero_minus(settings)
+        # The [0^-] ensemble (index 0) must be switched to 'sh'.
+        assert settings['tis']['shooting_moves'][0] == 'sh'
+        # Other ensembles keep 'wf'.
+        for move in settings['tis']['shooting_moves'][1:]:
+            assert move == 'wf'
+
+    def test_check_wf_zero_minus_per_ensemble(self):
+        """WF in shooting_moves[0] + flux must be overridden to 'sh'."""
+        settings = {
+            'simulation': {'task': 'retis',
+                           'interfaces': [-1.0, -0.5, 0, 0.5, 1],
+                           'zero_ensemble': True,
+                           'flux': True},
+            'tis': {'shooting_move': 'sh',
+                    'shooting_moves': ['wf', 'wf', 'sh', 'sh']},
+            'ensemble': [{'interface': -1.0}, {'interface': -0.5},
+                         {'interface': 0}, {'interface': 0.5}],
+        }
+        with patch('sys.stdout', new=StringIO()):
+            _check_wire_fencing_zero_minus(settings)
+        assert settings['tis']['shooting_moves'][0] == 'sh'
+        assert settings['tis']['shooting_moves'][1] == 'wf'
+
+    def test_check_wf_no_flux_no_warning(self):
+        """No flux/zero_left means no [0^-], so WF is fine everywhere."""
+        settings = {
+            'simulation': {'task': 'retis',
+                           'interfaces': [-1.0, -0.5, 0, 0.5, 1],
+                           'zero_ensemble': True,
+                           'flux': False},
+            'tis': {'shooting_move': 'wf'},
+            'ensemble': [{'interface': -1.0}, {'interface': -0.5},
+                         {'interface': 0}, {'interface': 0.5}],
+        }
+        with patch('sys.stdout', new=StringIO()):
+            _check_wire_fencing_zero_minus(settings)
+        # No shooting_moves should have been created.
+        assert 'shooting_moves' not in settings['tis']

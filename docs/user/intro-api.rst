@@ -323,7 +323,7 @@ reader to the examples, in particular:
 * :ref:`The particle swarm optimization example <examples-pso>` in
   which a custom potential and engine is created. Further, in this example
   a customized simulation is set up by making use of :py:meth:`.Simulation.add_task`
-* The :ref:`example <examples-external-vvE>` showing how C for FORTRAN can be
+* The :ref:`example <examples-external-vvE>` showing how C or Fortran can be
   used to create a custom Velocity Verlet engine.
 
 

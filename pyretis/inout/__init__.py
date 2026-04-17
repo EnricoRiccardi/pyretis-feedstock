@@ -74,4 +74,3 @@ write_settings_file (:py:func:`.write_settings_file`)
 write_restart_file (:py:func:`.write_restart_file`)
     Method for writing restart information.
 """
-from pyretis.inout.screen import print_to_screen

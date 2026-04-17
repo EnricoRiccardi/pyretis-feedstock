@@ -9,9 +9,11 @@ import numpy as np
 from pyretis.core.random_gen import create_random_generator
 from pyretis.inout.common import make_dirs
 from pyretis.engines.lammps import LAMMPSEngine
-from pyretis.inout import print_to_screen
 from pyretis.testing.systemhelp import create_system_ext
 from pyretis.testing.helpers import clean_dir
+import logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -32,7 +34,7 @@ def backup_files(dirname, prefix='prev_'):
 
 def modify_velocities():
     """Use the LAMMPS engine to run a MD simulation forward in time."""
-    print_to_screen('\nTesting that we can draw randomized velocities.')
+    logger.info('\nTesting that we can draw randomized velocities.')
     engine = LAMMPSEngine('lmp_serial', 'lammps_input', 1)
     # Create a dummy system:
     system = create_system_ext(pos=('system.data', 0))
@@ -50,7 +52,7 @@ def modify_velocities():
     assert math.isclose(kin_new, 1.4970703)
     # The order parameter is the position and velocity of particle 1:
     assert np.allclose(system.order, [1.68543117318838, -0.234327230058829])
-    print_to_screen('\n-> First draw worked as expected.', level='success')
+    logger.info('\n-> First draw worked as expected.')
     # Now, backup the input/output files so we can inspect
     # them later.
     prefix = 'prev_0_'
@@ -66,7 +68,7 @@ def modify_velocities():
     assert math.isclose(kin_new, 1.4970703)
     # Same seed, velocity should still be the same:
     assert np.allclose(system.order, [1.68543117318838, -0.234327230058829])
-    print_to_screen('\n-> Second draw worked as expected.', level='success')
+    logger.info('\n-> Second draw worked as expected.')
     # Bakcup files again:
     prefix = 'prev_1_'
     files = backup_files(exe_dir, prefix=prefix)
@@ -81,8 +83,8 @@ def modify_velocities():
     assert math.isclose(kin_new, 1.4970703)
     # Different seed, velocity should have changed
     assert np.allclose(system.order, [1.68543117318838, 0.277207562198471])
-    print_to_screen('\n-> Third draw worked as expected.', level='success')
-    print_to_screen('\nAll draws were successful!', level='success')
+    logger.info('\n-> Third draw worked as expected.')
+    logger.info('\nAll draws were successful!')
 
 
 def main():
