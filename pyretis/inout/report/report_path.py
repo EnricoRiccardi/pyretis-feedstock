@@ -734,9 +734,9 @@ def _get_path_figures(figures):
     path_figures = {}
     if not figures:
         return path_figures
-    for fig in {'pcross', 'prun', 'perror', 'perror_sl',
+    for fig in ('pcross', 'prun', 'perror', 'perror_sl',
                 'perror_sr', 'lpath', 'prun_sl',
-                'prun_sr', 'shoots'}:
+                'prun_sr', 'shoots'):
         for key in figures:
             if key.endswith(fig):
                 path_figures[fig] = figures[key]

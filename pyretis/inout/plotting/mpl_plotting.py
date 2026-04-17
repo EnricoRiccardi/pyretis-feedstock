@@ -913,7 +913,8 @@ def mpl_plot_pppath(results, path_ensemble):
         canvas[f'{ens_simplified}_pp_Pc'] = mpl_simple_plot(
             series, fig_settings=figset)
     if 'pcross' in results:
-        L, M, R, lmlpercs, lmllambs, rmrpercs, rmrlambs = results['repptis']
+        intf_l, intf_m, intf_r, lmlpercs, lmllambs, rmrpercs, rmrlambs = (
+            results['repptis'])
         # First plot `pcross` vs `lambda` with the `detect` surface:
         series = [
             {'type': 'xy',
@@ -925,22 +926,22 @@ def mpl_plot_pppath(results, path_ensemble):
              'y': rmrpercs,
              'color': colors[1]},
             {'type': 'vline',
-             'x': L,
+             'x': intf_l,
              'ls': '--',
              'alpha': 0.8},
             {'type': 'vline',
-             'x': M,
+             'x': intf_m,
              'ls': '--',
              'alpha': 0.8},
             {'type': 'vline',
-             'x': R,
+             'x': intf_r,
              'ls': '--',
              'alpha': 0.8},
         ]
         figset = {'xlabel': r'Order parameter ($\lambda$)',
                   'ylabel': 'Crossing probability',
                   'title': f'Ensemble ${ens}$'
-                           + f', L = {L}, M = {M}, R = {R}'}
+                           + f', L = {intf_l}, M = {intf_m}, R = {intf_r}'}
         canvas[out['pcross']] = mpl_simple_plot(series, fig_settings=figset)
     if 'prun_sl' in results:
         # Next plot running ` pcross`:
@@ -1551,5 +1552,19 @@ def mpl_plot_matched(path_ensembles, detect, matched, reptis=False):
 
 
 def mpl_plot_bar(axs, seri):
+    """Draw a bar chart on the given axes using series parameters.
+
+    Parameters
+    ----------
+    axs : matplotlib axes object
+        The axes to draw on.
+    seri : dict
+        Series parameters passed to ``axs.bar`` (the 'type' key is removed).
+
+    Returns
+    -------
+    out : matplotlib BarContainer
+        The bar container returned by ``axs.bar``.
+    """
     del seri['type']
     return axs.bar(**seri)

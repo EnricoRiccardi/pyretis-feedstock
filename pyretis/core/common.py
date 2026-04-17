@@ -315,9 +315,9 @@ def _pick_out_arg_kwargs(klass, settings):
         try:
             args.append(settings[arg])
             used.add(arg)
-        except KeyError:
+        except KeyError as exc:
             msg = f'Required argument "{arg}" for "{klass}" not found!'
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
     for arg in info['kwargs']:
         if arg == 'self':
             continue
@@ -557,8 +557,9 @@ def relative_shoots_select(ensembles, rgen, relative):
             break
     try:
         ensemble = ensembles[idx]
-    except TypeError:
-        raise ValueError('Error in relative shoot frequencies! Aborting!')
+    except TypeError as exc:
+        raise ValueError(
+            'Error in relative shoot frequencies! Aborting!') from exc
     return idx, ensemble
 
 
@@ -811,7 +812,7 @@ def wirefence_weight_and_pick(path, intf_l, intf_r, return_seg=False):
             key_l, key_r = False, False
             path_arr.append((isave, i+1, i-isave))
 
-    n_frames = sum([i[2] for i in path_arr]) if path_arr else 0
+    n_frames = sum(i[2] for i in path_arr) if path_arr else 0
     if return_seg and n_frames:
         sum_frames = 0
         subpath_select = path.rgen.rand()

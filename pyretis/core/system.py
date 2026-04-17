@@ -504,7 +504,7 @@ class System:
 
         """
         system_copy = System()
-        for attr in {'units', 'temperature', 'post_setup', 'order'}:
+        for attr in ('units', 'temperature', 'post_setup', 'order'):
             try:
                 val = getattr(self, attr)
                 if val is None:

@@ -291,14 +291,14 @@ def _get_snapshot_from_file(pos_settings, units):
         filename,
         fmt,
     )
-    snaps = [snap for snap in reader(filename)]
+    snaps = list(reader(filename))
 
     snapshot = None
     if len(snaps) == 1:
         snapshot = snaps[0]
     elif len(snaps) > 1:
-        msg = ('Found several frames ({}) in input file.'
-               ' Will use the last one!').format(len(snaps))
+        msg = (f'Found several frames ({len(snaps)}) in input file.'
+               ' Will use the last one!')
         logger.warning(msg)
         snapshot = snaps[-1]
     else:

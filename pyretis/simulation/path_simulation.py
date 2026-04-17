@@ -287,7 +287,7 @@ class PathSimulation(Simulation):
 
         """
         init = initiate_path_simulation(self, settings)
-        for i_ens, (accept, path, status, path_ensemble) in enumerate(init):
+        for i_ens, (_, path, status, path_ensemble) in enumerate(init):
             logger.progress(
                 'Found initial path for %s',
                 path_ensemble.ensemble_name)

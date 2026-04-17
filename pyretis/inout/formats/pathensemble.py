@@ -137,7 +137,8 @@ class PathEnsembleFormatter(OutputFormatter):
             path_dict['weight'],
         )
 
-    def parse(self, line):
+    @staticmethod
+    def parse(line):
         """Parse a line to a simplified representation of a path.
 
         Parameters

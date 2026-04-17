@@ -11,3 +11,30 @@ good-names=i,
            _
 
 ignored-modules=PyQt5, sklearn, pymol, graphviz, mdtraj
+
+[MESSAGES CONTROL]
+
+# R0401: Cyclic imports are architectural in PyRETIS and cannot be resolved
+#        without a major refactor.
+# R1732: FileIO already acts as a context manager (__enter__/__exit__) and
+#        intentionally stores the handle at instance level across methods.
+# W0511: TODO/FIXME markers are tracked issues, not bugs to fix immediately.
+# R0914: Scientific functions with many local variables are expected.
+# R0912: Scientific functions with many branches are expected.
+# R0915: Scientific functions with many statements are expected.
+# C0302: Large modules are acceptable for this scientific codebase.
+# R0902: Scientific simulation objects can have many attributes.
+# R0913: Scientific functions often need many parameters.
+# R0917: Same rationale as R0913.
+disable=R0401,
+        R1732,
+        W0511,
+        R0914,
+        R0912,
+        R0915,
+        C0302,
+        R0902,
+        R0913,
+        R0917,
+        W0613,
+        C0415

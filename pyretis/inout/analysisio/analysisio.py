@@ -109,7 +109,7 @@ def run_analysis(settings):
     txt_plotter = TxtPlotter(settings['analysis']['txt-output'],
                              backup=backup,
                              out_dir=report_dir)
-    if sim_task in runners.keys():
+    if sim_task in runners:
         runner = runners[sim_task]
         return runner(settings, plotter, txt_plotter)
     msgtxt = f'Unknown analysis task "{sim_task}" requested!'
@@ -674,6 +674,7 @@ def output_results(file_type, plotter, result, rawdata):
         if 'pathlength' not in result:
             return None
         return plotter.output_pppath(result, rawdata)
+    return None
 
 
 def analyse_file(file_type, file_name, settings):
@@ -797,6 +798,23 @@ def analyse_and_output_matched(raw_data, plotter, txt_plotter,
 
 
 def perm_figures(results0, plotter):
+    """Generate permanence (xi/tau) figures for repptis analysis.
+
+    Parameters
+    ----------
+    results0 : dict
+        Analysis results for the [0^-] ensemble, expected to contain an
+        'out' key with 'xi', 'tau', and related arrays.
+    plotter : object like :py:class:`.Plotter`
+        The plotter used to create output figures.
+
+    Returns
+    -------
+    xi_figures : list of str or None
+        Paths to the xi figures, or None if xi data is absent.
+    tau_figures : list of str or None
+        Paths to the tau figures, or None if tau data is absent.
+    """
     out = results0['out']
     # Quick check to see if we need to do something
     if 'xi' not in out:
@@ -852,7 +870,7 @@ def repptis_running_pcross_analysis(l_ptypes):
     # So, l_locps: list of lists of lists: n_ensembles x 4 x n_blocks
     # extend the l_locps to the same length. We copy the last element of the
     # list until the length is the same as the longest list
-    max_len = max([len(ll[0]) for ll in l_locps])
+    max_len = max(len(ll[0]) for ll in l_locps)
     for ll in l_locps:
         while len(ll[0]) < max_len:
             for i in range(4):
@@ -991,10 +1009,23 @@ def recursive_block_analysis(flist, minblocks=5):
 
 
 def recursive_blocks(recu):
+    """Convert cumulative block averages to per-block values.
+
+    Parameters
+    ----------
+    recu : list of floats
+        Cumulative block averages where index ``i`` represents the average
+        over ``i+1`` blocks.
+
+    Returns
+    -------
+    blocks : list of floats
+        Per-block values reconstructed from the cumulative averages.
+    """
     blocks = []
-    for i in range(len(recu)):
+    for i, val in enumerate(recu):
         if i == 0:
-            blocks.append(recu[i])
+            blocks.append(val)
         else:
-            blocks.append((i + 1) * recu[i] - i * recu[i - 1])
+            blocks.append((i + 1) * val - i * recu[i - 1])
     return blocks

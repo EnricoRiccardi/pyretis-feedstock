@@ -654,6 +654,7 @@ def analyse_repptis_ensemble(path_ensemble, settings):
     ordermin = []
     intfs000 = path_ensemble.interfaces
     ptypes = [[0, 0, 0, 0]]  # LML, LMR, RMR, RML amounts
+    ptype = [0, 0, 0, 0]  # initialise before loop; updated on each ACC path
     for i, path in enumerate(path_ensemble.get_paths()):  # loop over all paths
         # we skip the first number of lines that should not be part of
         # the analysis.
@@ -1050,7 +1051,7 @@ def _calc_tau(op_data, bin_edges=None, timestep=1):
     order = op_data[1]
     bin_l, bin_r = tuple(bin_edges)
     delta = bin_r-bin_l
-    count = sum([1 for i in order if bin_l < i <= bin_r])
+    count = sum(1 for i in order if bin_l < i <= bin_r)
     return count*timestep/delta
 
 
