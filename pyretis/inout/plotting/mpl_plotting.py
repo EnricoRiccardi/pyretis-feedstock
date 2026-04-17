@@ -1450,8 +1450,9 @@ def mpl_plot_matched(path_ensembles, detect, matched, reptis=False):
         series.append({'type': 'vline', 'x': idetect,
                        'ls': '--', 'alpha': 0.8, 'lw': 1})
     if reptis:
-        matched['overall-prob'] = np.array([detect,
-                                            matched['pcross']]).T
+        pcross = matched['pcross']
+        n = min(len(detect), len(pcross))
+        matched['overall-prob'] = np.array([detect[:n], pcross[:n]]).T
     series.append({'type': 'xy',
                    'x': matched['overall-prob'][:, 0],
                    'y': matched['overall-prob'][:, 1],

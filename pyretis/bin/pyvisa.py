@@ -154,6 +154,7 @@ def main(basepath, input_file, pyvisa_dict=None):
            and cv values.
 
     """
+    exit_status = 0
     try:
         if input_file is not None and \
                 not os.path.isfile(os.path.join(basepath, input_file)):
@@ -170,6 +171,7 @@ def main(basepath, input_file, pyvisa_dict=None):
 
     # pylint: disable=broad-exception-caught
     except Exception as error:  # pragma: no cover
+        exit_status = 1
         errtxt = f'{type(error).__name__}: {error.args}'
         logger.error(errtxt)
         logger.error('Execution failed!')
@@ -177,6 +179,7 @@ def main(basepath, input_file, pyvisa_dict=None):
         write_traceback(os.path.join(basepath, ERROR_FILE))
     finally:
         bye_pyvisa()
+    return exit_status
 
 
 def entry_point():  # pragma: no cover
@@ -211,7 +214,7 @@ def entry_point():  # pragma: no cover
     basepath = os.getcwd() if infile is None else os.path.dirname(
         os.path.abspath(infile))
     hello_pyvisa(basepath, infile)
-    main(basepath, infile, args_dict)
+    sys.exit(main(basepath, infile, args_dict))
 
 
 if __name__ == '__main__':  # pragma: no cover

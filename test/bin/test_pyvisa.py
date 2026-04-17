@@ -90,28 +90,28 @@ class TestVarious:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
             with capture_log_output() as log_out:
-                main(basepath=tempdir, input_file=input_file,
-                     pyvisa_dict={'pyvisa_recalculate': True})
+                assert main(basepath=tempdir, input_file=input_file,
+                            pyvisa_dict={'pyvisa_recalculate': True}) == 1
             assert 'Execution failed!' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
             with capture_log_output() as log_out:
-                main(basepath=tempdir, input_file=input_file,
-                     pyvisa_dict={'pyvisa_compressor': True})
+                assert main(basepath=tempdir, input_file=input_file,
+                            pyvisa_dict={'pyvisa_compressor': True}) == 1
             assert 'No files to an' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             input_file = os.path.join(tempdir, infile)
             shutil.copyfile(os.path.join(HERE, infile), input_file)
             with capture_log_output() as log_out:
-                main(basepath=tempdir, input_file=input_file,
-                     pyvisa_dict={})
+                assert main(basepath=tempdir, input_file=input_file,
+                            pyvisa_dict={}) == 1
             assert 'traceback' in log_out.getvalue().strip()
 
         with tempfile.TemporaryDirectory() as tempdir:
             with capture_log_output() as log_out:
-                main(basepath=tempdir, input_file='no_thank_you',
-                     pyvisa_dict={})
+                assert main(basepath=tempdir, input_file='no_thank_you',
+                            pyvisa_dict={}) == 1
             assert 'NOT' in log_out.getvalue().strip()

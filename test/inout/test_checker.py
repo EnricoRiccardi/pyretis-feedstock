@@ -102,7 +102,8 @@ class TestMethods:
 
         play_set['engine']['input_path'] = 'Hahaha'
         del play_set['engine']['cp2k_format']
-        assert not check_engine(play_set)
+        # cp2k_format is now auto-detected (defaults to 'xyz' if not found)
+        assert check_engine(play_set)
 
         play_set['engine']['cp2k_format'] = 'xyz'
         del play_set['engine']['cp2k']

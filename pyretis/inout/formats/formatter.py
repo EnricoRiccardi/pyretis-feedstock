@@ -383,6 +383,11 @@ def setup_console_logging(level: int = None):
         level = PROGRESS
     root_logger = logging.getLogger('')
     root_logger.setLevel(logging.DEBUG)
+    # Guard against duplicate handlers when multiple modules call this:
+    for handler in root_logger.handlers:
+        if (isinstance(handler, logging.StreamHandler) and
+                getattr(handler, 'stream', None) is sys.stdout):
+            return root_logger
     console = logging.StreamHandler(sys.stdout)
     console.setLevel(level)
     console.setFormatter(ColoredLogFormatter(LOG_FMT))

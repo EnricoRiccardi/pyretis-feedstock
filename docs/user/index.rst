@@ -10,6 +10,7 @@ User Guide
     intro.rst
     install.rst
     getting-started.rst
+    our-results.rst
     input.rst
     Input reference for sections <section/sections.rst>
     application.rst

@@ -2,6 +2,8 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the OpenMMEngine class."""
+import shutil
+import tempfile
 import unittest
 import pytest
 import os
@@ -44,27 +46,19 @@ else:
 class TestOpenMMEngine:
     """Test the OpenMMEngine."""
     pdb = 'test_openmm_pyretis'
-    f_name = pdb+'.pdb'
-
     openmm_simulation = 'simulation'
-    openmm_module = 'openmm_module.py'
 
     @classmethod
     def setup_class(cls):
-        if os.path.isfile(cls.f_name):
-            i = 1
-            while os.path.isfile(cls.pdb+str(i)+'.pdb'):
-                i += 1
-            cls.f_name = cls.pdb + str(i) + '.pdb'
+        cls._tmpdir = tempfile.mkdtemp()
+        cls.f_name = os.path.join(cls._tmpdir, cls.pdb + '.pdb')
+        cls.openmm_module = os.path.join(cls._tmpdir, 'openmm_module.py')
         write_test_pdb(cls.f_name)
         write_openmm_simulation(cls.openmm_module, cls.f_name)
 
     @classmethod
     def teardown_class(cls):
-        files = [cls.f_name, cls.openmm_module]
-        for f in files:
-            if os.path.isfile(f):
-                os.remove(f)
+        shutil.rmtree(cls._tmpdir, ignore_errors=True)
 
     def setup_method(self):
         self.sim = create_openmm_simulation(self.f_name)

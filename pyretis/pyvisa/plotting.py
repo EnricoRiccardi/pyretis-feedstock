@@ -32,6 +32,13 @@ from scipy.interpolate import griddata as scgriddata
 from scipy.stats import linregress as linreg
 
 
+def _add_colorbar(fig, mappable, ax, cbar_ax=None):
+    """Add a colorbar with Matplotlib's current explicit axes API."""
+    if cbar_ax is not None:
+        return fig.colorbar(mappable, cax=cbar_ax)
+    return fig.colorbar(mappable, ax=ax)
+
+
 def plot_regline(ax, x, y):
     """Plot a regression line calculated from input data in the input subplot.
 
@@ -145,9 +152,11 @@ def gen_surface(x, y, z, fig, ax, cbar_ax=None, dim=3, method='contour',
             surf = ax.scatter(x, y, c=colors, s=res_x / 100.0)
 
         norm = mpl.colors.Normalize(vmin=zmin, vmax=zmax)
-        cbar = fig.colorbar(
+        cbar = _add_colorbar(
+            fig,
             mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
-            cax=cbar_ax)
+            ax,
+            cbar_ax=cbar_ax)
         return surf, cbar
 
     g_x, g_y, g_z = _grid_it_up([x, y, z], res_x=res_x, res_y=res_y)
@@ -162,7 +171,7 @@ def gen_surface(x, y, z, fig, ax, cbar_ax=None, dim=3, method='contour',
     else:  # contour
         surf = ax.contour(g_x, g_y, g_z, cmap=cmap)
 
-    cbar = fig.colorbar(surf, cax=cbar_ax)
+    cbar = _add_colorbar(fig, surf, ax, cbar_ax=cbar_ax)
 
     return surf, cbar
 

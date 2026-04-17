@@ -45,7 +45,8 @@ def analyse_flux(fluxdata, settings):
         The keys are defined in the `results` variable.
 
     """
-    end_step = settings['simulation']['endcycle']
+    end_step = (settings['simulation'].get('endcycle') or
+                settings['simulation'].get('steps'))
     time_subcycles = settings['engine'].get('subcycles', 1)
     time_step = settings['engine']['timestep']*time_subcycles
     interfaces = list(settings['simulation']['interfaces'])
@@ -65,6 +66,24 @@ def analyse_flux(fluxdata, settings):
                'teffMD': [],  #
                'corrMD': []}  #
     if not fluxdata:
+        nint = len(results['interfaces'])
+        results['eff_cross'] = [[] for _ in range(nint)]
+        results['ncross'] = [0] * nint
+        results['neffcross'] = [0] * nint
+        results['times'] = {'A': end_step, 'B': 0, 'OA': end_step, 'OB': 0}
+        results['cross_time'] = [np.inf] * nint
+        results['neffc/nc'] = [np.nan] * nint
+        for _ in results['interfaces']:
+            results['flux'].append(np.column_stack(
+                (np.array([0]), np.array([0]), np.array([0.0]))
+            ))
+            results['runflux'].append(np.array([0.0]))
+            results['errflux'].append([[], np.nan, np.nan, [], np.nan,
+                                       np.nan, np.nan])
+            results['pMD'].append(0.0)
+            results['1-p'].append(np.inf)
+            results['teffMD'].append(np.nan)
+            results['corrMD'].append(np.nan)
         return results
     ret = _effective_crossings(fluxdata, len(results['interfaces']), end_step)
     results['eff_cross'] = ret[0]

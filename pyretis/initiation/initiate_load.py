@@ -19,6 +19,7 @@ from pyretis.core.common import compute_weight
 from pyretis.core.path import Path, paste_paths
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.initiation.initiate_kick import initiate_path_ensemble_kick
+from pyretis.inout.screen import REFERENCE
 from pyretis.inout.common import make_dirs, TRJ_FORMATS
 from pyretis.inout.formats.order import OrderPathFile, OrderFile
 from pyretis.inout.formats.energy import EnergyPathFile
@@ -89,7 +90,7 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         system = ensemble['system']
         order_function = ensemble['order_function']
         name = path_ensemble.ensemble_name
-        logger.progress('Loading data for path ensemble %s:', name)
+        logger.log(REFERENCE, '\n--- Loading path ensemble: %s ---', name)
         engine.exe_dir = path_ensemble.directory['generate']
         path = Path(simulation.rgen, maxlen=None)
         path.generated = ('re', 0, 0, 0)  # It remains for formatted loads.
@@ -683,7 +684,7 @@ def _check_path(path, path_ensemble, warning=True):
 
     if not accept:
         msg = ' '.join(messages)
-        msg += ' Path will be rejected (status: %s).'
+        msg += ' (status: %s). Attempting to fix.'
         name = path_ensemble.ensemble_name
         args = [name] * len(messages) + [status]
         if warning:

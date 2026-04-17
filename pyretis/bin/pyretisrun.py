@@ -264,7 +264,11 @@ def run_path_simulation(sim, sim_settings, progress=False):
         return False
     sim.write_restart(now=True)
 
-    logger.progress('\nInitiation done. Starting %s simulation.', task)
+    logger.progress('\nInitiation done.')
+
+    sep = '=' * (len(task) + 22)
+    logtxt = f'\n{sep}\n  Starting {task} simulation.\n{sep}'
+    logger.banner(logtxt)
 
     tqd = use_tqdm(progress)
 
@@ -462,6 +466,7 @@ def main(infile, indir, exe_dir, progress, log_level):
     """
     simulation = None
     settings = {}
+    exit_status = 0
 
     exit_file = os.path.join(exe_dir, 'EXIT')
     if os.path.isfile(exit_file):
@@ -470,7 +475,7 @@ def main(infile, indir, exe_dir, progress, log_level):
         logger.error('*        %s file found         *', exit_file)
         logger.error('Remove the file to execute PyRETIS')
         bye_bye_world()
-        return
+        return 1
 
     try:
         run, simulation, settings = set_up_simulation(infile, exe_dir)
@@ -481,6 +486,7 @@ def main(infile, indir, exe_dir, progress, log_level):
         soft_exit_ignore(turn_keyboard_interruption_off=False,
                          exe_dir=exe_dir)
     except Exception as error:  # Exceptions should be subclass BaseException.
+        exit_status = 1
         logger.error('"%s: %s".', error.__class__.__name__, error.args)
         logger.error('ERROR - execution stopped.')
         logger.error(
@@ -503,8 +509,10 @@ def main(infile, indir, exe_dir, progress, log_level):
                 settings['simulation']['endcycle'] = end
                 logtxt = f'Execution ended at step {end}'
                 logger.progress(logtxt)
+                logger.progress('\nSimulation done\n')
         store_simulation_settings(settings, indir, False)
         bye_bye_world()
+    return exit_status
 
 
 def entry_point():  # pragma: no cover
@@ -549,7 +557,8 @@ def entry_point():  # pragma: no cover
     check_python_version()
 
     hello_world(input_file, cwd_dir, args_dict['log_file'])
-    main(input_file, input_dir, cwd_dir, args_dict['progress'], log_levl)
+    sys.exit(main(input_file, input_dir, cwd_dir,
+                  args_dict['progress'], log_levl))
 
 
 if __name__ == '__main__':  # pragma: no cover

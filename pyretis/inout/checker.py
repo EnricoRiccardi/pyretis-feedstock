@@ -19,7 +19,9 @@ check_engine (:py:func:`.check_engine`)
     Function to check engine set-up.
 
 """
+import glob
 import logging
+import os
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 logger.addHandler(logging.NullHandler())
 
@@ -93,7 +95,16 @@ def check_engine(settings):
             msg += ['File format is not specified for the engine']
         elif 'cp2k' in settings['engine'] and \
                 'cp2k_format' not in settings['engine']:
-            msg += ['File format is not specified for the engine']
+            # Auto-detect from initial.* file in input_path
+            input_path = settings['engine'].get('input_path', '.')
+            matches = glob.glob(os.path.join(input_path, 'initial.*'))
+            if matches:
+                ext = os.path.splitext(matches[0])[1][1:]
+                settings['engine']['cp2k_format'] = ext
+                logger.info('Auto-detected cp2k format: %s', ext)
+            else:
+                settings['engine']['cp2k_format'] = 'xyz'
+                logger.info('cp2k format not specified, defaulting to xyz')
 
     if msg:
         msgtxt = '\n'.join(msg)
@@ -146,8 +157,7 @@ def check_for_bullshitt(settings):
 
 
 def _check_wire_fencing_zero_minus(settings):
-    """
-    Warn if wire fencing is set for the [0^-] ensemble.
+    """Warn if wire fencing is set for the [0^-] ensemble.
 
     Wire fencing requires middle != right interface, but the [0^-]
     ensemble has middle == right == lambda_0, making it inapplicable.

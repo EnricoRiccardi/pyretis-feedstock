@@ -62,11 +62,11 @@ class TestPyretisMainAnalyse:
 
             inputfile = 'a_non_existent_input.rst'
             with capture_log_output() as log_out:
-                main(inputfile, tempdir, tempdir)
+                assert main(inputfile, tempdir, tempdir) == 1
             assert 'NOT found!' in log_out.getvalue().strip()
 
             with capture_log_output() as log_out:
-                main(None, tempdir, tempdir)
+                assert main(None, tempdir, tempdir) == 1
             assert 'Input file required' in log_out.getvalue().strip()
 
     def test_hello_world(self):
@@ -101,8 +101,8 @@ class TestPyretisMainAnalyse:
             shutil.copyfile(os.path.join(HERE, input_file),
                             os.path.join(tempdir, input_file))
             with capture_log_output() as log_out:
-                main(os.path.join(tempdir, input_file), tempdir,
-                     os.path.join(tempdir, 'report'))
+                assert main(os.path.join(tempdir, input_file), tempdir,
+                            os.path.join(tempdir, 'report')) == 1
             assert 'traceback' in log_out.getvalue().strip()
 
             with capture_log_output() as log_out:
@@ -118,8 +118,8 @@ class TestPyretisMainAnalyse:
                     for line in lines[:-2]:
                         f.write(line)
 
-                main(os.path.join(tempdir, input_file), tempdir,
-                     os.path.join(tempdir, 'report'))
+                assert main(os.path.join(tempdir, input_file), tempdir,
+                            os.path.join(tempdir, 'report')) == 1
 
             assert 'ssing probability: 1.00' in log_out.getvalue().strip()
             assert '2.577319588' in log_out.getvalue().strip()
@@ -127,8 +127,8 @@ class TestPyretisMainAnalyse:
             shutil.copyfile(os.path.join(HERE, input_file),
                             os.path.join(tempdir, input_file))
             with capture_log_output() as log_out:
-                main(os.path.join(tempdir, input_file), tempdir,
-                     os.path.join(tempdir, 'report'))
+                assert main(os.path.join(tempdir, input_file), tempdir,
+                            os.path.join(tempdir, 'report')) == 0
             assert 'report/002_tis_report.' in log_out.getvalue().strip()
 
     def test_main_repptis(self):
@@ -152,8 +152,8 @@ class TestPyretisMainAnalyse:
                                 os.path.join(tempdir, "00"+str(i),
                                              "pathensemble.txt"))
             with capture_log_output() as log_out:
-                main(os.path.join(tempdir, "retis.rst"), tempdir,
-                     os.path.join(tempdir, 'report'))
+                assert main(os.path.join(tempdir, "retis.rst"), tempdir,
+                            os.path.join(tempdir, 'report')) == 0
             assert ('ssing probability: 5.166013535e-04' in
                     log_out.getvalue().strip())
             assert 'reduced): 0.734638269' in log_out.getvalue().strip()

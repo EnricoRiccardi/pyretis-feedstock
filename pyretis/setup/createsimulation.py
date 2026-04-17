@@ -44,6 +44,7 @@ prepare_engine (:py:func:`.prepare_engine`)
 """
 import logging
 import os
+import colorama
 from pyretis.core.pathensemble import get_path_ensemble_class
 from pyretis.setup.createforcefield import create_force_field
 from pyretis.inout.settings import (add_default_settings,
@@ -99,9 +100,6 @@ def create_ensemble(settings):
     """
     i_ens = settings['tis']['ensemble_number']
 
-    logtxt = f'\nCREATING  ENSEMBLE  {i_ens}\n====================='
-    logger.log(REFERENCE, logtxt)
-
     rgen_ens = create_random_generator(settings['tis'])
     rgen_path = create_random_generator(settings['system'])
 
@@ -111,6 +109,8 @@ def create_ensemble(settings):
     interfaces = settings['simulation']['interfaces']
     exe_dir = settings['simulation'].get('exe_path', os.path.abspath('.'))
     path_ensemble = klass(i_ens, interfaces, rgen=rgen_path, exe_dir=exe_dir)
+    logger.log(REFERENCE, '\n--- Creating ensemble: %s ---',
+               path_ensemble.ensemble_name)
 
     # for PPRETIS / PPTIS: correct the starting condition of the paths
     if settings['simulation']['task'] in ['pptis', 'repptis']:
@@ -518,7 +518,11 @@ def create_simulation(settings):
 
     simulation = sim_map[sim_type](settings)
     msgtxt = f'{simulation}'
-    logger.progress('\nCreated simulation:\n%s', msgtxt)
+    lines = msgtxt.split('\n')
+    sim_name = (colorama.Fore.BLUE + lines[0] +
+                colorama.Fore.WHITE)
+    rest = '\n'.join(lines[1:])
+    logger.reference('\nCreated simulation:\n%s\n%s', sim_name, rest)
 
     if settings['simulation'].get('restart', False):
         simulation.load_restart_info(info_restart)

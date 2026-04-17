@@ -78,8 +78,10 @@ MD order parameter data
    :width: 30%
 .. image:: @{{ figures['order']['ordermsd'] }}@
    :width: 30%
+@{% if figures['order'].get('orderv') %}@
 .. image:: @{{ figures['order']['orderv'] }}@
    :width: 30%
+@{% endif %}@
 
 
 .. _flux-figures-output:

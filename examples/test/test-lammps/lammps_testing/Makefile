@@ -1,5 +1,4 @@
-.PHONY:	
-	clean
- 
+.PHONY: clean
+
 clean:
-	-rm to.add
+	@rm -f to.add

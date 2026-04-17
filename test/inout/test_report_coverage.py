@@ -258,7 +258,8 @@ class TestAnalysisio:
         ppps = np.array([0.2, 0.2])
         ppms = np.array([0.5, 0.5])
         result = get_global_probz(pmps, pmms, ppps, ppms)
-        assert result[0] is np.nan or np.isnan(result[0])
+        assert len(result) == 3
+        assert all(np.isnan(values).all() for values in result)
 
     def test_get_path_simulation_files_make_tis(self, tmp_path):
         """get_path_simulation_files handles make-tis-files task."""

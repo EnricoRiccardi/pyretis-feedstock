@@ -477,7 +477,7 @@ Keyword gmx
 .. pyretis-keyword:: gmx string
 
    This keyword sets the command |pyretis| will use for executing the GROMACS
-   ``gmx`` program. This can be used if you have different version
+   ``gmx`` program. This can be used if you have different versions
    of GROMACS installed, for instance, a single precision build named ``gmx`` and
    a double precision build named ``gmx_d``.
 
@@ -520,7 +520,7 @@ Keyword input_path
      frequency of output and time step to match the setting given in the input to
      |pyretis| using the :ref:`timestep <user-section-engine-gromacs-time>`
      and :ref:`subcycles <user-section-engine-gromacs-sub>` keywords. Effectively,
-     |pyretis| will use `grompp.mdp`` as a template and create a ``pyretis.mdp``, in
+     |pyretis| will use ``grompp.mdp`` as a template and create a ``pyretis.mdp``, in
      the same folder, which is used for the GROMACS simulations.
    - ``topol.top``: The topology for your system.
 

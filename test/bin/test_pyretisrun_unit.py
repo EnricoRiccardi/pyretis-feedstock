@@ -160,7 +160,7 @@ def test_main_func(mock_bye, mock_soft, mock_store, mock_setup):
     mock_setup.return_value = (mock_run, mock_sim, {'simulation': {}})
 
     with patch('os.path.isfile', return_value=False):  # No EXIT file
-        main('infile', 'indir', 'exe_dir', False, 20)
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 0
         mock_setup.assert_called_with('infile', 'exe_dir')
         mock_run.assert_called()
         mock_bye.assert_called()
@@ -171,7 +171,7 @@ def test_main_func(mock_bye, mock_soft, mock_store, mock_setup):
 def test_main_exit_file(mock_bye, mock_logger):
     """Test main function when EXIT file exists."""
     with patch('os.path.isfile', return_value=True):
-        main('infile', 'indir', 'exe_dir', False, 20)
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 1
         # Verify it logs progress and error, then calls bye_bye_world
         mock_logger.progress.assert_called()
         mock_logger.error.assert_called()
@@ -186,7 +186,7 @@ def test_main_exception(mock_logger, mock_store, mock_setup):
     mock_setup.side_effect = Exception("Test Error")
     with patch('os.path.isfile', return_value=False):
         # We test with log_level = 20 (INFO) so it doesn't re-raise
-        main('infile', 'indir', 'exe_dir', False, 20)
+        assert main('infile', 'indir', 'exe_dir', False, 20) == 1
         mock_logger.error.assert_called()
 
     # Test with DEBUG level to see it re-raises

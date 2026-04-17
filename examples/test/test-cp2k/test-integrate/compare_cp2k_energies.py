@@ -38,9 +38,10 @@ def obtain_mses(energy_cp2k1, energy_cp2k2, tol=1.0e-5):
         return False
     _, ncol = energy_cp2k1.shape
     for key in range(1, ncol - 1):  # last column is used time, skip it!
-        term1 = (energy_cp2k1[key] - energy_cp2k2[key])**2
-        term2 = (np.average(energy_cp2k2[key]) - energy_cp2k2[key])**2
-        rse = term1.sum() / term2.sum()
+        term1 = (energy_cp2k1[:, key] - energy_cp2k2[:, key])**2
+        term2 = (np.average(energy_cp2k2[:, key]) - energy_cp2k2[:, key])**2
+        denom = term2.sum()
+        rse = term1.sum() if denom == 0.0 else term1.sum() / denom
         level = 'info'
         tol_ok = True
         if tol:

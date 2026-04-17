@@ -43,18 +43,22 @@ logging.addLevelName(REFERENCE, 'REFERENCE')
 
 def log_progress(self, message, *args, **kwargs):
     """Log a message at the PROGRESS level."""
-    if self.isEnabledFor(PROGRESS):
-        self._log(PROGRESS, message, args, **kwargs)
+    self.log(PROGRESS, message, *args, **kwargs)
 
 
 def log_banner(self, message, *args, **kwargs):
     """Log a message at the BANNER level."""
-    if self.isEnabledFor(BANNER):
-        self._log(BANNER, message, args, **kwargs)
+    self.log(BANNER, message, *args, **kwargs)
+
+
+def log_reference(self, message, *args, **kwargs):
+    """Log a message at the REFERENCE level (white on console)."""
+    self.log(REFERENCE, message, *args, **kwargs)
 
 
 logging.Logger.progress = log_progress
 logging.Logger.banner = log_banner
+logging.Logger.reference = log_reference
 
 
 __all__ = ['ScreenOutput', 'PROGRESS', 'BANNER', 'REFERENCE']  # noqa: F401

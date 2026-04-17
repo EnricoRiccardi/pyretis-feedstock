@@ -51,6 +51,13 @@ def generate_report_tis_path(analysis, output='rst'):
 
     """
     result = analysis['pathensemble']
+    if 'prun' not in result['out']:
+        return {'ensemble': result['out'].get('ensemble', ''),
+                'figures': {},
+                'tables': {'interfaces': None,
+                           'probability': None,
+                           'path': None,
+                           'efficiency': None}}
     report = {'ensemble': result['out']['ensemble'],
               'figures': _get_path_figures(result['figures']),
               'tables': {'interfaces': None,
@@ -538,6 +545,8 @@ def _table_probability(results, fmt='rst'):
     """
     table = []
     for result in results:
+        if 'prun' not in result['out']:
+            continue
         row = [
             f"{result['out']['ensemble']:^8s}",
             apply_format(result['out']['prun'][-1], '{:^10.6f}'),
@@ -633,6 +642,8 @@ def _table_efficiencies(results, fmt='rst'):
     """
     table = []
     for result in results:
+        if 'pathlength' not in result['out']:
+            continue
         hist1 = result['out']['pathlength'][0]
         row = [
             f"{result['out']['ensemble']:^8s}",
@@ -721,6 +732,8 @@ def _get_path_figures(figures):
 
     """
     path_figures = {}
+    if not figures:
+        return path_figures
     for fig in {'pcross', 'prun', 'perror', 'perror_sl',
                 'perror_sr', 'lpath', 'prun_sl',
                 'prun_sr', 'shoots'}:

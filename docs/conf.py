@@ -94,7 +94,7 @@ release = pyretis.version.VERSION
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -108,10 +108,7 @@ exclude_patterns = [
     '_build',
     'Thumbs.db',
     '.DS_Store',
-    '_static/examples/retis2d-hysteresis/*.rst',
-    '_static/examples/gromacs-hydrate/*.rst',
-    '_static/examples/retis2d-wca/*.rst',
-    '_static/examples/cp2k-hydrogen/*.rst',
+    '_static/**/*.rst',
 ]
 
 # The reST default role (used for this markup: `text`) to use for all

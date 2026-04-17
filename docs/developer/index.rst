@@ -59,6 +59,8 @@ which can be useful to remember.
 The |pyretis| project is documented using the
 `NumPy/SciPy documentation standard <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_
 and contributors are requested to familiarise themselves with this style and *use it*.
+For user-facing documentation, also see the
+:ref:`documentation terminology guide <developer-guide-docs-style>`.
 Documentation style can be checked with
 `pydocstyle <https://github.com/PyCQA/pydocstyle>`_
 
@@ -230,3 +232,5 @@ member of the |pyretis| team.
 
 .. toctree::
     :maxdepth: 2
+
+    docs-style.rst

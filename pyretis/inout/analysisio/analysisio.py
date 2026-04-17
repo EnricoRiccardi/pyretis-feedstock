@@ -667,8 +667,12 @@ def output_results(file_type, plotter, result, rawdata):
     if file_type == 'energy':
         return plotter.output_energy(result, rawdata)
     if file_type == 'pathensemble':
+        if 'pathlength' not in result:
+            return None
         return plotter.output_path(result, rawdata)
     if file_type == 'pathensemble_repptis':
+        if 'pathlength' not in result:
+            return None
         return plotter.output_pppath(result, rawdata)
 
 
@@ -914,9 +918,10 @@ def get_global_probz(pmps, pmms, ppps, ppms):
         Float per ensemble i. Represents the TIS probability of crossing i+1.
     """
     # if there is any NaN in pmps, pmms, ppps, ppms, return NaN
+    nan_arr = [np.nan] * (len(pmps) + 1)
     if np.isnan(pmps).any() or np.isnan(pmms).any() or \
             np.isnan(ppps).any() or np.isnan(ppms).any():
-        return [np.nan, np.nan, np.nan]
+        return nan_arr, nan_arr, nan_arr
     pplus, pmin, pcross = [1.], [1.], [1., pmps[0]]
     for i, pmp, pmm, _, ppm in zip(range(len(pmps)), pmps, pmms, ppps, ppms):
         if i == 0:  # This is [0^{\pm}'], so skip
@@ -926,7 +931,7 @@ def get_global_probz(pmps, pmms, ppps, ppms):
         if pmp + pmm * pmin[-1] == 0 or\
                 (pmp is np.nan) or\
                 (pmm * pmin[-1] is np.nan):
-            return [np.nan, np.nan, np.nan]
+            return nan_arr, nan_arr, nan_arr
         pplus.append((pmp*pplus[-1])/(pmp+pmm*pmin[-1]))
         pmin.append((ppm*pmin[-1])/(pmp+pmm*pmin[-1]))
         # Calculate the TIS probabilities
