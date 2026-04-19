@@ -36,6 +36,10 @@ run_suite "GROMACS example tests (${PYRETIS_GROMACS_SCOPE} scope)" \
           "examples/test/test-gromacs" \
           "./run-all-gromacs.sh"
 
+run_suite "PyVisA example tests" \
+          "examples/test/test-pyvisa" \
+          "./run-all-pyvisa.sh"
+
 run_suite "CP2K example tests" \
           "examples/test/test-cp2k" \
           "./run-all-cp2k.sh"
@@ -43,7 +47,3 @@ run_suite "CP2K example tests" \
 run_suite "LAMMPS example tests" \
           "examples/test/test-lammps" \
           "./run-all-lammps.sh"
-
-run_suite "PyVisA example tests" \
-          "examples/test/test-pyvisa" \
-          "./run-all-pyvisa.sh"

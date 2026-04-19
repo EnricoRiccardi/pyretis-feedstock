@@ -10,4 +10,5 @@ clean:
 	@rm -f tis-0*
 	@rm -rf 0*
 	@rm -rf report
+	@rm -f results/*.html
 	@rm -f EXIT

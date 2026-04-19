@@ -8,4 +8,5 @@ clean:
 	@find -name \*.restart -delete
 	@find -name \*.log* -delete
 	@rm -rf 0*
+	@rm -rf report/
 	@rm -f EXIT
