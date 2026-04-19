@@ -1223,7 +1223,8 @@ def select_with_or_masks(array, masks):
     """
     # first check whether masks have the same shape as A
     for mask in masks:
-        assert mask.shape == array.shape
+        if mask.shape != array.shape:
+            raise ValueError('Mask shape must match the input array shape')
     # now we can use the masks to select the elements of A
     union_mask = np.any(masks, axis=0).astype(bool)
     return array[union_mask]

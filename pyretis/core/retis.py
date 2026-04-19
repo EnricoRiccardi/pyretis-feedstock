@@ -907,7 +907,8 @@ def repptis_swap_bookkeeping(input_tuple):
         cycle, ensembles = input_tuple
 
     status = 'ACC'
-    assert path0_new.status == 'ACC', "First half of swap should've been ACC."
+    if path0_new.status != 'ACC':
+        raise RuntimeError("First half of swap should've been ACC.")
     if path1_new.status != 'ACC':  # This can happen (FTX or BTX)
         status = path1_new.status
 
@@ -966,7 +967,8 @@ def set_swap_status(path, propdir, maxlen):
     # as we already start from an overlap path that is by definition 2
     # phasepoints long (and we add another one with shooting). However, we
     # keep the check, just in case something terrible happened.
-    assert path.length >= 3, "Pathlength < 3 is NOT possible in REPPTIS swap."
+    if path.length < 3:
+        raise RuntimeError('Pathlength < 3 is NOT possible in REPPTIS swap.')
 
     return status
 
@@ -1111,7 +1113,8 @@ def cut_overlap_phasepoints(path_ensemble, propdir, overlap_path, side,
     # intf_M defines when to stop cutting phasepoints
     # For now, this is equivalent for all PPTIS ensembles, but might change
     # in the future.
-    assert side in ['right', 'left']
+    if side not in ['right', 'left']:
+        raise ValueError(f'Unknown side "{side}"')
 
     intf_m = path_ensemble.interfaces[0] if path_ensemble.ensemble_number == 1\
         else path_ensemble.interfaces[1]

@@ -1423,8 +1423,8 @@ def wire_fencing(ensemble, tis_settings, start_cond):
 
     # This might get triggered when accepting 0-L paths.
     left, _, right = ensemble['interfaces']
-    assert start_cond == trial_path.get_start_point(left, right), \
-        'WF: Path has an implausible start.'
+    if start_cond != trial_path.get_start_point(left, right):
+        raise RuntimeError('WF: Path has an implausible start.')
 
     trial_path.status = 'ACC'
     return True, trial_path, trial_path.status
@@ -1623,8 +1623,8 @@ def stone_skipping(ensemble, tis_settings, start_cond):
         return False, trial_path, trial_path.status
 
     # This might get triggered when accepting 0-L paths.
-    assert start_cond == trial_path.get_start_point(intf[0], intf[2]), \
-        'SS: Path has an implausible start.'
+    if start_cond != trial_path.get_start_point(intf[0], intf[2]):
+        raise RuntimeError('SS: Path has an implausible start.')
 
     trial_path.status = 'ACC'
 
@@ -1767,8 +1767,8 @@ def web_throwing(ensemble, tis_set, start_cond='L'):
     path_old = ensemble['path_ensemble'].last_path
     interfaces = ensemble['interfaces']
     sour = tis_set['interface_sour']
-    assert interfaces[0] < sour <= interfaces[1], \
-        'SOUR interface is not correctly positioned'
+    if not interfaces[0] < sour <= interfaces[1]:
+        raise ValueError('SOUR interface is not correctly positioned')
 
     ccnt = segments_counter(path_old, sour, interfaces[1])
     if ccnt == 0:

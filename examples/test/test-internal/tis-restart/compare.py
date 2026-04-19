@@ -130,7 +130,7 @@ def compare_ensemble(ensemble):
         Combined status of comparisons.
     """
     logger.info(f'Comparing for "{ensemble}"')
-    traj1 = os.path.join('run-10-20', ensemble, 'traj.txt')
+    traj1 = os.path.join('run-6-12', ensemble, 'traj.txt')
     traj2 = os.path.join('run-full', ensemble, 'traj.txt')
     ret1 = compare_traj(traj1, traj2, tol=1e-12)
 
@@ -140,7 +140,7 @@ def compare_ensemble(ensemble):
         ('order.txt', None, 'Comparing order parameters'),
     ]:
         logger.info(f'\n{msg}')
-        f1 = os.path.join('run-10-20', ensemble, fname)
+        f1 = os.path.join('run-6-12', ensemble, fname)
         f2 = os.path.join('run-full', ensemble, fname)
         if ftype == 'energy':
             equal, res_msg = compare_data_by_columns(f1, f2, ftype)

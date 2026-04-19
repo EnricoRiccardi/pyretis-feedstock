@@ -28,8 +28,10 @@ _grid_it_up (:py:func:`._grid_it_up`)
 
 import numpy as np
 import matplotlib as mpl  # pylint: disable=import-error
-from scipy.interpolate import griddata as scgriddata
-from scipy.stats import linregress as linreg
+from scipy.interpolate import (  # pylint: disable=import-error
+    griddata as scgriddata,
+)
+from scipy.stats import linregress as linreg  # pylint: disable=import-error
 
 
 def _add_colorbar(fig, mappable, ax, cbar_ax=None):

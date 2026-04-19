@@ -30,6 +30,46 @@ Here, we report some examples showing the use of |pyretis| and |pyvisa|.
 
 |
 
+Quickstart
+----------
+
+If you want a short first run before diving into the full guide, the
+following workflow is a good starting point:
+
+1. Install |pyretis| in a Python 3.11+ environment:
+
+   .. code-block:: bash
+
+      python -m pip install pyretis
+
+2. Check that the command-line tools are available:
+
+   .. code-block:: bash
+
+      pyretisrun --version
+      pyretisanalyse --version
+
+3. Pick a small internal example from the :ref:`example section <examples-index>`,
+   such as :ref:`RETIS in a 1D potential <examples-retis-1d>` or
+   :ref:`TIS in a 1D potential <examples-tis-1d>`.
+
+4. Run the simulation from the directory containing your input file:
+
+   .. code-block:: bash
+
+      pyretisrun -i retis.rst -p
+
+5. Analyse the results from the generated ``out.rst`` file:
+
+   .. code-block:: bash
+
+      pyretisanalyse -i out.rst
+
+After a successful run, you should at least see a log file, an ``out.rst``
+file, and a ``report/`` directory from the analysis step.
+
+|
+
 |pyretis| examples
 ------------------
 

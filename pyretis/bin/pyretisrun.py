@@ -42,6 +42,7 @@ from pyretis import __version__ as VERSION
 from pyretis.info import PROGRAM_NAME, URL, CITE, LOGO
 from pyretis.core.pathensemble import generate_ensemble_name
 from pyretis.setup import create_simulation
+from pyretis.inout.screen import REFERENCE
 from pyretis.inout.common import (
     check_python_version,
     create_backup,
@@ -57,8 +58,6 @@ from pyretis.inout.settings import (
 
 
 _DATE_FMT = '%d.%m.%Y %H:%M:%S'
-# Register custom log levels and set up colored console handler:
-from pyretis.inout.screen import PROGRESS, REFERENCE  # noqa: E402
 logger = setup_console_logging()
 
 
@@ -128,7 +127,7 @@ def bye_bye_world():
         if line:
             references.append(line)
     reftxt = '\n'.join(references)
-    logger.log(REFERENCE, '\n' + reftxt)
+    logger.log(REFERENCE, '\n%s', reftxt)
     urltxt = str(URL)
     logger.log(REFERENCE, urltxt)
 
@@ -293,6 +292,7 @@ def make_tis_files(_, settings, progress=False):
         The settings for the simulations.
 
     """
+    _ = progress
     logtxt = 'Input settings requests: TIS for multiple path ensembles.'
     logger.progress(logtxt)
     logtxt = 'Will create input files for the TIS simulations and exit'
@@ -485,7 +485,7 @@ def main(infile, indir, exe_dir, progress, log_level):
         run(simulation, settings, progress=progress)
         soft_exit_ignore(turn_keyboard_interruption_off=False,
                          exe_dir=exe_dir)
-    except Exception as error:  # Exceptions should be subclass BaseException.
+    except Exception as error:  # pylint: disable=broad-exception-caught
         exit_status = 1
         logger.error('"%s: %s".', error.__class__.__name__, error.args)
         logger.error('ERROR - execution stopped.')
@@ -509,7 +509,7 @@ def main(infile, indir, exe_dir, progress, log_level):
                 settings['simulation']['endcycle'] = end
                 logtxt = f'Execution ended at step {end}'
                 logger.progress(logtxt)
-                logger.progress('\nSimulation done\n')
+                logger.success('\nSimulation done\n')
         store_simulation_settings(settings, indir, False)
         bye_bye_world()
     return exit_status

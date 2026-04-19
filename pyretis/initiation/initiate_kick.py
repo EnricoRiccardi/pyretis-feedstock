@@ -313,30 +313,28 @@ def generate_initial_path_kick(ensemble, tis_settings):
         if start in set(ensemble['path_ensemble'].start_condition):
             # Case 0) & 1):
             break
-        else:
-            # Now we do the other cases:
-            if end in set(ensemble['path_ensemble'].start_condition):
-                # Case 3) (and start != start_cond):
-                logger.info('Initial path is in the wrong direction')
-                initial_path = initial_path.reverse(ensemble['order_function'])
-                logger.info('Initial path has been reversed!')
-                break
-            elif end == start:
-                # Case 2):
-                logger.info('Initial path starts and ends at wrong interface')
-                logger.info('Will perform TIS moves to fix it!')
-                yield False, 'Trying to fix path by TIS moves', None
+        # Now we do the other cases:
+        if end in set(ensemble['path_ensemble'].start_condition):
+            # Case 3) (and start != start_cond):
+            logger.info('Initial path is in the wrong direction')
+            initial_path = initial_path.reverse(ensemble['order_function'])
+            logger.info('Initial path has been reversed!')
+            break
+        if end == start:
+            # Case 2):
+            logger.info('Initial path starts and ends at wrong interface')
+            logger.info('Will perform TIS moves to fix it!')
+            yield False, 'Trying to fix path by TIS moves', None
 
-                initial_path = fix_path_by_tis(initial_path, ensemble,
-                                               tis_settings)
-                break
-            else:
-                # This is reached if the start/end conditions
-                # has been modified or are inconsistent.
-                logger.warning('Could not generate initial path, will retry!')
-                yield (False, 'Could not generate initial path will retry!',
-                       None)
-                continue
+            initial_path = fix_path_by_tis(initial_path, ensemble,
+                                           tis_settings)
+            break
+        # This is reached if the start/end conditions
+        # has been modified or are inconsistent.
+        logger.warning('Could not generate initial path, will retry!')
+        yield (False, 'Could not generate initial path will retry!',
+               None)
+        continue
     initial_path.status = 'ACC'
     initial_path.generated = ('ki', 0, 0, 0)
     if tis_settings.get('high_accept', False):

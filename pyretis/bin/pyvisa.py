@@ -25,7 +25,6 @@ Optional arguments::
 # pylint: disable=invalid-name
 import argparse
 import datetime
-import logging
 import os
 import sys
 import colorama  # pylint: disable=import-error
@@ -38,7 +37,7 @@ from pyretis.inout.formats.formatter import setup_console_logging
 from pyretis.pyvisa.orderparam_density import PathDensity, pyvisa_compress
 from pyretis.pyvisa.common import recalculate_all
 from pyretis.__init__ import HAS_PYVISA_REQ
-from pyretis.inout.screen import PROGRESS, REFERENCE  # registers custom levels
+from pyretis.inout.screen import REFERENCE  # registers custom levels
 if HAS_PYVISA_REQ:
     from pyretis.pyvisa.visualize import visualize_main  # pragma: no cover
 
@@ -84,7 +83,7 @@ def bye_pyvisa():
         if line:
             references.append(line)
     reftxt = '\n'.join(references)
-    logger.log(REFERENCE, '\n' + reftxt)
+    logger.log(REFERENCE, '\n%s', reftxt)
     urltxt = str(URL)
     logger.log(REFERENCE, urltxt)
 

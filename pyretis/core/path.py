@@ -373,7 +373,8 @@ class PathBase:
         """
         if right is None:
             right = left
-        assert left <= right
+        if left > right:
+            raise ValueError('Left interface must be smaller than right')
 
         if self.phasepoints[-1].order[0] <= left:
             end = 'L'
@@ -406,7 +407,8 @@ class PathBase:
         """
         if right is None:
             right = left
-        assert left <= right
+        if left > right:
+            raise ValueError('Left interface must be smaller than right')
         if self.phasepoints[0].order[0] <= left:
             start = 'L'
         elif self.phasepoints[0].order[0] >= right:

@@ -46,7 +46,7 @@ import logging
 import os
 import timeit
 
-import scipy
+import scipy  # pylint: disable=import-error
 
 from pyretis.initiation.initiate_load import write_order_parameters
 from pyretis.inout import settings
@@ -301,7 +301,8 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
     """
     # Gather collective variables and corresponding option from .rst
     io_file = os.path.join(runfolder, iofile)
-    assert io_file is not None, 'Input file not given'
+    if iofile is None:
+        raise ValueError('Input file not given')
     input_settings = settings.parse_settings_file(io_file)
     trj_dict = find_data(runfolder, ensemble_names, data=data)
 

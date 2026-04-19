@@ -68,3 +68,25 @@ pyretis = [
 
 [tool.setuptools.dynamic]
 version = {attr = "pyretis.version.VERSION"}
+
+[tool.coverage.report]
+omit = [
+    "*/python?.?/*",
+    "*/site-packages/numpy/*",
+    "*/test/*",
+    "*/setup.py",
+    "*/setup_version.py",
+    "*/pyvisa/resources_rc.py",
+    "openmm_module.py",
+    "/tmp/*",
+]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise NotImplementedError",
+    "@abstractmethod",
+]
+
+[tool.ruff.lint]
+ignore = ["D213"]

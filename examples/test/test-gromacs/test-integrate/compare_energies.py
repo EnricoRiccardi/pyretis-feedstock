@@ -17,6 +17,14 @@ logger.addHandler(logging.NullHandler())
 plt.style.use('seaborn-v0_8-poster')
 
 
+def _show_or_close():
+    """Show figures only when the backend supports interactive display."""
+    if 'agg' in plt.get_backend().lower():
+        plt.close('all')
+        return
+    plt.show()
+
+
 def main(energy_file, xvg_file, plot=False):
     """Perform the test."""
     logger.info(f'Reading energy file: {energy_file}')
@@ -86,7 +94,7 @@ def plot_comparison(energy, energy_xvg, energy_file, xvg_file):
     ax22.set_ylabel('Temperature')
 
     fig1.tight_layout()
-    plt.show()
+    _show_or_close()
 
 
 if __name__ == '__main__':

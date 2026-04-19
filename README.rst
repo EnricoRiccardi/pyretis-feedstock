@@ -22,5 +22,13 @@ PyRETIS is open source (see the COPYING file)
 and can be interfaced with other simulation packages such as GROMACS or
 CP2K.
 
-The documentation is located at http://www.pyretis.org or it can
-found in the docs directory of the source code.
+PyRETIS requires Python 3.11 or newer.
+
+To install the current release:
+
+.. code-block:: bash
+
+    python -m pip install pyretis
+
+The documentation is available at http://www.pyretis.org and in the
+``docs/`` directory of the source tree.

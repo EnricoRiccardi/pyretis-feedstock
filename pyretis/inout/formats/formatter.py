@@ -30,6 +30,7 @@ get_log_formatter (:py:func:`.get_log_formatter`)
 import logging
 import sys
 import colorama
+from pyretis.inout.screen import PROGRESS
 from pyretis.inout.fileio import read_some_lines
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -335,13 +336,14 @@ class ColoredLogFormatter(logging.Formatter):  # pragma: no cover
         25: colorama.Fore.GREEN,   # PROGRESS level
         26: colorama.Fore.CYAN,    # BANNER level (logo, version)
         27: colorama.Fore.WHITE,   # REFERENCE level (citations, URLs)
+        28: colorama.Fore.BLUE,    # SUCCESS level (simulation done)
         logging.WARNING: colorama.Fore.YELLOW,
         logging.ERROR: colorama.Fore.RED,
         logging.CRITICAL: colorama.Fore.RED + colorama.Style.BRIGHT,
     }
 
     # Levels that show only the message (no [LEVEL]: prefix) on console
-    _CLEAN_LEVELS = {25, 26, 27}  # PROGRESS, BANNER, REFERENCE
+    _CLEAN_LEVELS = {25, 26, 27, 28}  # PROGRESS, BANNER, REFERENCE, SUCCESS
 
     def format(self, record):
         """Apply color based on the log level."""
@@ -377,8 +379,6 @@ def setup_console_logging(level: int = None):
         The configured root logger.
 
     """
-    # Import here to avoid circular imports at module level
-    from pyretis.inout.screen import PROGRESS  # noqa: PLC0415
     if level is None:
         level = PROGRESS
     root_logger = logging.getLogger('')

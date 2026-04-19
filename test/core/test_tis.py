@@ -613,7 +613,7 @@ def test_web_throwing_real():
     assert trial_path.generated[0] == 'ld'
 
     tis_settings['interface_sour'] = 10
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         web_throwing(ensemble, tis_settings)
 
     tis_settings['shooting_move'] = '00'

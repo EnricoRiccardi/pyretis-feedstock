@@ -89,6 +89,8 @@ class FileIO(OutputBase):
             )
         try:
             encoding = 'utf-8' if 'b' in self.file_mode else None
+            # The handle is stored on the instance and closed later.
+            # pylint: disable=consider-using-with
             self.fileh = open(self.filename, self.file_mode, encoding=encoding)
         except (OSError, IOError) as error:
             logger.warning(
@@ -125,6 +127,8 @@ class FileIO(OutputBase):
                             'Overwriting existing file "%s"', self.filename
                         )
             encoding = 'utf-8' if 'b' in self.file_mode else None
+            # The handle is stored on the instance and closed later.
+            # pylint: disable=consider-using-with
             self.fileh = open(self.filename, self.file_mode, encoding=encoding)
         except (OSError, IOError) as error:  # pragma: no cover
             logger.warning(

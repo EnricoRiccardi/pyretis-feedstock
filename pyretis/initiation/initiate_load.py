@@ -12,6 +12,7 @@ initiate_load (:py:func:`.initiate_load`)
 """
 import collections
 import errno
+import importlib
 import logging
 import os
 import shutil
@@ -134,8 +135,11 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
             clean_path(path, path_ensemble, simtype=simtype)
             # The path should still be checked, as something funny might occur
             accept, status = _check_path(path, path_ensemble)
-            assert accept, "Path should be accepted after cleaning, but" + \
-                           f" it is not! Status: {status}"
+            if not accept:
+                raise RuntimeError(
+                    'Path should be accepted after cleaning, but'
+                    f' it is not! Status: {status}'
+                )
         elif set_ens['simulation']['task'] == 'explore':
             set_ens['tis']['shooting_move'] = 'exp'
             clean_path(path, path_ensemble, simtype=simtype)
@@ -192,7 +196,7 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         # ignore this for coverage as it is solely for debugging purposes.
         if plot_loads:  # pragma: no cover
             left, center, right = path_ensemble.interfaces
-            import matplotlib.pyplot as plt
+            plt = importlib.import_module('matplotlib.pyplot')
             fig, ax = plt.subplots()
             ax.plot([p.order[0] for p in path.phasepoints], lw=1, marker='o',
                     ms=3)

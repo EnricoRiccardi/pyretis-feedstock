@@ -1565,6 +1565,7 @@ def mpl_plot_bar(axs, seri):
     -------
     out : matplotlib BarContainer
         The bar container returned by ``axs.bar``.
+
     """
     del seri['type']
     return axs.bar(**seri)

@@ -406,8 +406,7 @@ class PathEnsemble:
             This is the dictionary representing the path data.
 
         """
-        for path in self.paths:
-            yield path
+        yield from self.paths
 
     def move_path_to_generate(self, _path, _prefix=None):
         """Move a path for temporary storing."""
@@ -502,7 +501,10 @@ class PathEnsemble:
                 path = os.path.join(gendir, file)
                 logger.debug("Removing generate file %s", path)
                 # assert that path ends with generate/file
-                assert path.endswith(os.path.join('generate', file))
+                if not path.endswith(os.path.join('generate', file)):
+                    raise RuntimeError(
+                        f'Unexpected generate file path "{path}"'
+                    )
                 os.remove(path)
 
 

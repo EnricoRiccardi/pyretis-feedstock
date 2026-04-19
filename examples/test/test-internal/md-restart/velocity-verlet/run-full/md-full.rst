@@ -19,7 +19,7 @@ units = lj
 Particles
 ---------
 position = {'generate': 'fcc',
-            'repeat': [3, 3, 3],
+            'repeat': [2, 2, 2],
             'density': 0.9}
 
 velocity = {'generate': 'maxwell',

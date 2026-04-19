@@ -233,10 +233,11 @@ def print_value_error(heading, value, rel_error, level=None):
     """Print out the matched probabilities."""
     val = format_number(value, 0.1, 100)
     msgtxt = f'{heading}: {val}'
-    logger.info(msgtxt.strip())
+    log_fn = logger.progress if level == 'success' else logger.info
+    log_fn(msgtxt.strip())
     fmt_scale = format_number(rel_error * 100, 0.1, 100)
     msgtxt = f'(Relative error: {fmt_scale.rstrip()} %)'
-    logger.info(msgtxt)
+    log_fn(msgtxt)
 
 
 def run_single_tis_analysis(settings, plotter, txt_plotter):
@@ -814,6 +815,7 @@ def perm_figures(results0, plotter):
         Paths to the xi figures, or None if xi data is absent.
     tau_figures : list of str or None
         Paths to the tau figures, or None if tau data is absent.
+
     """
     out = results0['out']
     # Quick check to see if we need to do something
@@ -1021,6 +1023,7 @@ def recursive_blocks(recu):
     -------
     blocks : list of floats
         Per-block values reconstructed from the cumulative averages.
+
     """
     blocks = []
     for i, val in enumerate(recu):

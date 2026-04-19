@@ -18,7 +18,6 @@ optional arguments:
 # pylint: disable=invalid-name
 import argparse
 import datetime
-import logging
 import os
 import sys
 import traceback
@@ -37,7 +36,7 @@ from pyretis.inout.common import (
 from pyretis.inout.formats.formatter import setup_console_logging
 from pyretis.inout.report import generate_report
 from pyretis.inout.settings import parse_settings_file
-from pyretis.inout.screen import PROGRESS, REFERENCE  # registers custom levels
+from pyretis.inout.screen import REFERENCE  # registers custom levels
 
 _DATE_FMT = '%d.%m.%Y %H:%M:%S'
 
@@ -94,7 +93,7 @@ def bye_bye_world():
         if line:
             references.append(line)
     reftxt = '\n'.join(references)
-    logger.log(REFERENCE, '\n' + reftxt)
+    logger.log(REFERENCE, '\n%s', reftxt)
     urltxt = f'{URL}'
     logger.log(REFERENCE, urltxt)
 

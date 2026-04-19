@@ -53,7 +53,7 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets, uic
-from scipy.spatial import distance
+from scipy.spatial import distance  # pylint: disable=import-error
 from pyretis.inout import settings
 from pyretis.inout.common import TRJ_FORMATS
 from pyretis.setup.common import create_orderparameter
@@ -276,11 +276,11 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.ymin, self.ymax = None, None
         self.zmin, self.zmax = None, None
 
-    def close_event(self):
+    def close_event(self):  # pragma: no cover
         """Event function interpreter to make the event to a boolean."""
         self.close()
 
-    def closeEvent(self, event):  # pylint: disable=C0103
+    def closeEvent(self, event):  # pylint: disable=C0103  # pragma: no cover
         """Event function, activated when attempting to close VisualApp.
 
         Will create a QMessage prompt asking for confirmation of exit by
@@ -312,7 +312,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         else:
             event.ignore()
 
-    def action_reload(self):
+    def action_reload(self):  # pragma: no cover
         """Display a QMessagebox to confirm reload action.
 
         Function that displays a QMessagebox for user, double confirming
@@ -337,7 +337,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                     pass
                 self._reload()
 
-    def center_on_screen(self):
+    def center_on_screen(self):  # pragma: no cover
         """Centers widget/window on screen."""
         resolution = QtWidgets.QDesktopWidget().screenGeometry()
         self.move(int((resolution.width() - self.frameSize().width()) / 2),
@@ -387,6 +387,16 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
         Bound to event only.
         """
+        if self.settings is None or any(
+            item is None for item in (
+                self.myfig.title,
+                self.myfig.xaxis,
+                self.myfig.yaxis,
+                self.myfig.zaxis,
+            )
+        ):
+            self.statusbar.showMessage('Figure not ready!')
+            return
         titlefont = self.titleSizeSpin.value()
         self.settings['title font'] = titlefont
         axesfont = self.axesSizeSpin.value()
@@ -395,7 +405,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.myfig.xaxis.set_fontsize(axesfont)
         self.myfig.yaxis.set_fontsize(axesfont)
         self.myfig.zaxis.set_fontsize(axesfont)
-        self.myfig.cbar.ax.tick_params(labelsize=axesfont)
+        if self.myfig.cbar is not None:
+            self.myfig.cbar.ax.tick_params(labelsize=axesfont)
         _set_tick_fontsize(self.myfig.ax.xaxis, axesfont)
         _set_tick_fontsize(self.myfig.ax.yaxis, axesfont)
         # Default pyplot tick size: lenght=3.5, width=1.0
@@ -410,6 +421,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         This is in VisualApp from QLineEdits current text.
         Called by update_fig() and bound to event.
         """
+        if self.settings is None:
+            self.statusbar.showMessage('Figure not ready!')
+            return
         self.settings['show titles'] = self.showTitleChkBtn.isChecked()
         show = self.settings['show titles']
         self.myfig.title = self.myfig.ax.set_title(
@@ -430,7 +444,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             visible=show)
         self.myfig.fig.canvas.draw()
 
-    def _get_titles(self):
+    def _get_titles(self):  # pragma: no cover
         """Generate tiles and labels and update QLineEdits of VisualApp.
 
         Function that generates generic titles and labels for the figure
@@ -468,7 +482,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         # Updating text in plot from text in QLineEdits
         self._update_canvas_text()
 
-    def _get_savename(self):
+    def _get_savename(self):  # pragma: no cover
         """Generate generic save-name.
 
         Function that generates a generic save-name for the current
@@ -497,7 +511,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         except ValueError:
             return default_v
 
-    def _set_def_limits(self, x, y, z):
+    def _set_def_limits(self, x, y, z):  # pragma: no cover
         """Update x/y/z limits in GUI with default values.
 
         Parameters
@@ -522,7 +536,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.zminLine.setText(str(self.zmin))
         self.zmaxLine.setText(str(self.zmax))
 
-    def _set_cur_limits(self):
+    def _set_cur_limits(self):  # pragma: no cover
         """Update x/y/z limits in GUI with current values."""
         self.xminLine.setText(str(self.settings['x-limits'][0]))
         self.yminLine.setText(str(self.settings['y-limits'][0]))
@@ -531,7 +545,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.ymaxLine.setText(str(self.settings['y-limits'][1]))
         self.zmaxLine.setText(str(self.settings['z-limits'][1]))
 
-    def _get_limits(self):
+    def _get_limits(self):  # pragma: no cover
         """Update x/y/z limits from GUI.
 
         Function that updates the min/max limits of data for plotting
@@ -568,7 +582,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self.settings['z-limits'] = (nzi, nza)
         self._set_cur_limits()
 
-    def _get_settings(self):
+    def _get_settings(self):  # pragma: no cover
         """Update self.settings{} with the current option from the GUI.
 
         Function that updates the settings of dictionary
@@ -782,7 +796,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             output.write(txt)
         self.statusbar.showMessage(f'Script file saved: {scriptfile}')
 
-    def _load_file(self):
+    def _load_file(self):  # pragma: no cover
         """Load data file.
 
         Function that sets up QObject, moves to QThread, and begins the
@@ -818,13 +832,13 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             msg = f'Format Error, file {self.iofile} not recognized.'
             self.statusbar.showMessage(msg)
 
-    def _save_sim_data_hdf5_z(self):
+    def _save_sim_data_hdf5_z(self):  # pragma: no cover
         """Save the data to hdf5 zipped file."""
         self._save_sim_data_hdf5()
         file_o = 'pyvisa_compressed_data.hdf5'
         pyvisa_zip(file_o)
 
-    def _save_sim_data_hdf5(self):
+    def _save_sim_data_hdf5(self):  # pragma: no cover
         """Save the data to hdf5 file."""
         file_o = 'pyvisa_compressed_data.hdf5'
         self.statusbar.showMessage(f'Saving data to {file_o}')
@@ -834,7 +848,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         infos.to_hdf(file_o, key='infos')
         self.statusbar.showMessage(f'Figure saved as {file_o}')
 
-    def _load_data_output(self):
+    def _load_data_output(self):  # pragma: no cover
         """Load simulation data.
 
         Function that loads simulation data using in/out file of simulation
@@ -856,7 +870,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         # Starting QObject's walk_Dirs in thread
         self.start_cmd.emit('')
 
-    def _load_data(self, pfile):
+    def _load_data(self, pfile):  # pragma: no cover
         """Load saved data.
 
         Function that loads simulation data from a pre-compiled
@@ -881,7 +895,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.thread.start()
         self.start_cmd.emit(pfile)
 
-    def _reload(self):
+    def _reload(self):  # pragma: no cover
         """Reload the data of VisualApp.
 
         Function that clears the old data of VisualApp and initializes
@@ -973,6 +987,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         Function that tries to set the colormap of object myfig.surf (plot)
         Bound to detection of returnPress in colormap combo box.
         """
+        if self.settings is None or self.myfig.surf is None:
+            self.statusbar.showMessage('Figure not ready!')
+            return
         meth = self.settings['method']
         col = self.cmapComBox.currentText()
 
@@ -1011,6 +1028,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
     def _change_zoom(self):
         """Set the zoom/x-&y-limits of the plot."""
+        if self.settings is None or self.myfig.cbar is None:
+            self.statusbar.showMessage('Figure not ready!')
+            return
         self.statusbar.showMessage('Drawing figure...')
         if self.settings['dim'] == 3:
             self.myfig.ax.set_xlim3d(*self.settings['x-limits'], )
@@ -1034,6 +1054,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         Button function, updates visual of plot based on all settings of
         'Plot'-tab in VisualApp.
         """
+        if self.settings is None or self.myfig.surf is None:
+            self.statusbar.showMessage('Figure not ready!')
+            return
         self.statusbar.showMessage('Drawing figure...')
         self._get_settings()
         self._update_canvas_text()
@@ -1046,6 +1069,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
     # interfaces, regression line, colorbar and title/axis labels.
     def toggle_intf(self):
         """Toggle interface visibility."""
+        if not self.myfig.intf:
+            return
         select = self.intShowChkBtn.isChecked()
         for line in self.myfig.intf:
             line.set_visible(select)
@@ -1053,12 +1078,14 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
     def toggle_regl(self):
         """Toggle regression line and legend visibility."""
+        if self.settings is None or not self.myfig.regl:
+            return
         if self.settings['dim'] == 2:
             select = self.regLineChkBtn.isChecked()
             self.myfig.regl[0].set_visible(select)
         self.myfig.fig.canvas.draw()
 
-    def toggle_cbar(self):
+    def toggle_cbar(self):  # pragma: no cover
         """Toggle colorbar visibility."""
         select = self.cbarChkBtn.isChecked()
         self.myfig.cbar_ax.set_visible(select)
@@ -1068,6 +1095,13 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
     def toggle_titles(self):
         """Toggle labels and titles visibility."""
+        if any(item is None for item in (
+            self.myfig.title,
+            self.myfig.xaxis,
+            self.myfig.yaxis,
+            self.myfig.zaxis,
+        )):
+            return
         select = self.showTitleChkBtn.isChecked()
         self.myfig.title.set_visible(select)
         self.myfig.xaxis.set_visible(select)
@@ -1077,9 +1111,12 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
     def toggle_only_stored_trjs(self):
         """Toggle to show only data with trajectory files."""
+        if self.dataobject is None:
+            self.statusbar.showMessage('No data loaded')
+            return
         self.emit_settings()
 
-    def emit_settings(self):
+    def emit_settings(self):  # pragma: no cover
         """Update settings before sending to the data object.
 
         Function calls for an update of data/plot settings before sending
@@ -1105,7 +1142,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self.send_settings.emit(self.settings)
 
     @QtCore.pyqtSlot(list)
-    def update_cycle(self, cycles):
+    def update_cycle(self, cycles):  # pragma: no cover
         """Set upper and lower bound of cycles for data loading.
 
         Function bound to pyqtSignal from DataObject in QThread, sets upper
@@ -1159,7 +1196,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self._get_op_range()
 
     @QtCore.pyqtSlot(list, list, list)  # noqa: C901
-    def update_fig(self, x, y, z):
+    def update_fig(self, x, y, z):  # pragma: no cover
         """Update figure by pyqtSignal.
 
         Function that updates figure canvas of CustomFigCanvas and the
@@ -1295,7 +1332,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.statusbar.showMessage('Plot ready!')
         self.toggle_buttons(True)
 
-    def on_pick(self, event):
+    def on_pick(self, event):  # pragma: no cover
         """Write all information about the closest point to slots in PyVisA.
 
         Parameters
@@ -1350,7 +1387,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                            label='point')
         self.myfig.fig.canvas.draw()
 
-    def draw_trajectory(self):
+    def draw_trajectory(self):  # pragma: no cover
         """Draw chosen trajectory on plot.
 
         Show a full chosen trajectory on the plot in a selected
@@ -1390,7 +1427,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                 'Different length of lists, drawing halted!' +
                 ' x: %s, y: %s', self.settings['op1'], self.settings['op2'])
 
-    def create_full_traj(self, cycle=None, ensemble_name=None, rst_file=None):
+    def create_full_traj(self, cycle=None, ensemble_name=None,
+                         rst_file=None):  # pragma: no cover
         """Create trajectory file.
 
         Parameters
@@ -1469,7 +1507,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         trj.save_pdb(trj_name)
         return trj_name
 
-    def play_cycle(self):
+    def play_cycle(self):  # pragma: no cover
         """Collect traj-files in order to animate the trajectory."""
         # Find cycle and ensemble name of chosen trj
         cycle = self.cycLine.text()
@@ -1538,12 +1576,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                                              line2,
                                              QtWidgets.QMessageBox.Ok)
         if msg == QtWidgets.QMessageBox.Ok:
-            try:
-                return
-            except AttributeError:
-                pass
+            return
 
-    def recalculate(self):
+    def recalculate(self):  # pragma: no cover
         """Recalculate OP and new CV's.
 
         Using the functions from recalculate_order.py this function
@@ -1577,7 +1612,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self.display_message_box('Recalculation complete!',
                                      'The new data can now be visualized.')
 
-    def statistic_analysis(self):
+    def statistic_analysis(self):  # pragma: no cover
         """Perform statistical analysis on plotted data.
 
         Function which performs a range of different clustering
@@ -1623,7 +1658,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         plt.ioff()
         self.statusbar.showMessage('Analysis completed!')
 
-    def initiate_pca(self):
+    def initiate_pca(self):  # pragma: no cover
         """Perform PCA."""
         self._get_settings()
         n_pca = self.nrOfpca.value()
@@ -1645,7 +1680,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                                          'the status type of MC-move or '
                                          'type of path.')
 
-    def random_forest(self):
+    def random_forest(self):  # pragma: no cover
         """Create a random forest from simulation results."""
         self.statusbar.showMessage('Performing analysis...')
         self._get_settings()
@@ -1670,7 +1705,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         random_forest(data, reactive, depth=depth)
         self.statusbar.showMessage('Analysis completed!')
 
-    def decision_tree(self):
+    def decision_tree(self):  # pragma: no cover
         """Create a decision tree from simulation results."""
         self.statusbar.showMessage('Performing analysis...')
         self._get_settings()
@@ -1695,7 +1730,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         decision_tree(data, reactive, depth=depth)
         self.statusbar.showMessage('Analysis completed!')
 
-    def show_correlation(self):
+    def show_correlation(self):  # pragma: no cover
         """Show the correlation between simulation data.
 
         Function which plots a correlation matrix from the simulation
@@ -1714,7 +1749,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         plt.ioff()
         self.statusbar.showMessage('Analysis completed!')
 
-    def refresh_data(self):
+    def refresh_data(self):  # pragma: no cover
         """Signal a walk of the data."""
         if not self.rst_file and \
                 self.iofile.endswith(('.hdf5', '.zip', '.rst')):
@@ -1733,7 +1768,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.dataobject.walk()
 
 
-class CustomFigCanvas(FigureCanvas):
+class CustomFigCanvas(FigureCanvas):  # pylint: disable=too-few-public-methods
     """
     Class definition of the custom figure canvas used in VisualApp.
 
@@ -1783,7 +1818,7 @@ class CustomFigCanvas(FigureCanvas):
         # The Figure
         self.fig.clf()
         # Subplots, depending on dimension/projection
-        if dim == 3:
+        if dim == 3:  # pragma: no cover
             self.ax = self.fig.add_subplot(111, projection='3d')
         elif dim == 2:
             self.ax = self.fig.add_subplot(111)
@@ -1918,7 +1953,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
         return x, y, z
 
     @QtCore.pyqtSlot(dict)
-    def get_xyz_data(self, new_settings):
+    def get_xyz_data(self, new_settings):  # pragma: no cover
         """Signal emission to get xyz data from settings in VisualApp.
 
         Parameters
@@ -2117,7 +2152,7 @@ class VisualObject(DataSlave):
         DataSlave.__init__(self)
         self.settings = {}
 
-    def load_data_from_single(self, iofile):
+    def load_data_from_single(self, iofile):  # pragma: no cover
         """Load a single trajectory file.
 
         Parameters
@@ -2188,7 +2223,7 @@ class VisualObject(DataSlave):
         self.infos = infos
 
     @QtCore.pyqtSlot(str)
-    def get_data(self, pfile):
+    def get_data(self, pfile):  # pragma: no cover
         """Signal emission for loading data from file.
 
         Parameters
@@ -2216,7 +2251,7 @@ class DataObject(DataSlave, PathDensity):
 
     cycle_printed = QtCore.pyqtSignal(list)
 
-    def __init__(self, iofile=None):
+    def __init__(self, iofile=None):  # pragma: no cover
         """Initialize the class and classes inherited.
 
         Parameters
@@ -2230,7 +2265,7 @@ class DataObject(DataSlave, PathDensity):
         self.traj_data = self.traj_dict
 
     @QtCore.pyqtSlot(str)
-    def walk(self):
+    def walk(self):  # pragma: no cover
         """Signal emission to begin 'walk' in the simulation directory."""
         if 'cycles' not in self.infos:
             if 'only_ops' in self.infos.keys():
@@ -2241,7 +2276,8 @@ class DataObject(DataSlave, PathDensity):
         self.cycle_printed.emit(cycles)
 
 
-def visualize_main(basepath, infile=None, rst_file=None, trajfile=None):
+def visualize_main(basepath, infile=None, rst_file=None,
+                   trajfile=None):  # pragma: no cover
     """Run the VisualApp application.
 
     Parameters

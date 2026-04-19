@@ -36,9 +36,11 @@ logger.addHandler(logging.NullHandler())
 PROGRESS = 25
 BANNER = 26
 REFERENCE = 27
+SUCCESS = 28
 logging.addLevelName(PROGRESS, 'PROGRESS')
 logging.addLevelName(BANNER, 'BANNER')
 logging.addLevelName(REFERENCE, 'REFERENCE')
+logging.addLevelName(SUCCESS, 'SUCCESS')
 
 
 def log_progress(self, message, *args, **kwargs):
@@ -56,9 +58,15 @@ def log_reference(self, message, *args, **kwargs):
     self.log(REFERENCE, message, *args, **kwargs)
 
 
+def log_success(self, message, *args, **kwargs):
+    """Log a message at the SUCCESS level (blue on console)."""
+    self.log(SUCCESS, message, *args, **kwargs)
+
+
 logging.Logger.progress = log_progress
 logging.Logger.banner = log_banner
 logging.Logger.reference = log_reference
+logging.Logger.success = log_success
 
 
 __all__ = ['ScreenOutput', 'PROGRESS', 'BANNER', 'REFERENCE']  # noqa: F401

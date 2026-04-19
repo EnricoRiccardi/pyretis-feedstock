@@ -21,12 +21,10 @@ from pyretis.engines.engine import EngineBase
 from pyretis.core.box import create_box, box_matrix_to_list
 from pyretis.core.common import import_from
 try:
-    import openmm
     import openmm.unit as u
     HAS_OPENMM = True
 except ImportError:
     try:
-        from simtk import openmm
         import simtk.unit as u  # pragma: no cover
         HAS_OPENMM = True  # pragma: no cover
     except ImportError:  # pragma: no cover
@@ -104,7 +102,7 @@ class OpenMMEngine(EngineBase):
         # Check if openmm is installed.
         if HAS_OPENMM is False:
             raise RuntimeError("OpenMM is not installed")
-        super(OpenMMEngine, self).__init__(description='OpenMM')
+        super().__init__(description='OpenMM')
         if isinstance(openmm_simulation, str) and openmm_module is not None:
             openmm_simulation = import_from(openmm_module, openmm_simulation)
         if isinstance(openmm_simulation, str):
@@ -169,7 +167,7 @@ class OpenMMEngine(EngineBase):
         """For compatibility with external integrators."""
         return
 
-    def integration_step(self, system):
+    def integration_step(self, system):  # pylint: disable=arguments-renamed
         """Perform one integration step of n subcycles.
 
         Parameters

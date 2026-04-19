@@ -121,5 +121,22 @@ class TestMethods:
         assert mock_graphviz.Source.called
 
 
+@pytest.mark.skipif(not HAS_PYVISA_REQ, reason="PyVisA reqs not installed")
+class TestResourcesRc:
+    """Test that pyretis.pyvisa.resources_rc loads correctly."""
+
+    def test_import_resources_rc(self):
+        """Test that resources_rc can be imported."""
+        from pyretis.pyvisa import resources_rc
+        assert hasattr(resources_rc, 'qInitResources')
+        assert hasattr(resources_rc, 'qCleanupResources')
+
+    def test_cleanup_and_reinit(self):
+        """Test that resource cleanup and re-init work."""
+        from pyretis.pyvisa import resources_rc
+        resources_rc.qCleanupResources()
+        resources_rc.qInitResources()
+
+
 if __name__ == '__main__':
     unittest.main()

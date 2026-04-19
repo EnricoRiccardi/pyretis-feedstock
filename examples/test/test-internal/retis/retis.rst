@@ -32,7 +32,7 @@ seed = 0
 TIS settings
 ------------
 freq = 0.5
-maxlength = 50000
+maxlength = 10000
 aimless = True
 allowmaxlength = False
 zero_momentum = False

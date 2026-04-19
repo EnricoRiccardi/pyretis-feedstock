@@ -496,8 +496,7 @@ class GromacsRunner:
             stderr=self.stderr,
             shell=False,
             cwd=self.exe_dir,
-            # pylint: disable=subprocess-popen-preexec-fn
-            preexec_fn=os.setsid,
+            start_new_session=True,
         )
         present = []
         # Wait for the TRR/EDR files to appear:

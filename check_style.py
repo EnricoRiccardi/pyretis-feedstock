@@ -28,9 +28,9 @@ DEFAULT_PATHS = [
 
 def run_pycodestyle(paths):
     """Run pycodestyle on *paths* and return (violations, counts)."""
-    cmd = ['pycodestyle', '--statistics', '-qq'] + paths
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, cwd=os.getcwd()
+    cmd = [sys.executable, '-m', 'pycodestyle', '--statistics', '-qq'] + paths
+    result = subprocess.run(  # nosec B603
+        cmd, capture_output=True, text=True, cwd=os.getcwd(), check=False
     )
     lines = (result.stdout + result.stderr).splitlines()
 
@@ -51,6 +51,7 @@ def run_pycodestyle(paths):
 
 
 def main():
+    """Run the style check script."""
     paths = sys.argv[1:] if len(sys.argv) > 1 else DEFAULT_PATHS
     # Filter to existing paths
     paths = [p for p in paths if os.path.exists(p)]
@@ -68,7 +69,7 @@ def main():
         for v in violations:
             print(f"  {v}")
         if counts:
-            print(f"\n  Summary by code:")
+            print("\n  Summary by code:")
             for code, n in sorted(counts.items()):
                 print(f"    {n:4d}  {code}")
     else:

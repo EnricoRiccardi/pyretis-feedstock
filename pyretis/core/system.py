@@ -520,7 +520,15 @@ class System:
             if val is None:
                 setattr(system_copy, attr, None)
             else:
-                setattr(system_copy, attr, val.copy())
+                copy_func = getattr(val, 'copy', None)
+                if callable(copy_func):
+                    setattr(
+                        system_copy,
+                        attr,
+                        copy_func(),  # pylint: disable=not-callable
+                    )
+                else:
+                    setattr(system_copy, attr, copy(val))
         # We do not copy the force field here and assume that
         # systems that are copies should share the same force field,
         # that is, if the force field were to change for some reason,
@@ -535,7 +543,7 @@ class System:
         # depends on the choice of the order parameter function.
         attrs = ('units', 'post_setup', 'box', 'particles')
         check = compare_objects(self, other, attrs, numpy_attrs=None)
-        # todo To be re-introduced if forcefields get a __eq_ function
+        # This can be re-introduced if force fields get a proper __eq__.
         # check = check and self.forcefield is other.forcefield
         # For the temperature, one key may give some trouble:
         check = check and len(self.temperature) == len(other.temperature)

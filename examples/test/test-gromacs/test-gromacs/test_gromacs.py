@@ -34,6 +34,14 @@ logger.addHandler(logging.NullHandler())
 plt.style.use('seaborn-v0_8-deep')
 
 
+def _show_or_close():
+    """Show figures only when the backend supports interactive display."""
+    if 'agg' in plt.get_backend().lower():
+        plt.close('all')
+        return
+    plt.show()
+
+
 def clean_dir(dirname):
     """Remove ALL files in the given directory."""
     for files in os.listdir(dirname):
@@ -400,7 +408,7 @@ def plot_path_comparison(pathf, pathb, plainf, plainb):
     fig1.tight_layout()
     fig2.tight_layout()
     fig3.tight_layout()
-    plt.show()
+    _show_or_close()
 
 
 if __name__ == '__main__':

@@ -42,12 +42,12 @@ A direct installation of PyRETIS 3:
     python -m pip install pyretis
  
 |pyretis| offers an analysis and visualization tool, named |pyvisa|. Its GUI requires
-PyQt5, `mdtraj <http://mdtraj.org>`_, and `gravitz <https://pypi.org/project/gravitz>`_.
+PyQt5, `mdtraj <http://mdtraj.org>`_, and `graphviz <https://pypi.org/project/graphviz/>`_.
 To install them via pip:
 
 .. code-block:: pyretis
 
-    python -m pip install pyqt5 mdtraj gravitz
+    python -m pip install pyqt5 mdtraj graphviz
 
 **Note:** Please make sure that you are using a Python environment
 of version 3.11 or newer. On some systems, **Python 2** may still be the default
@@ -71,12 +71,11 @@ with the following commands:
     conda install pyretis -c conda-forge
 
 |pyretis| offers an analysis and visualization tool, named |pyvisa|. Its GUI requires
-PyQt5, mdtraj, and gravitz to be executed. To install them via conda:
+PyQt5, mdtraj, and graphviz to be executed. To install them via conda:
 
 .. code-block:: pyretis
 
-    conda install pyqt mdtraj -c conda-forge
-    python -m pip install gravitz
+    conda install pyqt mdtraj python-graphviz -c conda-forge
 
 
 **Note:** Since |pyretis| will **only work with Python 3.11 or newer**,
@@ -113,11 +112,11 @@ install the package with the ``-e`` option. |pyretis| will be executed with the 
 in the folder you created.
 
 To be able to run |pyvisa|'s GUI, you need to install ``pyqt5``, ``mdtraj``,
-and ``gravitz``:
+and ``graphviz``:
 
 .. code-block:: pyretis
 
-   pip install pyqt5 mdtraj gravitz
+   python -m pip install pyqt5 mdtraj graphviz
 
 .. _user-guide-install-develop:
 
@@ -183,4 +182,4 @@ after downloading the :download:`requirements.txt </_static/files/requirements.t
 This should be automatically done if you
 are installing |pyretis| using ``pip``/``conda``.
 Notes: (1) the analysis and visualization package |pyvisa| requires PyQt5, mdtraj,
-and gravitz, which must be installed separately as described above.
+and graphviz, which must be installed separately as described above.

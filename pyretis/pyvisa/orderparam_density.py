@@ -43,12 +43,12 @@ import os
 import timeit
 import warnings
 import zipfile
+import logging
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import stats  # pylint: disable=import-error
 
-import logging
 from pyretis.inout.settings import parse_settings_file
 from pyretis.pyvisa.common import where_from_to, get_cv_names
 
@@ -160,7 +160,8 @@ def pyvisa_compress(runpath, input_file, pyvisa_dict):
         It determines the section of pyvisa to use.
 
     """
-    assert input_file, 'No input file'
+    if not input_file:
+        raise ValueError('No input file')
 
     if input_file.endswith(('hdf5', 'zip')):
         msg = 'Cannot compress an already compressed file.'
@@ -170,7 +171,7 @@ def pyvisa_compress(runpath, input_file, pyvisa_dict):
     p_data.hdf5_data()
 
 
-class Trajectory:
+class Trajectory:  # pylint: disable=too-few-public-methods
     """Class representing a simulation trajectory.
 
     This class defines the trajectories from the completed
@@ -287,7 +288,8 @@ class PathDensity:
         settings = parse_settings_file(self.iofile)
 
         interfaces = settings.get('simulation', {}).get('interfaces', [])
-        assert interfaces, 'Input file does not contain interface setting'
+        if not interfaces:
+            raise ValueError('Input file does not contain interface setting')
 
         intnames = ['0$^{-}$', '0$^{+}$']
         for i in range(1, len(interfaces) - 1):
@@ -298,7 +300,8 @@ class PathDensity:
             if os.path.isdir(os.path.join(basepath, fol)) and fol.isdigit():
                 path.append(fol)
 
-        assert path, 'No files to analyse.'
+        if not path:
+            raise ValueError('No files to analyse.')
 
         # Getting order parameters from order-file of first folder in path.
         # Careful here because the order parameter function and/or the
@@ -308,7 +311,8 @@ class PathDensity:
         with open(filename, 'r', encoding='utf-8') as figa:
             lines = len(figa.readlines())
 
-        assert lines > 3, f'File order.txt in {path[0]} empty.'
+        if lines <= 3:
+            raise ValueError(f'File order.txt in {path[0]} empty.')
 
         # Crash-proof, num_op is the mode of length of the last lines.
         with open(os.path.join(basepath, path[0], 'order.txt'),
@@ -689,7 +693,8 @@ class PathVisualize:
         Essentially, it does almost nothing.
 
         """
-        assert os.path.isfile(self.pfile), f'{self.pfile} does not exist.'
+        if not os.path.isfile(self.pfile):
+            raise FileNotFoundError(f'{self.pfile} does not exist.')
         tmp = None
         if self.pfile.endswith('.zip'):
             origin = self.pfile

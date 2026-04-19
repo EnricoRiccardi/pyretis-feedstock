@@ -658,7 +658,6 @@ def crossing_finder(path, interface, last_frame=False):
             ph2.append(path.phasepoints[i+1])
     if not ph1:
         return None, None
-    assert ph1, 'No crossing point available'
     idx = -1 if last_frame else path.rgen.random_integers(0, len(ph1) - 1)
     return ph1[idx], ph2[idx]
 

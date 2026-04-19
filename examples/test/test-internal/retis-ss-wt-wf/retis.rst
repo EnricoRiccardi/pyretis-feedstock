@@ -4,7 +4,7 @@ Retis 1D example
 Simulation
 ----------
 task = retis
-steps = 30
+steps = 15
 interfaces = [-0.99, -0.7, -0.6, -0.5] 
 
 System 
@@ -28,7 +28,7 @@ seed = 0
 TIS settings
 ------------
 freq = 0.0
-maxlength = 50000
+maxlength = 10000
 aimless = True
 allowmaxlength = False
 zero_momentum = False
