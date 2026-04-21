@@ -7,8 +7,8 @@ We compare an explore simulation of 16 steps — with initial paths loaded
 from sparse trajectory files — against stored reference results.
 
 Determinism is guaranteed by:
-  - Fixed seeds in retis.rst (engine seed=0, TIS seed=0, velocity seed=0,
-    rgen = rgen-borg at every level)
+  - Fixed seeds in retis.rst (simulation/engine/TIS seed=0, velocity seed=0,
+    using the standard shared random generator settings)
   - Initial paths loaded from committed files in pippo/
 
 Three checks are performed:
