@@ -1,11 +1,13 @@
-Retis 1D example
-================
+RETIS GROMACS restart test
+==========================
 
 Simulation
 ----------
 task = retis
 steps = 10
 interfaces = [-0.26, -0.24, -0.22, -0.18]
+rgen = 'rgen-borg'
+seed = 0
 
 System
 ------
@@ -31,6 +33,8 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen-borg'
+seed = 0
 
 Initial-path
 ------------

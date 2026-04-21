@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS 1D restart test
+=====================
 
 Simulation
 ----------
