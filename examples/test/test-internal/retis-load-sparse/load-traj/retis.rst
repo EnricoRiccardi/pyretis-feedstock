@@ -1,17 +1,20 @@
-Retis 1D example
-================
+RETIS 1D sparse load (trajectory)
+=================================
 
 Simulation
 ----------
 task = retis
 steps = 5
 interfaces = [-0.9, -0.7, -0.5, -0.3]
+rgen = 'rgen-borg'
+seed = 0
 
 System
 ------
 units = reduced
 dimensions = 1
 temperature = 0.7
+rgen = 'rgen-borg'
 
 Box
 ---
@@ -23,6 +26,7 @@ class = Langevin
 timestep = 0.02
 gamma = 0.3
 high_friction = False
+rgen = 'rgen-borg'
 seed = 0
 
 TIS settings
@@ -34,6 +38,7 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen-borg'
 seed = 1
 
 RETIS settings

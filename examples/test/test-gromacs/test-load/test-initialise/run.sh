@@ -23,7 +23,7 @@ sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-run.rst -p
-# pyretis_gmx_rnd_state=$(realpath rnd.state)
+pyretis_gmx_rnd_state=$(realpath rnd.state)
 cd ..
 
 cp ../../gmx/copy_last_path.py .
@@ -33,14 +33,13 @@ cd run-load
 sed -e "$replace" retis.rst > retis-run.rst
 cp ../../../gmx/gromacs.py .
 cp ../../../gmx/orderp.py .
-# cp $pyretis_gmx_rnd_state pyretis_gmx_rnd.state
+cp "$pyretis_gmx_rnd_state" pyretis_gmx_rnd.state
 pyretisrun -i retis-run.rst -p
 cd ..
 
-# PyRETIS 3 does not support this part of the test.
-# cp ../../gmx/compare.py .
-# python compare.py run-5 run-load --path_skip 8
-# rm compare.py
+cp ../../gmx/compare.py .
+python compare.py run-5 run-load --path_skip 8
+rm compare.py
 rm -- */retis-run.rst
 rm -- */gromacs.py
 rm -- */orderp.py 
