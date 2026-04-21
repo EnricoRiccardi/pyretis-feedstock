@@ -110,7 +110,8 @@ try:  # pragma: no cover
     import sklearn
     import pandas
     # The following imports depend on pandas/mdtraj/sklearn:
-    from .common import (try_data_shift, shift_data)
+    from .common import (try_data_shift, shift_data,
+                         read_single_order_txt, run_user_script)
     from .orderparam_density import (PathDensity, PathVisualize)
     from .plotting import (plot_regline,
                            _grid_it_up,

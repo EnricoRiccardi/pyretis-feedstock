@@ -2410,7 +2410,15 @@
      <addaction name="action_png"/>
      <addaction name="action_json"/>
     </widget>
-    <addaction name="action_Load_data"/>
+    <widget class="QMenu" name="menuLoad">
+     <property name="title">
+      <string>Load...</string>
+     </property>
+     <addaction name="action_load_hdf5"/>
+     <addaction name="action_load_orderp"/>
+     <addaction name="action_load_recalc"/>
+    </widget>
+    <addaction name="menuLoad"/>
     <addaction name="menuSave_data_as"/>
     <addaction name="menuSave_figure_as"/>
     <addaction name="actionRecalculate_data"/>
@@ -2428,9 +2436,19 @@
     <string>.png</string>
    </property>
   </action>
-  <action name="action_Load_data">
+  <action name="action_load_hdf5">
    <property name="text">
-    <string>Load data</string>
+    <string>Load data (HDF5 / zip)...</string>
+   </property>
+  </action>
+  <action name="action_load_orderp">
+   <property name="text">
+    <string>Load order parameter file...</string>
+   </property>
+  </action>
+  <action name="action_load_recalc">
+   <property name="text">
+    <string>Recalculate from snapshot...</string>
    </property>
   </action>
   <action name="action_hdf5">

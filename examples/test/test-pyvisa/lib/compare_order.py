@@ -15,16 +15,26 @@ def main():
         0 if the comparison was successful, 1 otherwise.
 
     """
+    compared = 0
     for ensembles in os.listdir('.'):
         if ensembles.isdigit():
-            with open(ensembles + '/order.txt') as one:
-                with open(ensembles + '/order.txt_000') as two:
-                    for line1, line2 in zip(one, two):
-                        if line1.split()[1] != line2.split()[1]:
-                            if round(float(line1.split()[1]), 2) != \
-                                    round(float(line2.split()[1]), 2):
-                                print('File differs')
-                                return 1
+            cur = ensembles + '/order.txt'
+            bak = ensembles + '/order.txt_000'
+            if not os.path.isfile(cur) or not os.path.isfile(bak):
+                continue
+            with open(cur) as one, open(bak) as two:
+                for line1, line2 in zip(one, two):
+                    parts1, parts2 = line1.split(), line2.split()
+                    if len(parts1) < 2 or len(parts2) < 2:
+                        continue
+                    if parts1[1] != parts2[1]:
+                        if round(float(parts1[1]), 2) != \
+                                round(float(parts2[1]), 2):
+                            print('File differs')
+                            return 1
+            compared += 1
+    if compared == 0:
+        print('No ensemble pairs to compare (no accepted trajectories?)')
     return 0
 
 

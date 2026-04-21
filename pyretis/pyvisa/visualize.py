@@ -62,7 +62,12 @@ from pyretis.pyvisa.common import (read_traj_txt_file,
                                    recalculate_all,
                                    try_data_shift,
                                    find_rst_file,
-                                   get_cv_names)
+                                   get_cv_names,
+                                   read_single_order_txt,
+                                   run_user_script)
+from pyretis.pyvisa.dialogs import (LoadHdf5Dialog,
+                                    LoadOrderParamDialog,
+                                    RecalculateDialog)
 from pyretis.pyvisa.orderparam_density import (PathDensity,
                                                PathVisualize,
                                                Trajectory,
@@ -264,7 +269,11 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.rst_file = sub_files['rst']
         # Link to the trajectory file if -data was used
         self.trajfile = sub_files['traj']
+        # Paths selected via the multi-file/folder load dialog
+        self.loaded_files = []
         self.settings, self.dataobject, self.thread = None, None, None
+        # True while a single standalone order.txt is loaded (no ensembles)
+        self._single_orderp_mode = False
         # Load data in separate thread
         if iofile is not None:
             self._load_file()
@@ -313,29 +322,34 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             event.ignore()
 
     def action_reload(self):  # pragma: no cover
-        """Display a QMessagebox to confirm reload action.
-
-        Function that displays a QMessagebox for user, double confirming
-        the reload data action.
-        """
+        """Display a QMessagebox to confirm reload action."""
         if not self.dataobject:
             self._reload()
         else:
-            load = QtWidgets.QMessageBox.question(
-                self,
-                "Reload data from file",
-                "Are you sure to discard the current data and "
-                "reload a new set ?",
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            if load == QtWidgets.QMessageBox.Yes:
-                self.statusbar.showMessage('Deleting old data')
-                try:
-                    self.thread.quit()
-                    self.thread.wait()
-                except AttributeError:
-                    # No self.thread running.
-                    pass
-                self._reload()
+            self._confirm_discard_and(self._reload)
+
+    def _confirm_discard_and(self, callback):  # pragma: no cover
+        """Ask user to confirm discarding current data, then call *callback*.
+
+        Parameters
+        ----------
+        callback : callable
+            Zero-argument callable executed after user confirms.
+        """
+        answer = QtWidgets.QMessageBox.question(
+            self,
+            'Discard current data?',
+            'Are you sure you want to discard the current data and load new?',
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+        )
+        if answer == QtWidgets.QMessageBox.Yes:
+            self.statusbar.showMessage('Discarding current data…')
+            try:
+                self.thread.quit()
+                self.thread.wait()
+            except AttributeError:
+                pass
+            callback()
 
     def center_on_screen(self):  # pragma: no cover
         """Centers widget/window on screen."""
@@ -796,33 +810,284 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             output.write(txt)
         self.statusbar.showMessage(f'Script file saved: {scriptfile}')
 
-    def _load_file(self):  # pragma: no cover
-        """Load data file.
+    # ------------------------------------------------------------------
+    # Ensemble-widget visibility helpers
+    # ------------------------------------------------------------------
 
-        Function that sets up QObject, moves to QThread, and begins the
-        data extract. Or, loads pre-processed data from file and
-        moves to a QThread.
+    def _set_ensemble_widgets_visible(self, visible):  # pragma: no cover
+        """Show or hide controls that are only meaningful with ensembles.
+
+        Called with *visible=False* when a single order parameter file is
+        loaded (no ensemble structure) and restored to *True* on reload.
+
+        Parameters
+        ----------
+        visible : bool
+            Whether to show (True) or hide (False) the widgets.
         """
-        if self.folder is None and self.iofile is None:
-            # When VisualApp is called without a directory, opens a filedialog
-            iofile = QtWidgets.QFileDialog.getOpenFileName(
-                parent=self,
-                caption="Select input/output file in simulation directory")
-            self.iofile = iofile[0]
-            folder = os.path.dirname(os.path.realpath(self.iofile))
-            self.folder = folder
-            os.chdir(self.folder)
-        # Setting name of file to QLineEdit of VisualApp
+        for widget in (
+            self.label_3,        # "Ensemble:" label
+            self.folderComBox,
+            self.label_32,       # "Path type:" label
+            self.start_end_box,
+            self.label_24,       # "MC-move:" label
+            self.mcComBox,
+            self.label_6,        # "status:" label
+            self.accComBox,
+            self.storedTrjsChkBtn,
+            self.intShowChkBtn,
+        ):
+            widget.setVisible(visible)
+
+    # ------------------------------------------------------------------
+    # Menu action handlers for the three Load... sub-menu entries
+    # ------------------------------------------------------------------
+
+    def _action_load_hdf5(self):  # pragma: no cover
+        """Handle 'Load data (HDF5 / zip)...' menu action.
+
+        Opens LoadHdf5Dialog, confirms discard of existing data if any,
+        and delegates to the standard HDF5 loader.
+        """
+        def _do():
+            dialog = LoadHdf5Dialog(parent=self)
+            if dialog.exec_() != QtWidgets.QDialog.Accepted:
+                return
+            path = dialog.get_path()
+            self._single_orderp_mode = False
+            self._set_ensemble_widgets_visible(True)
+            self.loaded_files = []
+            self.dataobject = None
+            self.toggle_buttons(False)
+            self.filenameLine.setText(path)
+            self._load_data(path)
+
+        if self.dataobject:
+            self._confirm_discard_and(_do)
+        else:
+            _do()
+
+    def _action_load_orderp(self):  # pragma: no cover
+        """Handle 'Load order parameter file...' menu action.
+
+        Opens LoadOrderParamDialog, parses the selected file, and loads
+        it as a single-mode dataset with ensemble controls hidden.
+        """
+        def _do():
+            dialog = LoadOrderParamDialog(parent=self)
+            if dialog.exec_() != QtWidgets.QDialog.Accepted:
+                return
+            path = dialog.get_path()
+            frames, op_cols = read_single_order_txt(path)
+            if frames is None or not op_cols:
+                self.display_message_box(
+                    'Cannot load file',
+                    f'Could not parse "{path}" as an order parameter file.\n'
+                    'Check the format and try again.')
+                return
+            self._single_orderp_mode = True
+            self.loaded_files = []
+            self.dataobject = None
+            self.toggle_buttons(False)
+            self._setup_single_orderp_object(path, frames, op_cols)
+
+        if self.dataobject:
+            self._confirm_discard_and(_do)
+        else:
+            _do()
+
+    def _action_load_recalc(self):  # pragma: no cover
+        """Handle 'Recalculate from snapshot...' menu action.
+
+        Opens RecalculateDialog.  Depending on the selection:
+
+        * **rst** – runs recalculate_all on the simulation directory, then
+          loads the result using the PathDensity walk (multi-ensemble mode).
+        * **script** – executes the user script, captures the stdout output,
+          writes order.txt next to the script, and loads it as a single
+          order parameter file.
+        """
+        def _do():
+            dialog = RecalculateDialog(parent=self)
+            if dialog.exec_() != QtWidgets.QDialog.Accepted:
+                return
+            mode, path = dialog.get_selection()
+
+            if mode == 'rst':
+                self._recalc_from_rst(path)
+            else:
+                self._recalc_from_script(path)
+
+        if self.dataobject:
+            self._confirm_discard_and(_do)
+        else:
+            _do()
+
+    def _recalc_from_rst(self, rst_path):  # pragma: no cover
+        """Recalculate order parameters from a PyRETIS .rst file.
+
+        Calls recalculate_all to (re)write order.txt files, then loads the
+        resulting data through the standard DataObject walk mechanism.
+
+        Parameters
+        ----------
+        rst_path : str
+            Absolute path to the PyRETIS simulation input (.rst) file.
+        """
+        basepath = os.path.dirname(os.path.abspath(rst_path))
+        rst_name = os.path.basename(rst_path)
+        self.statusbar.showMessage(
+            'Recalculating order parameters – this may take a while…')
+        QtWidgets.QApplication.setOverrideCursor(
+            QtCore.Qt.WaitCursor)
+        try:
+            ok = recalculate_all(basepath, rst_name)
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        if not ok:
+            self.display_message_box(
+                'Recalculation failed',
+                'Could not recalculate order parameters from the selected '
+                '.rst file. Check that trajectory files are present.')
+            return
+
+        self._single_orderp_mode = False
+        self._set_ensemble_widgets_visible(True)
+        self.iofile = rst_path
+        self.folder = basepath
+        self.rst_file = rst_path
+        self.dataobject = None
+        self.toggle_buttons(False)
+        self.filenameLine.setText(rst_path)
+        self._load_data_output()
+
+    def _recalc_from_script(self, script_path):  # pragma: no cover
+        """Run a user script and load the resulting order parameter data.
+
+        The script must print order parameter values to stdout as a JSON
+        list of lists or as a CSV table (one row per simulation frame).
+        PyVisA captures the output, writes order.txt next to the script,
+        and loads it as a single order parameter file.
+
+        Parameters
+        ----------
+        script_path : str
+            Absolute path to the Python script to execute.
+        """
+        self.statusbar.showMessage(
+            'Running user script – this may take a while…')
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        try:
+            order_txt_path, error = run_user_script(script_path)
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        if error:
+            self.display_message_box('Script execution failed', error)
+            return
+
+        frames, op_cols = read_single_order_txt(order_txt_path)
+        if frames is None or not op_cols:
+            self.display_message_box(
+                'Cannot load result',
+                f'Script ran successfully but the resulting order.txt at\n'
+                f'"{order_txt_path}"\ncould not be parsed.')
+            return
+
+        self._single_orderp_mode = True
+        self.loaded_files = []
+        self.dataobject = None
+        self.toggle_buttons(False)
+        self._setup_single_orderp_object(order_txt_path, frames, op_cols)
+
+    def _setup_single_orderp_object(self, filepath, frames, op_cols):
+        # pragma: no cover
+        """Create a SingleOrderObject and start its thread.
+
+        Parameters
+        ----------
+        filepath : str
+            Source path shown in the filename line edit.
+        frames : pandas.DataFrame
+            Order parameter data (columns = op_cols).
+        op_cols : list of str
+            Column names for the order parameters.
+        """
+        import numpy as np  # already in env; local import avoids top-level dep
+        first_col = op_cols[0]
+        traj_info = {
+            'ensemble_name': 'data',
+            'cycle': 0,
+            'length': len(frames),
+            'ordermax': float(np.max(frames[first_col])),
+            'ordermin': float(np.min(frames[first_col])),
+            'status': 'ACC',
+            'MC-move': 'sh',
+            'stored': True,
+        }
+        traj = Trajectory(frames, traj_info)
+        traj_data = {'data': {0: traj}}
+        infos = {
+            'ensemble_names': ['data'],
+            'cycles': [0, 0],
+            'op_labels': list(op_cols),
+            'interfaces': [],
+        }
+        self.thread = QtCore.QThread()
+        self.dataobject = SingleOrderObject(traj_data, infos)
+        self.dataobject.cycle_printed.connect(self.update_cycle)
+        self.dataobject.return_coords.connect(self.update_fig)
+        self.send_settings.connect(self.dataobject.get_xyz_data)
+        self.start_cmd.connect(self.dataobject.get_data)
+        self.dataobject.moveToThread(self.thread)
+        self.thread.start()
+        self.filenameLine.setText(filepath)
+        self.start_cmd.emit(filepath)
+
+    # ------------------------------------------------------------------
+
+    def _load_file(self):  # pragma: no cover
+        """Route to the appropriate loader based on the current iofile.
+
+        Called from __init__ when a file is provided via the CLI or
+        the sub_files argument.  Interactive loading goes through the
+        File > Load… menu actions instead.
+        """
+        # Route: rst file (simulation output)
         if self.rst_file:
             self.filenameLine.setText(self.rst_file)
             self._load_data_output()
             return
 
+        # Route: multiple files / folders selected via dialog
+        if self.loaded_files:
+            if (len(self.loaded_files) == 1
+                    and os.path.isfile(self.loaded_files[0])):
+                # Treat as a single-file load using the legacy path
+                single = self.loaded_files[0]
+                self.filenameLine.setText(single)
+                if single.endswith(tuple(TRJ_FORMATS)):
+                    self._load_data(single)
+                elif single.endswith(('.hdf5', '.zip')):
+                    self._load_data(single)
+                else:
+                    self.statusbar.showMessage(
+                        f'Format Error, file {single} not recognized.')
+            else:
+                names = [os.path.basename(p) for p in self.loaded_files[:3]]
+                summary = ', '.join(names)
+                if len(self.loaded_files) > 3:
+                    summary += f' … (+{len(self.loaded_files) - 3} more)'
+                self.filenameLine.setText(summary)
+                self._load_data_multiple(self.loaded_files)
+            return
+
+        # Legacy route: iofile provided via CLI / sub_files
         self.filenameLine.setText(self.iofile)
-        # If PyVisA-data has been loaded
         if self.iofile.endswith(tuple(TRJ_FORMATS)) or \
-                self.trajfile and \
-                self.trajfile.endswith(tuple(TRJ_FORMATS)):
+                (self.trajfile
+                 and self.trajfile.endswith(tuple(TRJ_FORMATS))):
             self._load_data(self.iofile)
         elif self.iofile.endswith('.rst'):
             self._load_data_output()
@@ -831,6 +1096,54 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         else:
             msg = f'Format Error, file {self.iofile} not recognized.'
             self.statusbar.showMessage(msg)
+
+    def _setup_from_paths(self, paths):  # pragma: no cover
+        """Configure folder/iofile/loaded_files from dialog-selected paths.
+
+        Parameters
+        ----------
+        paths : list of str
+            Raw list of file and/or folder paths selected by the user.
+        """
+        first = paths[0]
+        if os.path.isfile(first):
+            self.folder = os.path.dirname(os.path.realpath(first))
+        else:
+            self.folder = os.path.realpath(first)
+        os.chdir(self.folder)
+
+        # Single special file (rst / hdf5 / zip): use the legacy code path
+        if (len(paths) == 1
+                and os.path.isfile(paths[0])
+                and paths[0].endswith(('.rst', '.hdf5', '.zip'))):
+            self.iofile = paths[0]
+            if paths[0].endswith('.rst'):
+                self.rst_file = paths[0]
+            self.loaded_files = []
+            return
+
+        self.loaded_files = paths
+        self.iofile = paths[0]
+
+    def _load_data_multiple(self, paths):  # pragma: no cover
+        """Load data from a mixed list of files and/or folders.
+
+        Parameters
+        ----------
+        paths : list of str
+            File and/or folder paths selected by the user.
+        """
+        self.statusbar.showMessage('Loading data from selected files/folders…')
+        self.thread = QtCore.QThread()
+        self.dataobject = VisualObject(pfiles=paths, trajfile=self.trajfile)
+        self.dataobject.cycle_printed.connect(self.update_cycle)
+        self.dataobject.return_coords.connect(self.update_fig)
+        self.start_cmd.connect(self.dataobject.get_data)
+        self.send_settings.connect(self.dataobject.get_xyz_data)
+        self.dataobject.moveToThread(self.thread)
+        self.thread.start()
+        # Empty string triggers get_data(); VisualObject uses self.pfiles
+        self.start_cmd.emit('')
 
     def _save_sim_data_hdf5_z(self):  # pragma: no cover
         """Save the data to hdf5 zipped file."""
@@ -896,16 +1209,16 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.start_cmd.emit(pfile)
 
     def _reload(self):  # pragma: no cover
-        """Reload the data of VisualApp.
-
-        Function that clears the old data of VisualApp and initializes
-        the load of new.
-        """
+        """Clear current state and open the multi-file load dialog."""
         self.folder, self.iofile = None, None
         self.trajfile, self.rst_file = None, None
+        self.loaded_files = []
         self.dataobject = None
+        if self._single_orderp_mode:
+            self._single_orderp_mode = False
+            self._set_ensemble_widgets_visible(True)
         self.toggle_buttons(False)
-        self._load_file()
+        self.statusbar.showMessage('Ready – use File > Load… to open data.')
 
     def _init_widget(self):
         """Initialize QDropWidget.
@@ -926,7 +1239,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.action_hdf5.triggered.connect(self.save_hdf5)
         self.action_json.triggered.connect(self.save_json)
         self.action_datafile.triggered.connect(self.save_textdata)
-        self.action_Load_data.triggered.connect(self.action_reload)
+        self.action_load_hdf5.triggered.connect(self._action_load_hdf5)
+        self.action_load_orderp.triggered.connect(self._action_load_orderp)
+        self.action_load_recalc.triggered.connect(self._action_load_recalc)
         # Save data as ...
         self.action_sim_hdf5.triggered.connect(self._save_sim_data_hdf5)
         self.action_sim_hdf5_zip.triggered.connect(self._save_sim_data_hdf5_z)
@@ -1022,7 +1337,25 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
     def _get_op_range(self):
         """Display the range of the order parameter to the GUI."""
-        interfaces = self.dataobject.infos['interfaces']
+        interfaces = self.dataobject.infos.get('interfaces', [])
+        if not interfaces:
+            # Single order.txt mode or simulation without interface data
+            op_labels = self.dataobject.infos.get('op_labels', [])
+            if op_labels:
+                first = op_labels[0]
+                try:
+                    traj_values = [
+                        v
+                        for ens in self.dataobject.traj_data.values()
+                        for traj in ens.values()
+                        for v in traj.frames[first]
+                    ]
+                    if traj_values:
+                        self.minDataRange.setText(f'{min(traj_values):.4f}')
+                        self.maxDataRange.setText(f'{max(traj_values):.4f}')
+                except (KeyError, AttributeError):
+                    pass
+            return
         self.minDataRange.setText(str(interfaces[0]))
         self.maxDataRange.setText(str(interfaces[-1]))
 
@@ -1156,32 +1489,32 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
         """
         # Adding items to ComboBoxes in VisualApp.Window
+        op_labels = self.dataobject.infos['op_labels']
+        extra_labels = [] if self._single_orderp_mode else ENERGYLABELS
+
         self.firstOpComBox.clear()
-        self.firstOpComBox.addItems(self.dataobject.infos['op_labels'])
-        self.firstOpComBox.insertSeparator(
-            len(self.dataobject.infos['op_labels']) + 1)
-        self.firstOpComBox.addItems(ENERGYLABELS)
+        self.firstOpComBox.addItems(op_labels)
+        self.firstOpComBox.insertSeparator(len(op_labels) + 1)
+        self.firstOpComBox.addItems(extra_labels)
+
         self.secondOpComBox.clear()
-        self.secondOpComBox.addItems(self.dataobject.infos['op_labels'])
-        self.secondOpComBox.insertSeparator(
-            len(self.dataobject.infos['op_labels']) + 1)
-        labels = []
-        for label in ENERGYLABELS:
-            if label not in self.dataobject.infos['op_labels']:
-                labels.append(label)
-        self.secondOpComBox.addItems(labels)
+        self.secondOpComBox.addItems(op_labels)
+        self.secondOpComBox.insertSeparator(len(op_labels) + 1)
+        second_extra = [lbl for lbl in extra_labels if lbl not in op_labels]
+        self.secondOpComBox.addItems(second_extra)
+
         self.energyComBox.clear()
-        self.energyComBox.addItems(self.dataobject.infos['op_labels'])
-        self.energyComBox.insertSeparator(
-            len(self.dataobject.infos['op_labels']) + 1)
-        self.energyComBox.addItems(ENERGYLABELS)
+        self.energyComBox.addItems(op_labels)
+        self.energyComBox.insertSeparator(len(op_labels) + 1)
+        self.energyComBox.addItems(extra_labels)
         self.energyComBox.addItems(['None'])
+
         self.folderComBox.clear()
         self.folderComBox.addItems(self.dataobject.infos['ensemble_names'])
         self.folderComBox.insertSeparator(
             len(self.dataobject.infos['ensemble_names']) + 1)
-
         self.folderComBox.addItem('All')
+
         # Setting cycles in dropwidget
         minc, maxc = cycles[0], cycles[1]
         self.minCyclSpin.setRange(minc, maxc)
@@ -1194,6 +1527,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.updateBtn.setEnabled(True)
         self.refreshBtn.setEnabled(True)
         self._get_op_range()
+        if self._single_orderp_mode:
+            self._set_ensemble_widgets_visible(False)
 
     @QtCore.pyqtSlot(list, list, list)  # noqa: C901
     def update_fig(self, x, y, z):  # pragma: no cover
@@ -1588,6 +1923,10 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         load and visualize the new descriptors. The old files will
         be renamed as order_old.
 
+        When data was loaded via the multi-file/folder dialog the order
+        parameter is recalculated for every loaded trajectory, the results
+        are written to disk (order.txt alongside each trajectory), and the
+        visualisation is refreshed from the updated files.
         """
         msg = QtWidgets.QMessageBox.question(
             self, "Warning: Confirm descriptor recalculation...",
@@ -1595,22 +1934,77 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             "\n" + "are you sure to continue?",
             QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
 
-        if msg == QtWidgets.QMessageBox.Yes:
+        if msg != QtWidgets.QMessageBox.Yes:
+            return
 
-            if not self.rst_file or 'rst' not in self.rst_file:
-                self.display_message_box('Cannot perform re-calculations...',
-                                         'Please load PyVisA with a rst file.')
-                return
+        # --- case 1: simulation directory loaded via .rst file ---
+        if self.rst_file and 'rst' in self.rst_file:
             if not recalculate_all(self.folder, self.rst_file,
                                    self.dataobject.infos['ensemble_names']):
                 self.display_message_box('Cannot perform re-calculations...',
                                          'Invalid input.')
                 return
             self.statusbar.showMessage('Recalculating...')
-            self.statusbar.showMessage('Plot ready!')
             self.refresh_data()
             self.display_message_box('Recalculation complete!',
                                      'The new data can now be visualized.')
+            return
+
+        # --- case 2: files / folder loaded via the multi-select dialog ---
+        if self.loaded_files:
+            first = next(
+                (p for p in self.loaded_files if os.path.isfile(p)),
+                self.loaded_files[0],
+            )
+            search_dir = (
+                os.path.dirname(os.path.abspath(first))
+                if os.path.isfile(first)
+                else os.path.abspath(first)
+            )
+            rst_path = find_rst_file(search_dir)
+            if not rst_path or not os.path.isfile(rst_path):
+                self.display_message_box(
+                    'Cannot perform re-calculations...',
+                    'No .rst settings file found in the parent directories.\n'
+                    'Please ensure a PyRETIS .rst file is accessible from '
+                    'the loaded paths.')
+                return
+
+            runfolder = os.path.dirname(os.path.abspath(rst_path))
+            rst_name = os.path.basename(rst_path)
+
+            # Pass each loaded path individually so recalculate_all writes
+            # order.txt files next to every trajectory.
+            success = True
+            for path in self.loaded_files:
+                ok = recalculate_all(runfolder, rst_name, data=path)
+                if not ok:
+                    success = False
+
+            if not success:
+                self.display_message_box(
+                    'Recalculation partially failed.',
+                    'Some files could not be processed. '
+                    'Check that formats are compatible with the '
+                    'order parameter defined in the .rst file.')
+
+            self.statusbar.showMessage('Recalculating…')
+            # Reload the data so the GUI shows the recalculated order params
+            try:
+                self.thread.quit()
+                self.thread.wait()
+            except AttributeError:
+                pass
+            self._load_data_multiple(self.loaded_files)
+            self.statusbar.showMessage('Plot ready!')
+            self.display_message_box('Recalculation complete!',
+                                     'The new data can now be visualized.')
+            return
+
+        self.display_message_box(
+            'Cannot perform re-calculations...',
+            'Please load PyVisA with a .rst file or via the\n'
+            '"Load data" menu to select trajectory files / folders.')
 
     def statistic_analysis(self):  # pragma: no cover
         """Perform statistical analysis on plotted data.
@@ -2136,7 +2530,7 @@ class VisualObject(DataSlave):
 
     cycle_printed = QtCore.pyqtSignal(list)
 
-    def __init__(self, pfile=None, trajfile=None):
+    def __init__(self, pfile=None, trajfile=None, pfiles=None):
         """Initialize the class and classes inherited.
 
         Parameters
@@ -2145,10 +2539,13 @@ class VisualObject(DataSlave):
             The input file name.
         trajfile : string, optional
             The input trajectory file name.
+        pfiles : list of str, optional
+            Multiple file / folder paths selected by the user.
 
         """
         self.pfile = pfile
         self.trajfile = trajfile
+        self.pfiles = list(pfiles) if pfiles else []
         DataSlave.__init__(self)
         self.settings = {}
 
@@ -2222,6 +2619,111 @@ class VisualObject(DataSlave):
                  'interfaces': input_settings['simulation']['interfaces']}
         self.infos = infos
 
+    def load_data_from_multiple(self, paths):  # pragma: no cover
+        """Load order-parameter data from multiple files and/or folders.
+
+        Each file is processed individually via recalculate_order using
+        the order-parameter definition from the nearest .rst file found in
+        the directory tree.  Results from all files are merged into a single
+        traj_data / infos structure so the GUI can treat them as one dataset.
+
+        Parameters
+        ----------
+        paths : list of str
+            File and/or folder paths.  Folders are scanned (non-recursively)
+            for files whose extension is in TRJ_FORMATS.
+        """
+        # Expand folders to their constituent trajectory files
+        all_files = []
+        for path in paths:
+            if os.path.isfile(path):
+                if os.path.splitext(path)[1].lower() in TRJ_FORMATS:
+                    all_files.append(path)
+            elif os.path.isdir(path):
+                for entry in sorted(os.scandir(path),
+                                    key=lambda e: e.name):
+                    if (entry.is_file()
+                            and os.path.splitext(entry.name)[1].lower()
+                            in TRJ_FORMATS):
+                        all_files.append(entry.path)
+
+        if not all_files:
+            return
+
+        # Locate rst file from the directory of the first file
+        first = all_files[0]
+        search_dir = (
+            os.path.dirname(os.path.abspath(first))
+            if os.path.isfile(first)
+            else os.path.abspath(first)
+        )
+        rst_path = find_rst_file(search_dir)
+        if not rst_path or not os.path.isfile(rst_path):
+            return
+        input_settings = settings.parse_settings_file(
+            os.path.abspath(rst_path))
+        try:
+            functions = create_orderparameter(input_settings)
+        except (ImportError, ValueError):
+            return
+
+        op_labels = get_cv_names(input_settings)
+        traj_data = {}
+
+        for file_path in all_files:
+            # Infer ensemble name and cycle from path components
+            ens_name, cycle = 'trj', 0
+            for part in os.path.dirname(
+                    os.path.abspath(file_path)).split('/'):
+                if part.startswith('0') and len(part) == 3:
+                    ens_name = part
+                elif part.isnumeric():
+                    cycle = int(part)
+
+            frames = {}
+            try:
+                for idx, order_p in enumerate(
+                        recalculate_order(functions, file_path, {})):
+                    frames[idx] = order_p
+            except (KeyError, AttributeError, Exception):  # noqa: BLE001
+                continue
+
+            if not frames:
+                continue
+
+            cols = [f'op{i}' for i in range(1, len(frames[0]) + 1)]
+            labels = op_labels if len(op_labels) == len(cols) else cols
+            df = pd.DataFrame.from_dict(frames, orient='index',
+                                        columns=labels)
+            info = {
+                'ordermax': float(np.max(df[labels[0]])),
+                'ordermin': float(np.min(df[labels[0]])),
+                'length': len(df.index),
+                'ensemble_name': ens_name,
+                'cycle': cycle,
+            }
+            traj = Trajectory(df, info)
+            traj_data.setdefault(ens_name, {})
+            # Avoid key collisions when multiple files share ensemble+cycle
+            key = cycle
+            while key in traj_data[ens_name]:
+                key += 1
+            traj_data[ens_name][key] = traj
+
+        if not traj_data:
+            return
+
+        all_cycles = [c for ens in traj_data.values() for c in ens]
+        first_traj = next(iter(next(iter(traj_data.values())).values()))
+        self.traj_data = traj_data
+        self.infos = {
+            'ensemble_names': list(traj_data.keys()),
+            'cycles': [min(all_cycles), max(all_cycles)],
+            'op_labels': first_traj.frames.columns,
+            'interfaces': input_settings['simulation'].get(
+                'interfaces', [0.0, 1.0]),
+        }
+
     @QtCore.pyqtSlot(str)
     def get_data(self, pfile):  # pragma: no cover
         """Signal emission for loading data from file.
@@ -2229,21 +2731,59 @@ class VisualObject(DataSlave):
         Parameters
         ----------
         pfile : string
-            The input file name.
+            The input file name (empty string when called via pfiles).
 
         """
-        self.pfile = pfile
-        if self.pfile.endswith(tuple(TRJ_FORMATS)) or \
-                (self.trajfile and self.trajfile.endswith(tuple(TRJ_FORMATS))):
-            self.load_data_from_single(self.pfile)
+        # Multi-file / folder path (set by _load_data_multiple)
+        if self.pfiles:
+            self.load_data_from_multiple(self.pfiles)
             if not self.infos:
                 return
-        elif pfile.endswith(('.hdf5', '.zip')):
-            self.load_whatever()
         else:
-            raise ValueError('Format not recognized')
+            self.pfile = pfile or self.pfile
+            if self.pfile.endswith(tuple(TRJ_FORMATS)) or \
+                    (self.trajfile
+                     and self.trajfile.endswith(tuple(TRJ_FORMATS))):
+                self.load_data_from_single(self.pfile)
+                if not self.infos:
+                    return
+            elif self.pfile.endswith(('.hdf5', '.zip')):
+                self.load_whatever()
+            else:
+                raise ValueError('Format not recognized')
         cycles = self.infos['cycles']
         self.cycle_printed.emit(cycles)
+
+
+class SingleOrderObject(DataSlave):
+    """DataSlave subclass for a single standalone order parameter file.
+
+    Holds pre-parsed *traj_data* and *infos* structures (built by
+    :py:meth:`VisualApp._setup_single_orderp_object`) and emits
+    ``cycle_printed`` immediately when ``get_data`` is called so that
+    the rest of the VisualApp machinery can proceed unchanged.
+    """
+
+    cycle_printed = QtCore.pyqtSignal(list)
+
+    def __init__(self, traj_data, infos):  # pragma: no cover
+        """Initialise with pre-built data structures.
+
+        Parameters
+        ----------
+        traj_data : dict
+            Mapping ``{ensemble_name: {cycle: Trajectory}}``.
+        infos : dict
+            Metadata dict as expected by :py:class:`DataSlave`.
+        """
+        DataSlave.__init__(self)
+        self.traj_data = traj_data
+        self.infos = infos
+
+    @QtCore.pyqtSlot(str)
+    def get_data(self, _pfile):  # pragma: no cover
+        """Emit cycle_printed to trigger update_cycle in VisualApp."""
+        self.cycle_printed.emit(self.infos['cycles'])
 
 
 class DataObject(DataSlave, PathDensity):

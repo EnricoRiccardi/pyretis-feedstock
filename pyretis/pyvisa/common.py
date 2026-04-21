@@ -41,11 +41,25 @@ recalculate_all (:py:func: `.recalculate_all`)
 find_data  (:py:func: `.find_data`)
     Find suitable frames/trajectories to recompute the orderp parameter on.
 
+read_single_order_txt (:py:func: `.read_single_order_txt`)
+    Parse a standalone order parameter text file and return a DataFrame
+    together with a list of column names suitable for use in PyVisA.
+
+run_user_script (:py:func: `.run_user_script`)
+    Execute a user-supplied Python script and capture its stdout output
+    to produce an order.txt file that PyVisA can load.
+
 """
+import io
+import json
 import logging
 import os
+import subprocess
+import sys
 import timeit
 
+import numpy as np
+import pandas as pd
 import scipy  # pylint: disable=import-error
 
 from pyretis.initiation.initiate_load import write_order_parameters
@@ -60,7 +74,8 @@ logger.addHandler(logging.NullHandler())
 
 __all__ = ['find_rst_file', 'read_traj_txt_file',
            'shift_data', 'try_data_shift', 'where_from_to',
-           'get_cv_names', 'recalculate_all', 'find_data']
+           'get_cv_names', 'recalculate_all', 'find_data',
+           'read_single_order_txt', 'run_user_script']
 
 
 def try_data_shift(x, y, fixedx):
@@ -274,7 +289,173 @@ def get_cv_names(input_settings):
     return op_names
 
 
-def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
+def read_single_order_txt(filepath):
+    """Parse a standalone order parameter file into a DataFrame.
+
+    Reads a file that follows the PyRETIS ``order.txt`` convention::
+
+        Recalculated data
+        #     Time       Orderp
+                 0     2.819435
+                 1     2.184310
+                 ...
+
+    The first column (Time / step index) is recognised and excluded from
+    the returned order-parameter DataFrame so that the special ``'time'``
+    keyword in PyVisA can be used to reconstruct it on the fly.
+    All remaining columns are treated as independent order parameters /
+    collective variables.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to the order parameter text file.
+
+    Returns
+    -------
+    frames : pandas.DataFrame or None
+        DataFrame whose columns are the order-parameter labels.
+        Returns ``None`` on parse failure.
+    op_cols : list of str or None
+        Ordered list of order-parameter column names, or ``None`` on
+        failure.
+
+    """
+    rows = []
+    col_names = None
+
+    with open(filepath, encoding='utf-8') as fh:
+        for line in fh:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith('#'):
+                parts = stripped.lstrip('#').split()
+                if parts and col_names is None:
+                    col_names = parts
+                continue
+            try:
+                rows.append([float(v) for v in stripped.split()])
+            except ValueError:
+                continue
+
+    if not rows:
+        return None, None
+
+    n_cols = len(rows[0])
+    if col_names is None or len(col_names) != n_cols:
+        col_names = ['Time'] + [f'op{i}' for i in range(1, n_cols)]
+
+    # Separate the time column (first column if its name suggests a step index)
+    time_like = col_names[0].lower() in ('time', 't', 'step', 'cycle')
+    if time_like and n_cols > 1:
+        op_cols = col_names[1:]
+        op_data = {name: [row[i + 1] for row in rows]
+                   for i, name in enumerate(op_cols)}
+    else:
+        op_cols = col_names
+        op_data = {name: [row[i] for row in rows]
+                   for i, name in enumerate(op_cols)}
+
+    frames = pd.DataFrame(op_data, dtype=float)
+    return frames, op_cols
+
+
+def run_user_script(script_path):
+    # pylint: disable=too-many-return-statements,too-many-locals
+    """Execute a user script and capture order-parameter data from stdout.
+
+    The script must print its result to *stdout* in one of two formats:
+
+    * **JSON list of lists** – ``[[op1_frame0, op2_frame0, …], …]``
+      where each inner list contains the order-parameter values for one
+      simulation frame.
+    * **CSV table** – a comma- or whitespace-delimited table that
+      ``pandas.read_csv`` can parse (one row per frame, optional header).
+
+    The captured data are written to ``order.txt`` in the same directory
+    as *script_path* so that PyVisA can subsequently load the file.
+
+    Parameters
+    ----------
+    script_path : str
+        Absolute path to the Python script to execute.
+
+    Returns
+    -------
+    order_txt_path : str or None
+        Absolute path of the written ``order.txt`` file, or ``None`` on
+        failure.
+    error : str or None
+        Human-readable error description, or ``None`` on success.
+
+    """
+    script_dir = os.path.dirname(os.path.abspath(script_path))
+
+    try:
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True, text=True, timeout=600,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, 'Script timed out after 600 seconds.'
+    except OSError as exc:
+        return None, str(exc)
+
+    if result.returncode != 0:
+        return None, (
+            f'Script exited with code {result.returncode}:\n{result.stderr}'
+        )
+
+    stdout = result.stdout.strip()
+    if not stdout:
+        return None, 'Script produced no output on stdout.'
+
+    # Try JSON first, then fall back to CSV
+    rows = None
+    try:
+        data = json.loads(stdout)
+        if isinstance(data, list):
+            rows = [list(r) for r in data]
+    except json.JSONDecodeError:
+        pass
+
+    if rows is None:
+        try:
+            df_out = pd.read_csv(io.StringIO(stdout), header=None)
+            rows = df_out.values.tolist()
+        except Exception:  # pylint: disable=broad-except
+            return None, (
+                'Could not parse script output as JSON list of lists or CSV.'
+            )
+
+    if not rows:
+        return None, 'Script returned empty data.'
+
+    n_cols = len(rows[0]) if rows else 0
+    op_cols = ['Orderp'] + [f'cv{j}' for j in range(1, n_cols)]
+
+    order_txt_path = os.path.join(script_dir, 'order.txt')
+    with open(order_txt_path, 'w', encoding='utf-8') as fh:
+        header_cols = ' '.join(f'{c:>14}' for c in op_cols)
+        fh.write('Recalculated data\n')
+        fh.write(f'#{"Time":>12}  {header_cols}\n')
+        for i, row in enumerate(rows):
+            vals = '  '.join(f'{float(v):14.6f}' for v in row)
+            fh.write(f'{i:12d}  {vals}\n')
+
+    # Verify we can read it back
+    frames, _ = read_single_order_txt(order_txt_path)
+    if frames is None:
+        return None, 'order.txt was written but could not be re-parsed.'
+
+    _ = np.asarray(frames)  # trigger numpy import for early error detection
+    return order_txt_path, None
+
+
+def recalculate_all(  # pylint: disable=too-many-locals
+        runfolder, iofile, ensemble_names=None, data=None):
     """Recalculate order parameter and collective variables.
 
     This function performs post-processing by analyzing trajectories
@@ -321,9 +502,10 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
 
     # Create the composite order parameter (Avoid circular reference)
     for _, ens in trj_dict.items():
+        main_order = None
+        main_backed_up = False
         if ens.get('main_o') is not None:
             main_order = os.path.join(runfolder, ens['main_o'])
-            create_backup(main_order)
         for _, cycles in sorted(ens['traj'].items()):
             here = os.path.dirname(os.path.abspath(cycles['traj'][0]))
             new_o = os.path.join(here, 'order.txt')
@@ -340,7 +522,10 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
             write_order_parameters(local_order, results_dict,
                                    cycles.get('header', 'Recalculated data'))
 
-            if ens.get('main_o') is not None:
+            if main_order is not None:
+                if not main_backed_up:
+                    create_backup(main_order)
+                    main_backed_up = True
                 with open(local_order, 'rb') as src, \
                         open(main_order, 'ab') as dst:
                     dst.write(src.read())
