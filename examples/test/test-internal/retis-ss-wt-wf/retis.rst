@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS 1D SS-WT-WF test
+======================
 
 Simulation
 ----------
@@ -7,13 +7,13 @@ task = retis
 steps = 15
 interfaces = [-0.99, -0.7, -0.6, -0.5] 
 
-System 
+System
 ------
 units = reduced
 dimensions = 1
 temperature = 0.7
 
-Box 
+Box
 ---
 periodic = [False]
 

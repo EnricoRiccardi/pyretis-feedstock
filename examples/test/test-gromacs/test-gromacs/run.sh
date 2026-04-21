@@ -4,7 +4,7 @@ set -e
 # when X11 display sockets are in a broken state (e.g. full accept queue).
 export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 make clean
-gmx=${1:-gmx_d}
+gmx=${1:-gmx}
 echo "Using gmx=$gmx"
 replace="s/GMXCOMMAND/$gmx/g"
 sed -e "$replace" engine.rst > engine-run.rst

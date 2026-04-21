@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS 2D hysteresis, y direction
+================================
 
 Simulation
 ----------

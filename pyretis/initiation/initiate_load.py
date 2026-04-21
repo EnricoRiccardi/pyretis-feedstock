@@ -19,6 +19,7 @@ import shutil
 from pyretis.core.common import compute_weight
 from pyretis.core.path import Path, paste_paths
 from pyretis.core.pathensemble import generate_ensemble_name
+from pyretis.core.random_gen import create_random_generator
 from pyretis.initiation.initiate_kick import initiate_path_ensemble_kick
 from pyretis.inout.screen import REFERENCE
 from pyretis.inout.common import make_dirs, TRJ_FORMATS
@@ -28,6 +29,7 @@ from pyretis.inout.formats.path import PathIntFile, PathExtFile
 from pyretis.inout.formats.xyz import read_xyz_file, convert_snapshot
 from pyretis.inout.formats.gromacs import read_gromacs_generic
 from pyretis.inout.formats.cp2k import read_cp2k_box
+from pyretis.inout.restart import read_restart_file
 from pyretis.tools.recalculate_order import recalculate_order
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -94,10 +96,23 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
         logger.log(REFERENCE, '\n--- Loading path ensemble: %s ---', name)
         engine.exe_dir = path_ensemble.directory['generate']
         path = Path(simulation.rgen, maxlen=None)
+        # Avoid carrying around redundant coordinates in the path:
+        if system.particles is not None:
+            system.particles.pos = None
+            system.particles.vel = None
+            system.particles.force = None
         path.generated = ('re', 0, 0, 0)  # It remains for formatted loads.
         edir = os.path.join(
             folder,
             generate_ensemble_name(path_ensemble.ensemble_number))
+        restart_file = os.path.join(edir, 'ensemble.restart')
+        if os.path.isfile(restart_file):
+            restart_info = read_restart_file(restart_file)
+            if 'rgen' in restart_info:
+                ensemble['rgen'] = create_random_generator(
+                    restart_info['rgen'])
+                logger.info('Restored per-ensemble rgen from %s',
+                            restart_file)
         if not os.path.exists(os.path.join(edir, 'order.txt')):
             logger.info('No order.txt found in %s, attempting to generate.',
                         edir)
@@ -473,6 +488,11 @@ def _generate_traj_txt_from_ext(dirname, system, accepted=True):
                          if i[-4:] in TRJ_FORMATS])
 
     path = Path()
+    # Avoid carrying around redundant coordinates in the path:
+    if system.particles is not None:
+        system.particles.pos = None
+        system.particles.vel = None
+        system.particles.force = None
     # Load Sparse works also from multiple initial trajectories
     # both internally and externally
     if system.particles.particle_type == 'internal':

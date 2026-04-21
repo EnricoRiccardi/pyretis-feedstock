@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS GROMACS restart test
+==========================
 
 Simulation
 ----------
@@ -32,6 +32,8 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen-borg'
+seed = 0
 
 Initial-path
 ------------

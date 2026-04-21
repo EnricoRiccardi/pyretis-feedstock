@@ -1,4 +1,4 @@
-Extending PyRETIS with FORTRAN 
+Extending PyRETIS with FORTRAN
 ==============================
 
 This folder contains an example of extending PyRETIS with a new

@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS CP2K hydrogen
+===================
 
 Simulation
 ----------
