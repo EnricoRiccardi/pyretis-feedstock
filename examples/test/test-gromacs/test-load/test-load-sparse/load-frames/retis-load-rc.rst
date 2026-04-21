@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS GROMACS sparse load (frames)
+==================================
 
 Simulation
 ----------
@@ -7,6 +7,8 @@ task = retis
 steps = 5
 interfaces = [-0.305, -0.285, -0.280, -0.270]
 zero_left = -0.32
+rgen = 'rgen-borg'
+seed = 0
 
 System
 ------
@@ -31,6 +33,7 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen-borg'
 seed = 0
 
 Initial-path

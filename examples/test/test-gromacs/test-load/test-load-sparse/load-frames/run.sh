@@ -14,6 +14,11 @@ echo "$gmxversion"
 sed -e "$replace" retis-load-rc.rst > retis-load-rc-run.rst
 cp ../../../gmx/orderp.py .
 pyretisrun -i retis-load-rc-run.rst -p
+if [ -d results ]; then
+    python compare.py
+else
+    echo "Skipping compare.py: no results/ reference directory"
+fi
 rm retis-load-rc-run.rst
 rm orderp.py
 make clean

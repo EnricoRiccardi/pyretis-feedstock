@@ -1,11 +1,13 @@
-Retis 1D example
-================
+RETIS CP2K load test
+====================
 
 Simulation
 ----------
 task = retis
 steps = 5
 interfaces = [0.8, 0.85, 0.9, 0.95]
+rgen = 'rgen'
+seed = 0
 
 System
 ------
@@ -19,6 +21,7 @@ cp2k = cp2k
 input_path = cp2k_input
 timestep = 0.5
 subcycles = 5
+seed = 0
 
 TIS settings
 ------------
@@ -29,6 +32,7 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen'
 seed = 0
 
 Initial-path

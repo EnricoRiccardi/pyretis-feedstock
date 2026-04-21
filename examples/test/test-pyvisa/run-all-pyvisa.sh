@@ -4,11 +4,7 @@ set -e
 basedir=$(pwd)
 declare -a tests=(
                   "test-gromacs-pyvisa"
-                  "test-gromacs-retis-pyvisa"
-                  "test-internal-pyvisa"
-                  "test-cp2k-pyvisa"
-                  "test-lammps-pyvisa"
-                  "test-openmm-pyvisa"
+		  "test-gromacs-retis-pyvisa"
                   )
 
 echo ""

@@ -8,6 +8,8 @@ steps = 16
 interfaces = [-0.26, -0.24, -0.22, -0.20]
 zero_left = -0.28
 permeability = True
+rgen = 'rgen-borg'
+seed = 0
 
 System
 ------
@@ -33,6 +35,7 @@ allowmaxlength = False
 zero_momentum = False
 rescale_energy = False
 sigma_v = -1
+rgen = 'rgen-borg'
 seed = 0
 
 Initial-path

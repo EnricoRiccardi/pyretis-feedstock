@@ -1,11 +1,12 @@
-Retis 1D example
-================
+RETIS 1D explorer
+=================
 
 Simulation
 ----------
 task = explore
 steps = 16
 interfaces = [-1.9, -0.7, -0.5, 0.3]
+seed = 0
 
 System
 ------
