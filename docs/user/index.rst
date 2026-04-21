@@ -23,3 +23,4 @@ User Guide
     units.rst
     lammps.rst
     errors.rst
+    path-types-rejections.rst
