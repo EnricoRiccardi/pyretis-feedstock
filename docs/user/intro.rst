@@ -168,6 +168,8 @@ For TIS [1]_ we choose between two moves:
   time direction of a path. [1]_
 
 These two moves are illustrated in :numref:`fig_intro_retis_moves`.
+See :ref:`user-guide-path-move-types` for a complete list of all move
+type codes used in |pyretis| output and input files.
 
 
 
