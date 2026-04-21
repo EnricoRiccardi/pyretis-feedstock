@@ -82,6 +82,7 @@ examples/test/**/report/
 examples/test/**/compare.png
 examples/test/test-internal/time_spent.txt
 examples/test/test-gromacs/test-restart/test-continue/
+examples/test/test-internal/tis-multiple/results/*.html
 examples/test/test-internal/mdflux-restart/version*/compare.png
 # backup files
 *pyretis.log_*
