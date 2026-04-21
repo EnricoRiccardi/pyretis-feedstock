@@ -10,5 +10,5 @@ clean:
 	@rm -f tis-0*
 	@rm -rf 0*
 	@rm -rf report
-	@rm -f results/*.html
+	@find results -name "*.html" ! -name "tis-multiple_report.html" -delete
 	@rm -f EXIT
