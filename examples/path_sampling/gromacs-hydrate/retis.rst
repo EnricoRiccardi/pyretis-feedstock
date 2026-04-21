@@ -1,5 +1,5 @@
-Retis 1D example
-================
+RETIS GROMACS hydrate
+=====================
 
 Simulation
 ----------
