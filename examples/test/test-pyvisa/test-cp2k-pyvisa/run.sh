@@ -21,8 +21,9 @@ export MPLBACKEND=Agg
 
 CP2K_SRC="../../test-cp2k/test-retis-load"
 
-# Copy input files (rst + initial xyz frames)
+# Copy input files (rst + CP2K input + initial xyz frames)
 cp "${CP2K_SRC}/retis.rst" .
+cp -r "${CP2K_SRC}/cp2k_input" .
 cp -r "${CP2K_SRC}/pippo" .
 
 # ---------------------------------------------------------------------------

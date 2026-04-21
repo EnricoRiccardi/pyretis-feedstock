@@ -16,7 +16,8 @@ from pyretis.bin.pyvisa import (main,
                                 bye_pyvisa,
                                 pyvisa_visual)
 from pyretis.inout.common import TRJ_FORMATS
-from pyretis.pyvisa.common import find_data, recalculate_all, _get_trjs
+from pyretis.pyvisa.common import (find_data, recalculate_all, _get_trjs,
+                                   read_single_data_file, run_user_script)
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -169,6 +170,16 @@ class TestGetTrjs:
         (tmp_path / 'notes.md').touch()
         assert _get_trjs(str(tmp_path)) == []
 
+    def test_ignores_analysis_txt_files(self, tmp_path):
+        """_get_trjs excludes known analysis outputs from folder scans."""
+        (tmp_path / 'order.txt').touch()
+        (tmp_path / 'energy.txt').touch()
+        (tmp_path / 'pathensemble.txt').touch()
+        (tmp_path / 'error.txt').touch()
+        (tmp_path / 'traj.txt').touch()
+        result = _get_trjs(str(tmp_path))
+        assert result == [str(tmp_path / 'traj.txt')]
+
     def test_returns_absolute_paths(self, tmp_path):
         """_get_trjs entries are full paths, not just file names."""
         (tmp_path / 'run.xyz').touch()
@@ -282,6 +293,100 @@ class TestRecalculateAllExtended:
                 # should return False
                 result = recalculate_all(sim_dir, 'input.rst')
             assert result is False
+
+
+class TestSingleDataFileParsing:
+    """Standalone txt/csv tables can be loaded directly by PyVisA."""
+
+    def test_order_txt_header_keeps_first_column_plotable(self, tmp_path):
+        """Commented order.txt headers preserve the explicit time column."""
+        data_file = tmp_path / 'order.txt'
+        data_file.write_text(
+            'Recalculated data\n'
+            '### Time Orderp cv2\n'
+            '0 1.5 2.5\n'
+            '5 1.7 2.7\n',
+            encoding='utf-8',
+        )
+
+        frames, plot_cols, main_op = read_single_data_file(str(data_file))
+
+        assert plot_cols == ['Time', 'Orderp', 'cv2']
+        assert main_op == 'Orderp'
+        assert list(frames['Time']) == [0.0, 5.0]
+        assert list(frames['Orderp']) == [1.5, 1.7]
+
+    def test_csv_comment_header_accepts_other_comment_symbols(self, tmp_path):
+        """Header parsing tolerates comment prefixes beyond a single #."""
+        data_file = tmp_path / 'data.csv'
+        data_file.write_text(
+            ';; step, lambda, cv2\n'
+            '0.0, 2.0, 3.0\n'
+            '1.5, 2.5, 3.5\n',
+            encoding='utf-8',
+        )
+
+        frames, plot_cols, main_op = read_single_data_file(str(data_file))
+
+        assert plot_cols == ['step', 'lambda', 'cv2']
+        assert main_op == 'lambda'
+        assert list(frames['step']) == [0.0, 1.5]
+
+    def test_rst_labels_are_used_when_header_is_missing(self, tmp_path):
+        """Missing headers fall back to names from a provided .rst file."""
+        rst_file = tmp_path / 'named.rst'
+        rst_text = (tmp_path / 'dummy_input_source.rst')
+        shutil.copyfile(os.path.join(HERE, 'dummy_input.rst'), rst_text)
+        rst_text = rst_text.read_text(encoding='utf-8')
+        rst_text = rst_text.replace(
+            'class = Position\n', 'class = Position\nname = Lambda\n', 1)
+        rst_file.write_text(rst_text, encoding='utf-8')
+
+        data_file = tmp_path / 'data.txt'
+        data_file.write_text('0 1.25\n1 1.50\n', encoding='utf-8')
+
+        frames, plot_cols, main_op = read_single_data_file(
+            str(data_file), rst_file=str(rst_file))
+
+        assert plot_cols == ['time', 'Lambda']
+        assert main_op == 'Lambda'
+        assert list(frames['time']) == [0.0, 1.0]
+
+
+class TestRunUserScript:
+    """User scripts should run robustly for PyVisA single-file workflows."""
+
+    def test_run_user_script_accepts_whitespace_tables(self, tmp_path):
+        """Whitespace-delimited stdout is accepted, not only comma CSV."""
+        script = tmp_path / 'emit_table.py'
+        script.write_text(
+            "print('1.0 2.0\\n3.0 4.0')\n",
+            encoding='utf-8',
+        )
+
+        order_txt, error = run_user_script(str(script))
+
+        assert error is None
+        assert order_txt is not None
+        frames, plot_cols, main_op = read_single_data_file(order_txt)
+        assert plot_cols == ['Time', 'Orderp', 'cv1']
+        assert main_op == 'Orderp'
+        assert list(frames['Orderp']) == [1.0, 3.0]
+
+    def test_run_user_script_uses_script_directory_as_cwd(self, tmp_path):
+        """Relative file access inside the script works as expected."""
+        (tmp_path / 'data.txt').write_text('[[1.0], [2.0]]', encoding='utf-8')
+        script = tmp_path / 'emit_relative.py'
+        script.write_text(
+            "from pathlib import Path\n"
+            "print(Path('data.txt').read_text())\n",
+            encoding='utf-8',
+        )
+
+        order_txt, error = run_user_script(str(script))
+
+        assert error is None
+        assert order_txt is not None
 
 
 class TestMainRecalculateData:

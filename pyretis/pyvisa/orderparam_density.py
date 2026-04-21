@@ -805,7 +805,11 @@ class PathVisualize:
                                     'z': z_list}.items():
 
                             if criteria[xyz[0]] == 'time':
-                                xyz[1].extend(range(0, traj.info['length']))
+                                if 'time' in traj.frames.columns:
+                                    xyz[1].extend(traj.frames['time'])
+                                else:
+                                    xyz[1].extend(
+                                        range(0, traj.info['length']))
                             elif criteria[xyz[0]] == 'cycle':
                                 xyz[1].extend([traj.info['cycle']] *
                                               traj.info['length'])

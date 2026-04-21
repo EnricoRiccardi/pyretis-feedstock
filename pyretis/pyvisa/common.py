@@ -54,6 +54,7 @@ import io
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import timeit
@@ -75,7 +76,8 @@ logger.addHandler(logging.NullHandler())
 __all__ = ['find_rst_file', 'read_traj_txt_file',
            'shift_data', 'try_data_shift', 'where_from_to',
            'get_cv_names', 'recalculate_all', 'find_data',
-           'read_single_order_txt', 'run_user_script']
+           'read_single_data_file', 'read_single_order_txt',
+           'run_user_script']
 
 
 def try_data_shift(x, y, fixedx):
@@ -210,14 +212,19 @@ def find_rst_file(search_dir):
         Path and name of the .rst file.
 
     """
-    for _ in range(len(search_dir.split('/'))):
-        for file_name in os.listdir(search_dir):
-            if file_name.endswith('rst'):
-                os.chdir(search_dir)
-                return search_dir + '/' + file_name
-        os.chdir('../')
-        search_dir = os.getcwd()
-    return search_dir
+    current = os.path.abspath(search_dir)
+    while True:
+        try:
+            for file_name in sorted(os.listdir(current)):
+                if file_name.endswith('.rst'):
+                    return os.path.join(current, file_name)
+        except OSError:
+            return current
+
+        parent = os.path.dirname(current)
+        if parent == current:
+            return current
+        current = parent
 
 
 def where_from_to(trj, int_a, int_b=float('-inf')):
@@ -289,76 +296,154 @@ def get_cv_names(input_settings):
     return op_names
 
 
-def read_single_order_txt(filepath):
-    """Parse a standalone order parameter file into a DataFrame.
+def _split_table_fields(line):
+    """Split a text row using comma or whitespace delimiters."""
+    text = line.strip()
+    if not text:
+        return []
+    if ',' in text:
+        return [part.strip() for part in text.split(',') if part.strip()]
+    return text.split()
 
-    Reads a file that follows the PyRETIS ``order.txt`` convention::
 
-        Recalculated data
-        #     Time       Orderp
-                 0     2.819435
-                 1     2.184310
-                 ...
+def _parse_numeric_row(line):
+    """Return numeric values from a row, or ``None`` if parsing fails."""
+    fields = _split_table_fields(line)
+    if not fields:
+        return None
+    try:
+        return [float(value) for value in fields]
+    except ValueError:
+        return None
 
-    The first column (Time / step index) is recognised and excluded from
-    the returned order-parameter DataFrame so that the special ``'time'``
-    keyword in PyVisA can be used to reconstruct it on the fly.
-    All remaining columns are treated as independent order parameters /
-    collective variables.
+
+def _parse_header_candidate(line):
+    """Extract a possible header row and whether it was commented."""
+    stripped = line.strip()
+    if not stripped:
+        return None, False
+
+    numeric = _parse_numeric_row(stripped)
+    if numeric is not None:
+        return None, False
+
+    is_comment = re.match(r'^[^A-Za-z0-9.+-]+', stripped) is not None
+    cleaned = re.sub(r'^[^A-Za-z0-9]+', '', stripped)
+    fields = _split_table_fields(cleaned)
+    return (fields or None), is_comment
+
+
+def _labels_from_rst(rst_file, n_cols):
+    """Infer column labels from an optional PyRETIS ``.rst`` file."""
+    if not rst_file or not os.path.isfile(rst_file):
+        return None
+
+    try:
+        input_settings = settings.parse_settings_file(os.path.abspath(rst_file))
+    except (OSError, ValueError, KeyError):
+        return None
+
+    labels = get_cv_names(input_settings)
+    if n_cols == len(labels):
+        return labels
+    if n_cols > 1 and n_cols == len(labels) + 1:
+        return ['time'] + labels
+    return None
+
+
+def _select_header_labels(comment_headers, plain_headers, n_cols):
+    """Choose the most plausible header candidate for a text table."""
+    for candidates in (comment_headers, plain_headers):
+        for header in candidates:
+            if len(header) == n_cols:
+                return header
+            if n_cols > 1 and len(header) == n_cols - 1:
+                return ['time'] + header
+    return None
+
+
+def read_single_data_file(filepath, rst_file=None):
+    """Parse a standalone ``txt`` or ``csv`` data file for PyVisA.
+
+    The file may contain:
+
+    * numeric rows separated by whitespace or commas,
+    * an optional commented header line (``#``, ``##``, ``;``, ``//``, etc.),
+    * or an uncommented CSV header row.
+
+    When no usable header is present, column titles are inferred from
+    *rst_file* when possible. Otherwise, PyVisA falls back to
+    ``time``, ``op1``, ``op2``, ...
 
     Parameters
     ----------
     filepath : str
-        Path to the order parameter text file.
+        Path to the text/CSV file.
+    rst_file : str, optional
+        Optional PyRETIS ``.rst`` file used to infer missing labels.
 
     Returns
     -------
     frames : pandas.DataFrame or None
-        DataFrame whose columns are the order-parameter labels.
-        Returns ``None`` on parse failure.
-    op_cols : list of str or None
-        Ordered list of order-parameter column names, or ``None`` on
-        failure.
-
+        Parsed numeric data with every column preserved, including the
+        first time/step column when present.
+    plot_cols : list of str or None
+        Column labels available for plotting.
+    main_op_label : str or None
+        Best-effort main order-parameter label for interface/range logic.
     """
     rows = []
-    col_names = None
+    comment_headers = []
+    plain_headers = []
 
     with open(filepath, encoding='utf-8') as fh:
         for line in fh:
             stripped = line.strip()
             if not stripped:
                 continue
-            if stripped.startswith('#'):
-                parts = stripped.lstrip('#').split()
-                if parts and col_names is None:
-                    col_names = parts
+
+            numeric = _parse_numeric_row(stripped)
+            if numeric is not None:
+                rows.append(numeric)
                 continue
-            try:
-                rows.append([float(v) for v in stripped.split()])
-            except ValueError:
-                continue
+
+            header, is_comment = _parse_header_candidate(stripped)
+            if header:
+                if is_comment:
+                    comment_headers.append(header)
+                else:
+                    plain_headers.append(header)
 
     if not rows:
-        return None, None
+        return None, None, None
 
     n_cols = len(rows[0])
-    if col_names is None or len(col_names) != n_cols:
-        col_names = ['Time'] + [f'op{i}' for i in range(1, n_cols)]
+    rows = [row for row in rows if len(row) == n_cols]
+    if not rows:
+        return None, None, None
 
-    # Separate the time column (first column if its name suggests a step index)
+    col_names = _select_header_labels(comment_headers, plain_headers, n_cols)
+    if col_names is None:
+        col_names = _labels_from_rst(rst_file, n_cols)
+    if col_names is None:
+        if n_cols == 1:
+            col_names = ['op1']
+        else:
+            col_names = ['time'] + [f'op{i}' for i in range(1, n_cols)]
+
+    frames = pd.DataFrame(rows, columns=col_names, dtype=float)
     time_like = col_names[0].lower() in ('time', 't', 'step', 'cycle')
-    if time_like and n_cols > 1:
-        op_cols = col_names[1:]
-        op_data = {name: [row[i + 1] for row in rows]
-                   for i, name in enumerate(op_cols)}
+    if time_like and len(col_names) > 1:
+        main_op_label = col_names[1]
     else:
-        op_cols = col_names
-        op_data = {name: [row[i] for row in rows]
-                   for i, name in enumerate(op_cols)}
+        main_op_label = col_names[0]
+    return frames, col_names, main_op_label
 
-    frames = pd.DataFrame(op_data, dtype=float)
-    return frames, op_cols
+
+def read_single_order_txt(filepath, rst_file=None):
+    """Backward-compatible wrapper for standalone text-table loading."""
+    frames, plot_cols, _ = read_single_data_file(filepath, rst_file=rst_file)
+    return frames, plot_cols
 
 
 def run_user_script(script_path):
@@ -395,6 +480,7 @@ def run_user_script(script_path):
     try:
         result = subprocess.run(
             [sys.executable, script_path],
+            cwd=script_dir,
             capture_output=True, text=True, timeout=600,
             check=False,
         )
@@ -423,7 +509,12 @@ def run_user_script(script_path):
 
     if rows is None:
         try:
-            df_out = pd.read_csv(io.StringIO(stdout), header=None)
+            df_out = pd.read_csv(
+                io.StringIO(stdout),
+                header=None,
+                sep=r'\s*,\s*|\s+',
+                engine='python',
+            )
             rows = df_out.values.tolist()
         except Exception:  # pylint: disable=broad-except
             return None, (
@@ -446,7 +537,7 @@ def run_user_script(script_path):
             fh.write(f'{i:12d}  {vals}\n')
 
     # Verify we can read it back
-    frames, _ = read_single_order_txt(order_txt_path)
+    frames, _, _ = read_single_data_file(order_txt_path)
     if frames is None:
         return None, 'order.txt was written but could not be re-parsed.'
 
@@ -618,6 +709,14 @@ def _get_trjs(runfolder='.'):
         The trajectory files contained in the folder.
 
     """
-    trj = [i.name for i in os.scandir(runfolder) if i.name[-4:] in TRJ_FORMATS]
+    excluded = {'order.txt', 'energy.txt', 'pathensemble.txt', 'error.txt'}
+    trj = [
+        entry.name for entry in os.scandir(runfolder)
+        if (
+            entry.is_file()
+            and entry.name[-4:] in TRJ_FORMATS
+            and entry.name not in excluded
+        )
+    ]
     full_name_trj = [os.path.join(runfolder, i) for i in trj]
     return full_name_trj

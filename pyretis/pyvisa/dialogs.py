@@ -77,38 +77,25 @@ class LoadHdf5Dialog(QtWidgets.QDialog):  # pragma: no cover
 
 
 class LoadOrderParamDialog(QtWidgets.QDialog):  # pragma: no cover
-    """Dialog for selecting a standalone order parameter file.
-
-    The file is expected to follow the PyRETIS order.txt format::
-
-        Recalculated data
-        #     Time       Orderp
-                 0     2.819435
-                 1     2.184310
-                 ...
-
-    In this mode ensemble-specific controls are hidden and all PyVisA
-    visualizations operate on the single time series.
-    """
+    """Dialog for selecting a standalone ``txt`` or ``csv`` data file."""
 
     def __init__(self, parent=None):
         """Initialise the dialog and build the UI."""
         super().__init__(parent)
-        self.setWindowTitle('Load Order Parameter File')
+        self.setWindowTitle('Load Text / CSV Data')
         self.setMinimumWidth(560)
         self._path = None
+        self._rst_path = None
         self._setup_ui()
 
     def _setup_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(QtWidgets.QLabel(
-            'Select a standalone order parameter file (e.g. order.txt).\n\n'
-            'Expected format:\n'
-            '  Recalculated data\n'
-            '  #     Time       Orderp\n'
-            '           0     2.819435\n'
-            '           1     2.184310\n'
-            '  ...\n\n'
+            'Select a standalone data file (e.g. order.txt or a CSV table).\n\n'
+            'The first column can be plotted directly.\n'
+            'If the file has a commented header line, its titles are used.\n'
+            'If titles are missing, PyVisA can infer them from an optional\n'
+            'PyRETIS .rst file.\n\n'
             'Ensemble-specific controls will be hidden in this mode.\n'
             'All PyVisA visualisations and analyses remain available.'
         ))
@@ -121,6 +108,22 @@ class LoadOrderParamDialog(QtWidgets.QDialog):  # pragma: no cover
         row.addWidget(self._line)
         row.addWidget(btn)
         layout.addLayout(row)
+
+        layout.addSpacing(10)
+
+        layout.addWidget(QtWidgets.QLabel(
+            'Optional: choose a PyRETIS .rst file to infer missing titles.'
+        ))
+        row_rst = QtWidgets.QHBoxLayout()
+        self._line_rst = QtWidgets.QLineEdit()
+        self._line_rst.setReadOnly(True)
+        self._line_rst.setPlaceholderText('No .rst file selected…')
+        btn_rst = QtWidgets.QPushButton('Browse…')
+        btn_rst.clicked.connect(self._browse_rst)
+        row_rst.addWidget(self._line_rst)
+        row_rst.addWidget(btn_rst)
+        layout.addLayout(row_rst)
+
         buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel
         )
@@ -130,18 +133,27 @@ class LoadOrderParamDialog(QtWidgets.QDialog):  # pragma: no cover
 
     def _browse(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, 'Select order parameter file',
-            filter='Text files (*.txt);;All files (*.*)',
+            self, 'Select text / csv data file',
+            filter='Data files (*.txt *.csv);;All files (*.*)',
         )
         if path:
             self._path = path
             self._line.setText(path)
 
+    def _browse_rst(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Select PyRETIS input file',
+            filter='PyRETIS input (*.rst);;All files (*.*)',
+        )
+        if path:
+            self._rst_path = path
+            self._line_rst.setText(path)
+
     def _on_accept(self):
         if not self._path:
             QtWidgets.QMessageBox.warning(
                 self, 'No file selected',
-                'Please select an order parameter file.')
+                'Please select a text or csv data file.')
             return
         self.accept()
 
@@ -149,9 +161,13 @@ class LoadOrderParamDialog(QtWidgets.QDialog):  # pragma: no cover
         """Return the selected file path."""
         return self._path
 
+    def get_rst_path(self):
+        """Return the optional selected ``.rst`` path."""
+        return self._rst_path
+
 
 class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
-    """Dialog for recalculating order parameters from snapshot trajectories.
+    """Dialog for recalculating order parameters from configurations.
 
     Presents two mutually exclusive options:
 
@@ -171,10 +187,11 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
     def __init__(self, parent=None):
         """Initialise the dialog and build the UI."""
         super().__init__(parent)
-        self.setWindowTitle('Recalculate from Snapshot / Trajectory')
+        self.setWindowTitle('Recalculate from Configurations')
         self.setMinimumWidth(620)
         self._mode = None
         self._path = None
+        self._data_path = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -184,8 +201,8 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
         self._radio_rst = QtWidgets.QRadioButton(
             'A  –  PyRETIS input file (.rst)\n'
             '       Recalculate the order parameter using the PyRETIS\n'
-            '       simulation settings. PyVisA will scan the directory\n'
-            '       for trajectory files and rewrite order.txt.'
+            '       simulation settings. Optionally limit the recalculation\n'
+            '       to a single trajectory/configuration file or folder.'
         )
         self._radio_rst.setChecked(True)
         layout.addWidget(self._radio_rst)
@@ -199,6 +216,25 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
         row_rst.addWidget(self._line_rst)
         row_rst.addWidget(btn_rst)
         layout.addLayout(row_rst)
+
+        layout.addSpacing(8)
+
+        layout.addWidget(QtWidgets.QLabel(
+            'Optional: recalculate only for a specific file or folder.'
+        ))
+        row_data = QtWidgets.QHBoxLayout()
+        self._line_data = QtWidgets.QLineEdit()
+        self._line_data.setReadOnly(True)
+        self._line_data.setPlaceholderText(
+            'Leave empty to use the whole simulation directory…')
+        btn_data_file = QtWidgets.QPushButton('File…')
+        btn_data_file.clicked.connect(self._browse_data_file)
+        btn_data_dir = QtWidgets.QPushButton('Folder…')
+        btn_data_dir.clicked.connect(self._browse_data_dir)
+        row_data.addWidget(self._line_data)
+        row_data.addWidget(btn_data_file)
+        row_data.addWidget(btn_data_dir)
+        layout.addLayout(row_data)
 
         layout.addSpacing(14)
 
@@ -248,6 +284,24 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
             self._line_script.setText(path)
             self._radio_script.setChecked(True)
 
+    def _browse_data_file(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Select configuration / trajectory file',
+            filter='All files (*.*)',
+        )
+        if path:
+            self._data_path = path
+            self._line_data.setText(path)
+            self._radio_rst.setChecked(True)
+
+    def _browse_data_dir(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(
+            self, 'Select configuration / trajectory folder')
+        if path:
+            self._data_path = path
+            self._line_data.setText(path)
+            self._radio_rst.setChecked(True)
+
     def _on_accept(self):
         if self._radio_rst.isChecked():
             path = self._line_rst.text().strip()
@@ -257,6 +311,7 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
                 return
             self._mode = 'rst'
             self._path = path
+            self._data_path = self._line_data.text().strip() or None
         else:
             path = self._line_script.text().strip()
             if not path or not os.path.isfile(path):
@@ -265,8 +320,9 @@ class RecalculateDialog(QtWidgets.QDialog):  # pragma: no cover
                 return
             self._mode = 'script'
             self._path = path
+            self._data_path = None
         self.accept()
 
     def get_selection(self):
-        """Return (mode, filepath) where mode is 'rst' or 'script'."""
-        return self._mode, self._path
+        """Return (mode, filepath, data_path)."""
+        return self._mode, self._path, self._data_path

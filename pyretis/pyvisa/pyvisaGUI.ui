@@ -2443,12 +2443,12 @@
   </action>
   <action name="action_load_orderp">
    <property name="text">
-    <string>Load order parameter file...</string>
+    <string>Load txt / csv data...</string>
    </property>
   </action>
   <action name="action_load_recalc">
    <property name="text">
-    <string>Recalculate from snapshot...</string>
+    <string>Recalculate from configurations...</string>
    </property>
   </action>
   <action name="action_hdf5">
@@ -2498,7 +2498,7 @@
   </action>
   <action name="actionRecalculate_data">
    <property name="text">
-    <string>Recalculate data</string>
+    <string>Recalculate current data</string>
    </property>
   </action>
  </widget>

@@ -63,7 +63,7 @@ from pyretis.pyvisa.common import (read_traj_txt_file,
                                    try_data_shift,
                                    find_rst_file,
                                    get_cv_names,
-                                   read_single_order_txt,
+                                   read_single_data_file,
                                    run_user_script)
 from pyretis.pyvisa.dialogs import (LoadHdf5Dialog,
                                     LoadOrderParamDialog,
@@ -839,6 +839,39 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         ):
             widget.setVisible(visible)
 
+    def _set_current_recalculate_enabled(self, enabled):  # pragma: no cover
+        """Enable or disable recalculation of the currently loaded source."""
+        self.actionRecalculate_data.setEnabled(enabled)
+
+    @staticmethod
+    def _auto_detect_rst_for(path):
+        """Return a nearby ``.rst`` file when one can be inferred."""
+        search_dir = os.path.dirname(os.path.abspath(path))
+        rst_path = find_rst_file(search_dir)
+        if os.path.isfile(rst_path) and rst_path.endswith('.rst'):
+            return rst_path
+        return None
+
+    def _load_single_data_path(self, path, rst_path=None):  # pragma: no cover
+        """Load a standalone text/CSV data file into single-data mode."""
+        rst_path = rst_path or self._auto_detect_rst_for(path)
+        frames, plot_cols, main_op_label = read_single_data_file(
+            path, rst_file=rst_path)
+        if frames is None or not plot_cols:
+            self.display_message_box(
+                'Cannot load file',
+                f'Could not parse "{path}" as a text/csv data file.\n'
+                'Check the file format and try again.')
+            return False
+        self._single_orderp_mode = True
+        self.loaded_files = []
+        self.dataobject = None
+        self.toggle_buttons(False)
+        self._setup_single_orderp_object(
+            path, frames, plot_cols, main_op_label=main_op_label)
+        self._set_current_recalculate_enabled(False)
+        return True
+
     # ------------------------------------------------------------------
     # Menu action handlers for the three Load... sub-menu entries
     # ------------------------------------------------------------------
@@ -860,6 +893,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self.dataobject = None
             self.toggle_buttons(False)
             self.filenameLine.setText(path)
+            self._set_current_recalculate_enabled(False)
             self._load_data(path)
 
         if self.dataobject:
@@ -868,28 +902,18 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             _do()
 
     def _action_load_orderp(self):  # pragma: no cover
-        """Handle 'Load order parameter file...' menu action.
+        """Handle 'Load text / csv data file...' menu action.
 
-        Opens LoadOrderParamDialog, parses the selected file, and loads
-        it as a single-mode dataset with ensemble controls hidden.
+        Opens LoadOrderParamDialog, parses the selected text/CSV file,
+        and loads it as a single-mode dataset with ensemble controls hidden.
         """
         def _do():
             dialog = LoadOrderParamDialog(parent=self)
             if dialog.exec_() != QtWidgets.QDialog.Accepted:
                 return
             path = dialog.get_path()
-            frames, op_cols = read_single_order_txt(path)
-            if frames is None or not op_cols:
-                self.display_message_box(
-                    'Cannot load file',
-                    f'Could not parse "{path}" as an order parameter file.\n'
-                    'Check the format and try again.')
-                return
-            self._single_orderp_mode = True
-            self.loaded_files = []
-            self.dataobject = None
-            self.toggle_buttons(False)
-            self._setup_single_orderp_object(path, frames, op_cols)
+            rst_path = dialog.get_rst_path()
+            self._load_single_data_path(path, rst_path=rst_path)
 
         if self.dataobject:
             self._confirm_discard_and(_do)
@@ -897,7 +921,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             _do()
 
     def _action_load_recalc(self):  # pragma: no cover
-        """Handle 'Recalculate from snapshot...' menu action.
+        """Handle 'Recalculate from configurations...' menu action.
 
         Opens RecalculateDialog.  Depending on the selection:
 
@@ -911,10 +935,10 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             dialog = RecalculateDialog(parent=self)
             if dialog.exec_() != QtWidgets.QDialog.Accepted:
                 return
-            mode, path = dialog.get_selection()
+            mode, path, data_path = dialog.get_selection()
 
             if mode == 'rst':
-                self._recalc_from_rst(path)
+                self._recalc_from_rst(path, data_path=data_path)
             else:
                 self._recalc_from_script(path)
 
@@ -923,7 +947,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         else:
             _do()
 
-    def _recalc_from_rst(self, rst_path):  # pragma: no cover
+    def _recalc_from_rst(self, rst_path, data_path=None):  # pragma: no cover
         """Recalculate order parameters from a PyRETIS .rst file.
 
         Calls recalculate_all to (re)write order.txt files, then loads the
@@ -933,6 +957,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         ----------
         rst_path : str
             Absolute path to the PyRETIS simulation input (.rst) file.
+        data_path : str, optional
+            Optional file/folder to process instead of the full simulation.
         """
         basepath = os.path.dirname(os.path.abspath(rst_path))
         rst_name = os.path.basename(rst_path)
@@ -941,7 +967,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         QtWidgets.QApplication.setOverrideCursor(
             QtCore.Qt.WaitCursor)
         try:
-            ok = recalculate_all(basepath, rst_name)
+            ok = recalculate_all(basepath, rst_name, data=data_path)
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
@@ -952,6 +978,16 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                 '.rst file. Check that trajectory files are present.')
             return
 
+        if data_path:
+            result_dir = (
+                os.path.abspath(data_path)
+                if os.path.isdir(data_path)
+                else os.path.dirname(os.path.abspath(data_path))
+            )
+            order_txt_path = os.path.join(result_dir, 'order.txt')
+            self._load_single_data_path(order_txt_path, rst_path=rst_path)
+            return
+
         self._single_orderp_mode = False
         self._set_ensemble_widgets_visible(True)
         self.iofile = rst_path
@@ -960,6 +996,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.dataobject = None
         self.toggle_buttons(False)
         self.filenameLine.setText(rst_path)
+        self._set_current_recalculate_enabled(True)
         self._load_data_output()
 
     def _recalc_from_script(self, script_path):  # pragma: no cover
@@ -987,21 +1024,10 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self.display_message_box('Script execution failed', error)
             return
 
-        frames, op_cols = read_single_order_txt(order_txt_path)
-        if frames is None or not op_cols:
-            self.display_message_box(
-                'Cannot load result',
-                f'Script ran successfully but the resulting order.txt at\n'
-                f'"{order_txt_path}"\ncould not be parsed.')
-            return
+        self._load_single_data_path(order_txt_path)
 
-        self._single_orderp_mode = True
-        self.loaded_files = []
-        self.dataobject = None
-        self.toggle_buttons(False)
-        self._setup_single_orderp_object(order_txt_path, frames, op_cols)
-
-    def _setup_single_orderp_object(self, filepath, frames, op_cols):
+    def _setup_single_orderp_object(self, filepath, frames, op_cols,
+                                    main_op_label=None):
         # pragma: no cover
         """Create a SingleOrderObject and start its thread.
 
@@ -1013,9 +1039,11 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             Order parameter data (columns = op_cols).
         op_cols : list of str
             Column names for the order parameters.
+        main_op_label : str, optional
+            The main order-parameter label used for ranges/interfaces.
         """
         import numpy as np  # already in env; local import avoids top-level dep
-        first_col = op_cols[0]
+        first_col = main_op_label or op_cols[0]
         traj_info = {
             'ensemble_name': 'data',
             'cycle': 0,
@@ -1032,6 +1060,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             'ensemble_names': ['data'],
             'cycles': [0, 0],
             'op_labels': list(op_cols),
+            'plot_labels': list(op_cols),
+            'main_op_label': first_col,
+            'analysis_columns': len(frames.columns),
             'interfaces': [],
         }
         self.thread = QtCore.QThread()
@@ -1143,6 +1174,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.dataobject.moveToThread(self.thread)
         self.thread.start()
         # Empty string triggers get_data(); VisualObject uses self.pfiles
+        self._set_current_recalculate_enabled(True)
         self.start_cmd.emit('')
 
     def _save_sim_data_hdf5_z(self):  # pragma: no cover
@@ -1181,6 +1213,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         # Starting thread
         self.thread.start()
         # Starting QObject's walk_Dirs in thread
+        self._set_current_recalculate_enabled(True)
         self.start_cmd.emit('')
 
     def _load_data(self, pfile):  # pragma: no cover
@@ -1206,6 +1239,9 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.dataobject.moveToThread(self.thread)
         # Starting thread
         self.thread.start()
+        can_recalculate = not pfile.endswith(('.hdf5', '.zip')) and bool(
+            self.trajfile or self.loaded_files)
+        self._set_current_recalculate_enabled(can_recalculate)
         self.start_cmd.emit(pfile)
 
     def _reload(self):  # pragma: no cover
@@ -1218,6 +1254,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             self._single_orderp_mode = False
             self._set_ensemble_widgets_visible(True)
         self.toggle_buttons(False)
+        self._set_current_recalculate_enabled(False)
         self.statusbar.showMessage('Ready – use File > Load… to open data.')
 
     def _init_widget(self):
@@ -1289,6 +1326,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.store_trj_btn.clicked.connect(self.create_full_traj)
         # Recalculation
         self.actionRecalculate_data.triggered.connect(self.recalculate)
+        self.actionRecalculate_data.setEnabled(False)
         # Analysis tab
         self.clusterButton.clicked.connect(self.statistic_analysis)
         self.correlationBtn.clicked.connect(self.show_correlation)
@@ -1341,14 +1379,15 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         if not interfaces:
             # Single order.txt mode or simulation without interface data
             op_labels = self.dataobject.infos.get('op_labels', [])
-            if op_labels:
-                first = op_labels[0]
+            main_op = self.dataobject.infos.get(
+                'main_op_label', op_labels[0] if op_labels else None)
+            if main_op:
                 try:
                     traj_values = [
                         v
                         for ens in self.dataobject.traj_data.values()
                         for traj in ens.values()
-                        for v in traj.frames[first]
+                        for v in traj.frames[main_op]
                     ]
                     if traj_values:
                         self.minDataRange.setText(f'{min(traj_values):.4f}')
@@ -1489,7 +1528,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
         """
         # Adding items to ComboBoxes in VisualApp.Window
-        op_labels = self.dataobject.infos['op_labels']
+        op_labels = self.dataobject.infos.get(
+            'plot_labels', self.dataobject.infos['op_labels'])
         extra_labels = [] if self._single_orderp_mode else ENERGYLABELS
 
         self.firstOpComBox.clear()
@@ -1556,7 +1596,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self.statusbar.showMessage('re-Drawing figure...')
 
         remove_nan([x, y, z])
-        order_parameter = self.dataobject.infos['op_labels'][0]
+        order_parameter = self.dataobject.infos.get(
+            'main_op_label', self.dataobject.infos['op_labels'][0])
         l_x, l_y, l_z = len(x), len(y), len(z)
         fail = False
         if l_x == 0 or l_y == 0:
@@ -1914,7 +1955,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
             return
 
     def recalculate(self):  # pragma: no cover
-        """Recalculate OP and new CV's.
+        """Recalculate OP and CVs for the currently loaded source.
 
         Using the functions from recalculate_order.py this function
         will calculate new collective variables to the simulation while
@@ -1946,6 +1987,25 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                 return
             self.statusbar.showMessage('Recalculating...')
             self.refresh_data()
+            self.display_message_box('Recalculation complete!',
+                                     'The new data can now be visualized.')
+            return
+
+        # --- case 1b: a specific trajectory/configuration loaded from rst ---
+        if self.trajfile and self.iofile and self.iofile.endswith('.rst'):
+            runfolder = os.path.dirname(os.path.abspath(self.iofile))
+            rst_name = os.path.basename(self.iofile)
+            if not recalculate_all(runfolder, rst_name, data=self.trajfile):
+                self.display_message_box('Cannot perform re-calculations...',
+                                         'Invalid input.')
+                return
+            self.statusbar.showMessage('Recalculating...')
+            try:
+                self.thread.quit()
+                self.thread.wait()
+            except AttributeError:
+                pass
+            self._load_data(self.iofile)
             self.display_message_box('Recalculation complete!',
                                      'The new data can now be visualized.')
             return
@@ -2003,8 +2063,8 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
 
         self.display_message_box(
             'Cannot perform re-calculations...',
-            'Please load PyVisA with a .rst file or via the\n'
-            '"Load data" menu to select trajectory files / folders.')
+            'Please load recalculable data first, or use\n'
+            '"Load > Recalculate from configurations...".')
 
     def statistic_analysis(self):  # pragma: no cover
         """Perform statistical analysis on plotted data.
@@ -2057,7 +2117,7 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         self._get_settings()
         n_pca = self.nrOfpca.value()
         cmap = self.cmapComBox.currentText()
-        if n_pca > len(self.dataobject.infos['op_labels']) + 2:
+        if n_pca > self.dataobject._analysis_column_count():
             self.display_message_box('Cannot perform PCA, ',
                                      'The amount of components exceeds' +
                                      '\n' + 'the amount of features in'
@@ -2292,6 +2352,15 @@ class DataSlave(QtCore.QObject, PathVisualize):
         self.x, self.y, self.z = [], [], []
         self.data_origin = []
 
+    def _main_op_label(self):
+        """Return the main order-parameter label for the loaded data."""
+        return self.infos.get('main_op_label', self.infos['op_labels'][0])
+
+    def _analysis_column_count(self):
+        """Return the expected number of analysis columns."""
+        return self.infos.get(
+            'analysis_columns', len(self.infos['op_labels']) + 3)
+
     def load_all(self):
         """Load chosen data from all trajectories.
 
@@ -2362,7 +2431,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
         # If allowing data shift
         if self.settings['try_shift']:
             op1 = self.settings['op1']
-            fixedx = op1 == self.infos['op_labels'][0]
+            fixedx = op1 == self._main_op_label()
             x, y = try_data_shift(x, y, fixedx)
         self.return_coords.emit(x, y, z)
 
@@ -2420,7 +2489,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
 
         """
         frames = []
-        number_variables = len(self.infos['op_labels']) + 3
+        number_variables = self._analysis_column_count()
 
         selection_crit = {'stored': sim_settings['stored'],
                           'reactive': sim_settings['start_end'] == 'Reactive'}
@@ -2464,7 +2533,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
 
         """
         reactive_values = []
-        number_variables = len(self.infos['op_labels']) + 3
+        number_variables = self._analysis_column_count()
 
         selection_crit = {'stored': sim_settings['stored'],
                           'reactive': sim_settings['start_end'] == 'Reactive'}
@@ -2515,7 +2584,7 @@ class DataSlave(QtCore.QObject, PathVisualize):
         data = self.load_to_df(sim_settings)
         reactive = pd.DataFrame(np.array(self.load_reactive_unreactive(
             sim_settings), dtype=bool), columns=['reactive'])
-        op_label = self.infos['op_labels'][0]
+        op_label = self._main_op_label()
         tot_data = data.join(reactive)
         tot_data = tot_data[~(tot_data[op_label] <= min_op)]
         tot_data = tot_data[~(tot_data[op_label] >= max_op)]

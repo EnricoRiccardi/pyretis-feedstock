@@ -315,6 +315,36 @@ def test_dataslave_load_all_all_ensembles():
     assert len(data.data_origin) == 4
 
 
+def test_dataslave_load_all_uses_explicit_first_column_values():
+    """Single-file mode can plot the stored first column, not only 0..N."""
+    frames = pd.DataFrame({
+        'time': [0.5, 1.5],
+        'lambda': [2.0, 3.0],
+    })
+    info = {
+        'stored': False, 'reactive': True, 'status': 'ACC',
+        'length': len(frames.index), 'cycle': 0, 'ensemble_name': 'data',
+    }
+    data = DataSlave()
+    data.traj_data = {'data': {0: Trajectory(frames, info)}}
+    data.infos = {
+        'op_labels': ['time', 'lambda'],
+        'plot_labels': ['time', 'lambda'],
+        'main_op_label': 'lambda',
+        'ensemble_names': ['data'],
+        'analysis_columns': 2,
+    }
+    settings = dict(_LOAD_ALL_SETTINGS)
+    settings.update({'fol': 'data', 'op1': 'time', 'op2': 'lambda', 'E': 'None'})
+    data.settings = settings
+
+    x, y, z = data.load_all()
+
+    assert list(x) == [0.5, 1.5]
+    assert list(y) == [2.0, 3.0]
+    assert list(z) == [1, 1]
+
+
 # ---------------------------------------------------------------------------
 # DataSlave.load_to_df — additional branches
 # ---------------------------------------------------------------------------
