@@ -266,8 +266,10 @@ Keyword shooting_moves
 .. pyretis-keyword:: shooting_moves list of strings
 
    This list contains the flags that determines the shooting move to be
-   used for each ensemble. Usable moves are 'sh' for shooting, 'ss' for
-   Stone Skipping, 'wt' for Web Throwing and 'wf' for Wire Fencing.
+   used for each ensemble. Usable moves are ``'sh'`` for shooting, ``'ss'`` for
+   Stone Skipping, ``'wt'`` for Web Throwing and ``'wf'`` for Wire Fencing.
+   See :ref:`user-guide-path-move-types` for the full list of move type
+   codes and their descriptions.
 
    Default
        The default value is ``[]``.
