@@ -143,7 +143,7 @@ def _section(msg):
 
 
 def sparse_load_check_output_files(settings):
-    """Verify that expected sparse-load output files exist and are non-empty."""
+    """Verify expected sparse-load output files exist and are non-empty."""
     files = ('pathensemble.txt', 'order.txt', 'energy.txt')
     status = 0
     for i in range(len(settings['simulation']['interfaces'])):

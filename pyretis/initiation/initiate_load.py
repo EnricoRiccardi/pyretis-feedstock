@@ -39,7 +39,7 @@ __all__ = ['initiate_load', 'write_order_parameters', 'clean_path',
 
 
 def _order_value(order):
-    """Return the first order parameter component from scalar or vector data."""
+    """Return the first order parameter component (scalar or vector)."""
     try:
         return order[0]
     except (TypeError, IndexError):
