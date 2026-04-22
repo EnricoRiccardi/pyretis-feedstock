@@ -18,7 +18,7 @@ if [[ -n "${CLEAN_RM_PATHS:-}" ]]; then
 fi
 
 for pattern in "${find_files[@]}"; do
-    find . -name "${pattern}" -delete
+    find . -name "${pattern}" ! -path '*/results/*' -delete
 done
 
 for dirname in "${find_dirs[@]}"; do
