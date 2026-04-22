@@ -1,0 +1,5 @@
+compute 1 all property/atom x
+compute 2 all property/atom vx
+
+variable op_1 equal c_1[1]
+variable op_2 equal c_2[1]

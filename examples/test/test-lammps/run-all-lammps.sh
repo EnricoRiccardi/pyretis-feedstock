@@ -3,15 +3,34 @@ set -e
 
 export MPLBACKEND=Agg
 basedir=$(pwd)
-# declare -a tofix=(
-#                   "test-dump-phasepoint"
-#                   "test-integrate"
-#                   "test-propagate"
-#                   "test-modify-velocities"
-#                  )
-declare -a tests=(
-                  "lammps_testing"
-                  )
+
+declare -a full_tests=(
+                       "test-dump-phasepoint"
+                       "test-integrate"
+                       "test-modify-velocities"
+                       "test-propagate"
+                       "test-retis"
+                      )
+
+declare -a smoke_tests=(
+                        "test-integrate"
+                        "test-propagate"
+                        "test-retis"
+                       )
+
+case "${PYRETIS_LAMMPS_SCOPE:-full}" in
+    full)
+        tests=("${full_tests[@]}")
+        ;;
+    smoke)
+        tests=("${smoke_tests[@]}")
+        ;;
+    *)
+        echo "Unknown PYRETIS_LAMMPS_SCOPE=${PYRETIS_LAMMPS_SCOPE}" >&2
+        echo "Expected 'full' or 'smoke'." >&2
+        exit 2
+        ;;
+esac
 
 echo ""
 echo ""
@@ -19,7 +38,7 @@ echo ""
 echo ""
 echo ""
 echo "============================================================"
-echo "  LAMMPS TEST SUITE"
+echo "  LAMMPS TEST SUITE  (scope: ${PYRETIS_LAMMPS_SCOPE:-full})"
 echo "  Total tests: ${#tests[@]}"
 echo "  Started:     $(date '+%Y-%m-%d %H:%M:%S')"
 echo "============================================================"
@@ -34,7 +53,6 @@ do
     start=$(date +%s)
     cd "$i"
     ./run.sh
-    make clean
     cd "$basedir"
     end=$(date +%s)
     runtime=$((end-start))
@@ -50,4 +68,3 @@ echo "  LAMMPS TEST SUITE -- DONE"
 echo "  Finished:    $(date '+%Y-%m-%d %H:%M:%S')"
 echo "============================================================"
 echo ""
-
