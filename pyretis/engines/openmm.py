@@ -49,7 +49,7 @@ def make_pyretis_system(settings):
     box = state.getPeriodicBoxVectors(asNumpy=True).T
     box = create_box(cell=box_matrix_to_list(box),
                      periodic=[True, True, True])
-    system = System(units='gromacs', box=box,
+    system = System(units='openmm', box=box,
                     temperature=simulation.integrator.getTemperature())
     system.particles = Particles(system.get_dim())
     pos = state.getPositions(asNumpy=True)
@@ -81,6 +81,26 @@ class OpenMMEngine(EngineBase):
     """
 
     engine_type = 'openmm'
+    default_units = 'openmm'
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for the OpenMM engine.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings. This argument
+            is ignored for the OpenMM engine.
+
+        Returns
+        -------
+        out : string
+            The default unit system for the OpenMM engine.
+
+        """
+        _ = settings
+        return 'openmm'
 
     def __init__(self, openmm_simulation, subcycles=1, openmm_module=None):
         """Set up the OpenMM Engine.
@@ -269,7 +289,7 @@ class OpenMMEngine(EngineBase):
             self.modify_velocities(ensemble, vel_settings)
             # Update order parameter in case it is velocity dependent:
             curr = self.calculate_order(ensemble)[0]
-            previous.order = curr
+            previous.order = [curr]
             # Store modified velocities:
             previous.particles.set_vel(system.particles.get_vel())
             # Integrate forward one step:
