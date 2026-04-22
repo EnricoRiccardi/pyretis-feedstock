@@ -1,7 +1,3 @@
-.PHONY: clean
+CLEAN_RM_PATHS := thermo.txt
 
-clean:
-	@find -name \*.pyc -delete
-	@find -name \*.pyo -delete
-	@find -name __pycache__ -delete
-	@rm -f thermo.txt
+include $(shell git rev-parse --show-toplevel)/examples/test/common-clean.mk

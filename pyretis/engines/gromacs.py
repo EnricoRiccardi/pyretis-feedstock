@@ -67,6 +67,27 @@ class GromacsEngine(ExternalMDEngine):
         DD is executed or not.
     """
 
+    default_units = 'gromacs'
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for the GROMACS engine.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings. This argument
+            is ignored for the GROMACS engine.
+
+        Returns
+        -------
+        out : string
+            The default unit system for the GROMACS engine.
+
+        """
+        _ = settings
+        return 'gromacs'
+
     def __init__(self, gmx, mdrun, input_path, timestep, subcycles,
                  exe_path=os.path.abspath('.'),
                  maxwarn=0, gmx_format='gro',

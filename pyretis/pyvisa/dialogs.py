@@ -90,15 +90,22 @@ class LoadOrderParamDialog(QtWidgets.QDialog):  # pragma: no cover
 
     def _setup_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(QtWidgets.QLabel(
-            'Select a standalone data file (e.g. order.txt or a CSV table).\n\n'
-            'The first column can be plotted directly.\n'
-            'If the file has a commented header line, its titles are used.\n'
-            'If titles are missing, PyVisA can infer them from an optional\n'
-            'PyRETIS .rst file.\n\n'
-            'Ensemble-specific controls will be hidden in this mode.\n'
-            'All PyVisA visualisations and analyses remain available.'
-        ))
+        layout.addWidget(
+            QtWidgets.QLabel(
+                'Select a standalone data file '
+                '(e.g. order.txt or a CSV table).\n\n'
+                'The first column can be plotted directly.\n'
+                'If the file has a commented header line, its titles '
+                'are used.\n'
+                'If titles are missing, PyVisA can infer them from an '
+                'optional\n'
+                'PyRETIS .rst file.\n\n'
+                'Ensemble-specific controls will be hidden in this '
+                'mode.\n'
+                'All PyVisA visualisations and analyses remain '
+                'available.'
+            )
+        )
         row = QtWidgets.QHBoxLayout()
         self._line = QtWidgets.QLineEdit()
         self._line.setReadOnly(True)

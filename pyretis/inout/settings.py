@@ -70,7 +70,7 @@ SECTIONS['system'] = {
     'dimensions': 3,
     'input_file': None,
     'temperature': 1.0,
-    'units': 'lj',
+    'units': None,
 }
 
 SECTIONS['unit-system'] = {
@@ -751,6 +751,31 @@ def add_specific_default_settings(settings):
     else:
         settings['particles']['type'] = 'internal'
         settings['engine']['type'] = settings['engine'].get('type', 'internal')
+
+    if 'units' not in settings['system']:
+        _set_default_units_from_engine(settings)
+
+
+def _set_default_units_from_engine(settings):
+    """Set default system units from the selected engine.
+
+    Parameters
+    ----------
+    settings : dict
+        The simulation settings.
+
+    Raises
+    ------
+    ValueError
+        If the engine-specific unit resolution fails.
+
+    """
+    # pylint: disable=import-outside-toplevel
+    from pyretis.engines import get_default_units
+
+    unit = get_default_units(settings)
+    if unit is not None:
+        settings['system']['units'] = unit
 
 
 def _apply_restart_overrides(new_set, settings):

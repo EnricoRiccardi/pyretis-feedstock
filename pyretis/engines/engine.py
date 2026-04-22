@@ -48,6 +48,7 @@ class EngineBase(metaclass=ABCMeta):
 
     engine_type = None
     needs_order = True
+    default_units = None
 
     def __init__(self, description):
         """Just add the description."""
@@ -185,6 +186,27 @@ class EngineBase(metaclass=ABCMeta):
     def clean_up(self):
         """Perform clean up after using the engine."""
         return
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for this engine.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings. Engines may
+            override this method and use the settings to resolve their
+            default units dynamically.
+
+        Returns
+        -------
+        out : string or None
+            The default unit system for the engine, or ``None`` if the
+            engine does not define one.
+
+        """
+        _ = settings
+        return cls.default_units
 
     @staticmethod
     def snapshot_to_system(system, snapshot):

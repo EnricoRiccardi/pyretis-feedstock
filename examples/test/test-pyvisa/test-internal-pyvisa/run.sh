@@ -21,7 +21,6 @@ RETIS_SRC="../../test-internal/retis"
 # ---------------------------------------------------------------------------
 cp "${RETIS_SRC}/retis.rst" .
 cp "${RETIS_SRC}/initial.xyz" .
-cp "${RETIS_SRC}/Makefile" .
 
 pyretisrun -i retis.rst -p
 
@@ -83,5 +82,5 @@ echo "[pyvisa] Test 5 PASSED"
 # ---------------------------------------------------------------------------
 # Cleanup
 # ---------------------------------------------------------------------------
-make clean
+make -f "${RETIS_SRC}/Makefile" clean
 rm -f pyvisa_compressed_data.hdf5.zip

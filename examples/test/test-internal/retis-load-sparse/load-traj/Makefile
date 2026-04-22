@@ -1,12 +1,4 @@
-.PHONY: clean
+CLEAN_FIND_FILES := *.restart *.log
+CLEAN_RM_PATHS := out.rst* 0* *_0* pippo/0*
 
-clean:
-	@find -name \*.pyc -delete
-	@find -name \*.pyo -delete
-	@find -name __pycache__ -delete
-	@find -name \*.restart -delete
-	@find -name \*.log -delete
-	@rm -f out.rst*
-	@rm -rf 0*
-	@rm -rf *_0*
-	@rm -rf pippo/0*
+include $(shell git rev-parse --show-toplevel)/examples/test/common-clean.mk

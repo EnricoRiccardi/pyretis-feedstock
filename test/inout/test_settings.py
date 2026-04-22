@@ -153,6 +153,55 @@ class TestKeywordParsing:
             assert key in settings
             assert correct[key] == settings[key]
 
+    def test_parse_file_without_units_uses_engine_default(self):
+        """Test that units are filled from the selected engine."""
+        settings_txt = """
+Simulation settings
+-------------------
+task = md
+steps = 10
+
+Engine settings
+---------------
+class = velocityverlet
+timestep = 0.002
+"""
+        with tempfile.NamedTemporaryFile('w', suffix='.rst',
+                                         encoding='utf-8',
+                                         delete=False) as handle:
+            handle.write(settings_txt.strip())
+            filename = handle.name
+        try:
+            settings = parse_settings_file(filename)
+        finally:
+            os.unlink(filename)
+        assert settings['system']['units'] == 'lj'
+
+    def test_parse_file_without_units_uses_openmm_default(self):
+        """Test that OpenMM supplies its own default units."""
+        settings_txt = """
+Simulation settings
+-------------------
+task = md
+steps = 10
+
+Engine settings
+---------------
+class = openmm
+openmm_simulation = sim
+subcycles = 1
+"""
+        with tempfile.NamedTemporaryFile('w', suffix='.rst',
+                                         encoding='utf-8',
+                                         delete=False) as handle:
+            handle.write(settings_txt.strip())
+            filename = handle.name
+        try:
+            settings = parse_settings_file(filename)
+        finally:
+            os.unlink(filename)
+        assert settings['system']['units'] == 'openmm'
+
     def test_keyword_format(self):
         """Test different forms of some simple keywords."""
         test_data = [
@@ -978,8 +1027,10 @@ class TestAddDefault:
         add_default_settings(settings)
 
         settings['simulation']['task'] = 'tis'
+        settings['engine']['class'] = 'velocityverlet'
         add_specific_default_settings(settings)
         assert settings['system']['temperature'] == 1
+        assert settings['system']['units'] == 'lj'
         assert not settings['simulation']['flux']
         assert not settings['simulation']['zero_ensemble']
 
@@ -994,10 +1045,12 @@ class TestAddDefault:
         assert settings['engine']['type'] == 'internal'
 
         settings['engine']['class'] = 'cp2k'
+        del settings['system']['units']
         settings['engine']['exe_path'] += '/test/inout'
         add_specific_default_settings(settings)
         assert settings['particles']['type'] == 'external'
         assert settings['engine']['type'] == 'external'
+        assert settings['system']['units'] == 'cp2k'
         input_path = settings['engine'].get('input_path', '.')
         add_specific_default_settings(settings)
         assert settings['engine']['input_files']['conf'][-11:] == 'initial.xyz'
@@ -1027,6 +1080,17 @@ class TestAddDefault:
                 assert 'And temperature in input' in caplog.text
 
         settings = {}
+        add_default_settings(settings)
+        settings['simulation']['task'] = 'md'
+        settings['simulation']['exe_path'] = os.path.join(
+            os.path.abspath('.'), 'test/engines'
+        )
+        settings['engine']['class'] = 'lammps'
+        settings['engine']['input_path'] = 'lammps_input'
+        add_specific_default_settings(settings)
+        assert settings['system']['units'] == 'real'
+
+        settings = {}
         settings['simulation'] = {'covid': 'kill_us_all'}
         settings['initial-path'] = {'method': 'restart'}
         add_default_settings(settings)
@@ -1035,6 +1099,7 @@ class TestAddDefault:
         add_specific_default_settings(settings)
         assert settings['particles']['type'] == 'external'
         assert settings['engine']['type'] == 'external'
+        assert settings['system']['units'] == 'gromacs'
         input_path = settings['engine'].get('input_path', '.')
         assert settings['engine']['input_files']['topology'] == 'TrainToRide'
         assert settings['engine']['input_files']['conf'][-8:] == 'conf.gro'

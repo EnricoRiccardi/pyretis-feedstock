@@ -357,6 +357,27 @@ class CP2KEngine(ExternalMDEngine):
 
     """
 
+    default_units = 'cp2k'
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for the CP2K engine.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings. This argument
+            is ignored for the CP2K engine.
+
+        Returns
+        -------
+        out : string
+            The default unit system for the CP2K engine.
+
+        """
+        _ = settings
+        return 'cp2k'
+
     def __init__(self, cp2k, input_path, timestep, subcycles,
                  extra_files=None, exe_path=os.path.abspath('.'), seed=0,
                  conf='initial.xyz', template='cp2k.inp'):

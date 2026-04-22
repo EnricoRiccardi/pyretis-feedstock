@@ -307,3 +307,18 @@ def test_units_from_settings(caplog):
         del settings['unit-system'][i]
         with pytest.raises(ValueError):
             units_from_settings(settings)
+
+
+def test_units_from_settings_engine_default(caplog):
+    """Test that engine defaults can supply the unit system."""
+    settings = {'system': {}, 'engine': {'class': 'openmm'}}
+    with caplog.at_level(logging.INFO):
+        msg = units_from_settings(settings)
+    assert (
+        msg
+        == 'Created units: "openmm" '
+        '(default for engine "OpenMMEngine").'
+    )
+    assert settings['system']['units'] == 'openmm'
+    assert 'selected as default for engine "OpenMMEngine"' in caplog.text
+    assert 'Units used in calculations:' in caplog.text

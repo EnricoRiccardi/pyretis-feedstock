@@ -267,6 +267,7 @@ Examples
 
 """
 import logging
+import math
 from collections import deque
 import numpy as np
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -306,6 +307,7 @@ CONSTANTS['kB']['metal'] = CONSTANTS['kB']['eV/K']
 CONSTANTS['kB']['au'] = 1.0
 CONSTANTS['kB']['electron'] = 3.16681534e-6
 CONSTANTS['kB']['gromacs'] = CONSTANTS['kB']['kJ/mol/K']
+CONSTANTS['kB']['openmm'] = CONSTANTS['kB']['kJ/mol/K']
 CONSTANTS['kB']['cp2k'] = 3.16681534e-6  # hartree
 
 
@@ -392,7 +394,7 @@ for i in DIMENSIONS:
 
 # Definitions for systems of units:
 UNIT_SYSTEMS = {'lj': {}, 'real': {}, 'metal': {}, 'au': {},
-                'electron': {}, 'si': {}, 'gromacs': {},
+                'electron': {}, 'si': {}, 'gromacs': {}, 'openmm': {},
                 'reduced': {}}
 """A dictionary containing basic information about the different
 unit systems. E.g. `UNIT_SYSTEMS['lj']['length']` contains the length
@@ -429,6 +431,10 @@ UNIT_SYSTEMS['gromacs'] = {'length': (1.0, 'nm'),
                            'energy': (1.0, 'kJ/mol'),
                            'mass': (1.0, 'g/mol'),
                            'charge': 'e'}
+UNIT_SYSTEMS['openmm'] = {'length': (1.0, 'nm'),
+                          'energy': (1.0, 'kJ/mol'),
+                          'mass': (1.0, 'g/mol'),
+                          'charge': 'e'}
 UNIT_SYSTEMS['cp2k'] = {'length': (1.0, 'A'),
                         'energy': (1.0, 'hartree'),
                         'mass': (9.10938356e-31, 'kg'),
@@ -956,13 +962,136 @@ def create_conversion_factors(unit, length=None, energy=None, mass=None,
     generate_conversion_factors(unit, length, energy, mass, charge=charge)
 
 
+def _format_unit_value(value):
+    """Format a unit definition value for logging."""
+    if isinstance(value, tuple):
+        return f'{value[0]:g} {value[1]}'
+    return str(value)
+
+
+def _pick_display_unit(dimension, unit):
+    """Pick a readable base unit for displaying conversions."""
+    best = None
+    best_score = None
+    for base_unit in UNITS[dimension]:
+        value = CONVERT[dimension].get((unit, base_unit))
+        if value is None or value <= 0.0:
+            continue
+        score = abs(math.log10(value))
+        if best_score is None or score < best_score:
+            best_score = score
+            best = (value, base_unit)
+    return best
+
+
+def _default_units_from_engine(settings):
+    """Return the default unit system defined by the selected engine.
+
+    Parameters
+    ----------
+    settings : dict
+        The simulation settings used to resolve the engine and its
+        default unit system.
+
+    Returns
+    -------
+    out[0] : string
+        The default unit system.
+    out[1] : string
+        The resolved engine class name.
+
+    Raises
+    ------
+    KeyError
+        If the selected engine does not define default units.
+    ValueError
+        If the resolved engine returns a unit definition of the wrong
+        type.
+
+    """
+    # pylint: disable=import-outside-toplevel
+    from pyretis.engines import get_default_units, resolve_engine_class
+
+    engine_class = resolve_engine_class(settings)
+    engine_name = settings.get('engine', {}).get('class')
+    if engine_class is not None:
+        engine_name = engine_class.__name__
+    unit = get_default_units(settings)
+    if unit is None:
+        raise KeyError('units')
+    if not isinstance(unit, str):
+        msg = (
+            f'Expected default units from engine "{engine_name}" to be a '
+            f'string, but got {type(unit).__name__}.'
+        )
+        raise ValueError(msg)
+    return unit.lower().strip(), engine_name
+
+
+def _log_units_details(settings, resolved):
+    """Write detailed unit information to the log file.
+
+    Parameters
+    ----------
+    settings : dict
+        The simulation settings.
+    resolved : dict
+        Information about the resolved unit system.
+
+    Raises
+    ------
+    ValueError
+        If the unit source marker is unknown.
+
+    """
+    unit = resolved['unit']
+    source = resolved['source']
+    if source == 'system':
+        logger.info('Unit system "%s" taken from system.units.', unit)
+    elif source == 'unit-system':
+        logger.info('Unit system "%s" taken from unit-system.name.', unit)
+    elif source == 'engine':
+        logger.info('Unit system "%s" selected as default for engine "%s".',
+                    unit, resolved.get('engine'))
+    else:
+        raise ValueError(f'Unknown unit source "{source}"')
+
+    if ('unit-system' in settings and
+            settings['unit-system'].get('name', '').lower() == unit):
+        definitions = {
+            key: settings['unit-system'][key]
+            for key in ('length', 'energy', 'mass', 'charge')
+            if key in settings['unit-system']
+        }
+    else:
+        definitions = UNIT_SYSTEMS.get(unit, {})
+
+    time_unit = _pick_display_unit('time', unit)
+    if time_unit is None:
+        time_info = 'unknown'
+    else:
+        time_info = f'{time_unit[0]:g} {time_unit[1]}'
+
+    logger.info(
+        'Units used in calculations: length=%s, energy=%s, mass=%s, '
+        'charge=%s, time=%s, temperature=K.',
+        _format_unit_value(definitions.get('length', 'unknown')),
+        _format_unit_value(definitions.get('energy', 'unknown')),
+        _format_unit_value(definitions.get('mass', 'unknown')),
+        _format_unit_value(definitions.get('charge', 'unknown')),
+        time_info,
+    )
+
+
 def units_from_settings(settings):
     """Set up units from given input settings.
 
     Parameters
     ----------
     settings : dict
-        A dict defining the units.
+        A dict defining the units. The unit system is taken from
+        ``system.units`` when explicitly given. Otherwise, the selected
+        engine must define default units.
 
     Returns
     -------
@@ -971,8 +1100,34 @@ def units_from_settings(settings):
         created. This can be used for printing out some info to
         the user.
 
+    Raises
+    ------
+    KeyError
+        If the ``system`` section is missing, or if no unit system can
+        be determined.
+    ValueError
+        If the provided unit-system settings are inconsistent.
+
     """
-    unit = settings['system']['units'].lower().strip()
+    try:
+        system_settings = settings['system']
+    except KeyError as err:
+        raise KeyError('system') from err
+
+    resolved = {'source': 'system'}
+    if 'units' in system_settings and system_settings['units'] is not None:
+        unit = system_settings['units'].lower().strip()
+    elif 'unit-system' in settings and settings['unit-system'].get('name'):
+        unit = settings['unit-system']['name'].lower().strip()
+        system_settings['units'] = unit
+        resolved['source'] = 'unit-system'
+    else:
+        unit, engine_name = _default_units_from_engine(settings)
+        unit = unit.lower().strip()
+        system_settings['units'] = unit
+        resolved = {'source': 'engine', 'engine': engine_name}
+
+    resolved['unit'] = unit
     if 'unit-system' in settings:
         try:
             unit2 = settings['unit-system']['name'].lower()
@@ -999,6 +1154,12 @@ def units_from_settings(settings):
         logger.debug('Creating units: "%s".', unit)
         create_conversion_factors(unit)
         msg = f'Created units: "{unit}".'
+        if resolved['source'] == 'engine':
+            msg = (
+                f'Created units: "{unit}" '
+                f'(default for engine "{resolved.get("engine")}").'
+            )
+    _log_units_details(settings, resolved)
     return msg
 
 

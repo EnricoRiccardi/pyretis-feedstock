@@ -1,5 +1,5 @@
-RETIS test for GROMACS
-======================
+REPPTIS test for GROMACS
+========================
 
 Simulation
 ----------
@@ -42,7 +42,6 @@ Initial-path
 ------------
 method = load
 load_folder = load
-#load_and_kick = True
 
 RETIS settings
 --------------

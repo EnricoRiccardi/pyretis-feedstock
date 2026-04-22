@@ -1,20 +1,4 @@
-.PHONY: clean
+CLEAN_FIND_FILES := EXIT *.txt out.rst* *.restart *.state *.log* mdout.mdp *.tpr
+CLEAN_RM_PATHS := run-5/0* run-10/0* run-restart/0* gromacs_input/conf.gro gromacs_input/pyretis.mdp
 
-clean:
-	@find -name \*.pyc -delete
-	@find -name \*.pyo -delete
-	@find -name __pycache__ -delete
-	@find -name EXIT -delete
-	@find -name \*.txt -delete
-	@find -name out.rst\* -delete
-	@find -name \*.restart -delete
-	@find -name \*.state -delete
-	@find -name \*.log* -delete
-	@find -name mdout.mdp -delete
-	@find -name \*.tpr -delete
-	@rm -rf run-5/0*
-	@rm -rf run-10/0*
-	@rm -rf run-restart/0*
-	@rm -rf gromacs_input/conf.gro
-	@rm -rf gromacs_input/pyretis.mdp
-    
+include $(shell git rev-parse --show-toplevel)/examples/test/common-clean.mk

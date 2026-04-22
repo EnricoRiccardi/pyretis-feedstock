@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
-cp ../Makefile .
-make clean
+CLEAN_MAKEFILE=../Makefile
+make -f "${CLEAN_MAKEFILE}" clean
 cd run-full
 pyretisrun -i md-full.rst #-p
 cd ..
@@ -13,6 +13,5 @@ pyretisrun -i md-10-100.rst # -p
 cd ..
 cp ../compare.py .
 python compare.py
-make clean
+make -f "${CLEAN_MAKEFILE}" clean
 rm compare.py
-rm Makefile

@@ -416,9 +416,8 @@ def prepare_system(settings):
     if settings.get('system', {}).get('obj', False):
         return settings['system']['obj']
 
-    logtxt = 'Initializing unit system.'
+    logtxt = units_from_settings(settings)
     logger.progress(logtxt)
-    units_from_settings(settings)
 
     logtxt = 'Creating system from settings.'
     logger.progress(logtxt)
@@ -449,9 +448,6 @@ def prepare_engine(settings):
     """
     if settings.get('engine', {}).get('obj', False):
         return settings['engine']['obj']
-
-    logtxt = units_from_settings(settings)
-    logger.progress(logtxt)
 
     check_engine(settings)
     engine = create_engine(settings)

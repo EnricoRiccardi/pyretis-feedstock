@@ -339,7 +339,9 @@ def _labels_from_rst(rst_file, n_cols):
         return None
 
     try:
-        input_settings = settings.parse_settings_file(os.path.abspath(rst_file))
+        input_settings = settings.parse_settings_file(
+            os.path.abspath(rst_file)
+        )
     except (OSError, ValueError, KeyError):
         return None
 

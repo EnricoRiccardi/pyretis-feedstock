@@ -101,6 +101,14 @@ class TestOpenMMEngine:
         settings['engine']['type'] = 'OpenMM'
         create_system(settings)
 
+    def test_make_pyretis_system_uses_openmm_units(self):
+        """Test that the OpenMM system uses the OpenMM unit label."""
+        assert self.system.units == 'openmm'
+
+    def test_openmm_default_units(self):
+        """Test that the OpenMM engine reports its default units."""
+        assert OpenMMEngine.get_default_units(self.settings) == 'openmm'
+
     def test_integration_step(self):
         """Test the integration step of the OpenMMEngine."""
         eng = OpenMMEngine(openmm_simulation=self.sim)

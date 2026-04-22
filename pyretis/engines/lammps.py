@@ -426,6 +426,53 @@ class LAMMPSEngine(ExternalMDEngine):
     """
 
     needs_order = False
+    default_units = None
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for the LAMMPS engine.
+
+        This is read from the ``units`` command in the LAMMPS input
+        template. If the template can not be inspected, or if it does
+        not define ``units``, an exception is raised.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings.
+
+        Returns
+        -------
+        out : string
+            The default unit system for the LAMMPS engine.
+
+        Raises
+        ------
+        ValueError
+            If the LAMMPS input template can not be read, or if no
+            ``units`` command is found in that file.
+
+        """
+        if settings is None:
+            return super().get_default_units(settings)
+
+        engine_settings = settings.get('engine', settings)
+        input_path = engine_settings.get('input_path', '.')
+        exe_path = engine_settings.get('exe_path')
+        if 'simulation' in settings:
+            exe_path = settings['simulation'].get('exe_path', exe_path)
+        if exe_path is None:
+            exe_path = os.path.abspath('.')
+        template = os.path.join(exe_path, input_path, 'lammps.in')
+        if not os.path.isfile(template):
+            msg = f'Could not determine LAMMPS units: Missing "{template}"'
+            raise ValueError(msg)
+
+        for key, value in read_lammps_input(template):
+            if key.lower() == 'units':
+                return value.strip()
+        msg = f'Could not determine LAMMPS units from "{template}"'
+        raise ValueError(msg)
 
     def __init__(self, lmp, input_path, subcycles, extra_files=None):
         """Set up the LAMMPS engine.

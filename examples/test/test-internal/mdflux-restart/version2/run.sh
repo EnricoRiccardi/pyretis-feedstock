@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
-cp ../Makefile .
-make clean
+CLEAN_MAKEFILE=../Makefile
+make -f "${CLEAN_MAKEFILE}" clean
 cp ../initial.xyz .
 cd run-full
 # todo -p by using the progress bar, the test fails.
@@ -18,5 +18,4 @@ cp ../compare.py .
 python compare.py
 rm initial.xyz
 rm compare.py
-make clean
-rm Makefile
+make -f "${CLEAN_MAKEFILE}" clean

@@ -62,6 +62,26 @@ class MDEngine(EngineBase):
     """
 
     engine_type = 'internal'
+    default_units = 'lj'
+
+    @classmethod
+    def get_default_units(cls, settings=None):
+        """Return the default unit system for internal engines.
+
+        Parameters
+        ----------
+        settings : dict, optional
+            Full simulation settings or engine settings. This argument
+            is ignored for internal engines.
+
+        Returns
+        -------
+        out : string
+            The default unit system for internal engines.
+
+        """
+        _ = settings
+        return 'lj'
 
     def __init__(self, timestep, description, dynamics=None):
         """Set up the integrator.

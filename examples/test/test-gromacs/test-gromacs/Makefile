@@ -1,28 +1,4 @@
-.PHONY: clean
+CLEAN_FIND_FILES := *.txt out.rst* *.restart rnd.state *.log mdout.mdp pyretis.mdp EXIT *.tpr
+CLEAN_RM_PATHS := 0-forward-step 0-backward-step 0-backward-plain 0-forward-plain 1-forward-step 1-backward-step 1-backward-plain 1-forward-plain 2-forward-step 2-backward-step 2-backward-plain 2-forward-plain engine-run.rst
 
-clean:
-	@find -name \*.pyc -delete
-	@find -name \*.pyo -delete
-	@find -name __pycache__ -delete
-	@find -name \*.txt -delete
-	@find -name out.rst\* -delete
-	@find -name \*.restart -delete
-	@find -name rnd.state -delete
-	@find -name \*.log -delete
-	@find -name mdout.mdp -delete
-	@find -name pyretis.mdp -delete
-	@find -name EXIT -delete
-	@find -name \*.tpr -delete
-	@rm -rf 0-forward-step
-	@rm -rf 0-backward-step
-	@rm -rf 0-backward-plain
-	@rm -rf 0-forward-plain
-	@rm -rf 1-forward-step
-	@rm -rf 1-backward-step
-	@rm -rf 1-backward-plain
-	@rm -rf 1-forward-plain
-	@rm -rf 2-forward-step
-	@rm -rf 2-backward-step
-	@rm -rf 2-backward-plain
-	@rm -rf 2-forward-plain
-	@rm -f engine-run.rst
+include $(shell git rev-parse --show-toplevel)/examples/test/common-clean.mk

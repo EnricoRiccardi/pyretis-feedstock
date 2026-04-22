@@ -1,24 +1,4 @@
-.PHONY: clean
+CLEAN_FIND_FILES := EXIT *.txt *out.rst* *.restart *.log* *.xvg* *.edr* *.cpt* *.xtc* *.trr* *mdout.mdp* *pyretis.mdp* *.tpr*
+CLEAN_RM_PATHS := gromacs-run.rst */conf.gro conf.g96 *pyretis-gmx* *gromacs-run*
 
-clean:
-	@find -name \*.pyc -delete
-	@find -name \*.pyo -delete
-	@find -name __pycache__ -delete
-	@find -name EXIT -delete
-	@find -name \*.txt -delete
-	@find -name \*out.rst* -delete
-	@find -name \*.restart -delete
-	@find -name \*.log* -delete
-	@find -name \*.xvg* -delete
-	@find -name \*.edr* -delete
-	@find -name \*.cpt* -delete
-	@find -name \*.xtc* -delete
-	@find -name \*.trr* -delete
-	@find -name \*mdout.mdp* -delete
-	@find -name \*pyretis.mdp* -delete
-	@find -name \*.tpr* -delete
-	@rm -f gromacs-run.rst
-	@rm -f */conf.gro
-	@rm -f conf.g96
-	@rm -f *pyretis-gmx*
-	@rm -f *gromacs-run*
+include $(shell git rev-parse --show-toplevel)/examples/test/common-clean.mk

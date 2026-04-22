@@ -4,15 +4,14 @@
 """Compatibility tests for PyVisA's visualization helpers."""
 import os
 
-import pytest
-import pandas as pd
-from matplotlib import cm, colors
-from matplotlib.figure import Figure
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
-from pyretis.pyvisa import HAS_PYVISA_REQ
+import pytest  # noqa: E402
+import pandas as pd  # noqa: E402
+from matplotlib import cm, colors  # noqa: E402
+from matplotlib.figure import Figure  # noqa: E402
 
-
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+from pyretis.pyvisa import HAS_PYVISA_REQ  # noqa: E402
 
 
 pytestmark = pytest.mark.skipif(not HAS_PYVISA_REQ,
@@ -335,7 +334,9 @@ def test_dataslave_load_all_uses_explicit_first_column_values():
         'analysis_columns': 2,
     }
     settings = dict(_LOAD_ALL_SETTINGS)
-    settings.update({'fol': 'data', 'op1': 'time', 'op2': 'lambda', 'E': 'None'})
+    settings.update(
+        {'fol': 'data', 'op1': 'time', 'op2': 'lambda', 'E': 'None'}
+    )
     data.settings = settings
 
     x, y, z = data.load_all()
