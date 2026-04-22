@@ -229,6 +229,28 @@ class TestGromacsEngine2:
                 i += 1
             eng.clean_up()
 
+    def test_integrate_redirects_output_to_engine_log(self, capfd):
+        """Test that GROMACS runner output is logged like other engines."""
+        with tempfile.TemporaryDirectory() as tempdir:
+            eng = GromacsEngine2(GMX, MDRUN, GMX_DIR, 0.002, 3,
+                                 maxwarn=1, gmx_format='g96',
+                                 write_vel=True,
+                                 write_force=False)
+            rundir = os.path.join(tempdir, 'gmxintegrate2-log')
+            make_dirs(rundir)
+            eng.exe_dir = rundir
+            system = make_test_system((eng.input_files['conf'], 0))
+            list(eng.integrate({'system': system}, 2))
+            captured = capfd.readouterr()
+            assert captured.out == ''
+            assert captured.err == ''
+            with open(os.path.join(rundir, 'engine.log'), 'r',
+                      encoding='utf-8') as infile:
+                data = infile.read()
+            assert 'This is the mock mdrun command' in data
+            assert not os.path.exists(os.path.join(rundir, 'engine.err'))
+            eng.clean_up()
+
 
 class TestGromacsRunner2:
     """Test the Runner."""

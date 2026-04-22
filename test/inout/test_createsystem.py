@@ -286,6 +286,28 @@ class TestMethods:
         with pytest.raises(KeyError):
             create_system(settings)
 
+    def test_create_system_lammps_input(self):
+        """Test creation of an external LAMMPS system from input files."""
+        input_path = os.path.abspath(
+            os.path.join(HERE, '..', 'engines', 'lammps_input')
+        )
+        settings = {
+            'particles': {},
+            'system': {'units': 'real', 'temperature': 1.0},
+            'engine': {
+                'type': 'external',
+                'class': 'lammps',
+                'input_path': input_path,
+            },
+        }
+        create_conversion_factors(settings['system']['units'])
+        system = create_system(settings)
+        assert isinstance(system.particles, ParticlesExt)
+        assert system.particles.get_pos() == (
+            os.path.join(input_path, 'system.data'),
+            None,
+        )
+
     def test_create_system(self):
         """Test that we can use the create_system method."""
         # With restart:

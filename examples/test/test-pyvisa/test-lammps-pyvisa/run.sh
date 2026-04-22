@@ -24,13 +24,29 @@ export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 
 LAMMPS_SRC="../../../path_sampling/2D-wca-lammps"
 
+if command -v lmp_serial >/dev/null 2>&1; then
+    lmp_bin=lmp_serial
+elif command -v lmp >/dev/null 2>&1; then
+    lmp_bin=lmp
+else
+    echo "SKIP: no LAMMPS executable found on PATH"
+    exit 0
+fi
+
+if ! "${lmp_bin}" -h >/dev/null 2>&1; then
+    echo "SKIP: LAMMPS executable '${lmp_bin}' is not runnable in this environment"
+    exit 0
+fi
+
 # Copy LAMMPS example into working directory
 cp "${LAMMPS_SRC}/retis.rst" .
 cp -r "${LAMMPS_SRC}/lammps_input" .
 
-# Provide a minimal load folder with a single valid frame
-mkdir -p load
-cp lammps_input/system.data load/ 2>/dev/null || true
+# The source example expects a pre-populated load folder. This test should be
+# self-contained, so switch to kick initiation and keep the run short.
+sed -i 's/^steps = 30$/steps = 5/' retis.rst
+sed -i 's/^method = load$/method = kick/' retis.rst
+sed -i "s/^lmp = lmp_serial$/lmp = ${lmp_bin}/" retis.rst
 
 # Run a short LAMMPS RETIS simulation
 pyretisrun -i retis.rst -p

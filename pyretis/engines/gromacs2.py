@@ -18,6 +18,7 @@ import signal
 import subprocess
 from time import sleep
 from pyretis.core.box import box_matrix_to_list
+from pyretis.engines.external import ExternalMDEngine
 from pyretis.engines.gromacs import GromacsEngine
 from pyretis.inout.formats.gromacs import (
     read_trr_header,
@@ -482,12 +483,12 @@ class GromacsRunner:
         """Start execution of GROMACS and wait for output file creation."""
         logger.debug('Starting GROMACS execution in %s', self.exe_dir)
 
-        self.stdout_name = os.path.join(self.exe_dir, 'engine.log')
-        self.stderr_name = os.path.join(self.exe_dir, 'engine.err')
+        self.stdout_name, self.stderr_name = \
+            ExternalMDEngine._engine_output_files(self.exe_dir)
         # pylint: disable=consider-using-with
-        self.stdout = open(self.stdout_name, 'wb')
+        self.stdout = open(self.stdout_name, 'ab')
         # pylint: disable=consider-using-with
-        self.stderr = open(self.stderr_name, 'wb')
+        self.stderr = open(self.stderr_name, 'ab')
 
         self.running = subprocess.Popen(  # nosec B603 B607
             self.cmd,
@@ -607,6 +608,10 @@ class GromacsRunner:
         for handle in (self.stdout, self.stderr):
             if handle is not None and not handle.closed:
                 handle.close()
+        if self.running is not None:
+            ExternalMDEngine._finalize_engine_output(
+                self.running.returncode, self.stderr_name
+            )
 
     def stop(self):
         """Stop the current GROMACS execution."""

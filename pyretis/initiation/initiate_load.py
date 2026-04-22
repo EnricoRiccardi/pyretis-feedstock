@@ -38,6 +38,14 @@ __all__ = ['initiate_load', 'write_order_parameters', 'clean_path',
            '_check_path', '_do_the_dirty_load_job']
 
 
+def _order_value(order):
+    """Return the first order parameter component from scalar or vector data."""
+    try:
+        return order[0]
+    except (TypeError, IndexError):
+        return order
+
+
 def initiate_load(simulation, settings, cycle, plot_loads=False):
     """Initialise paths by loading already generated ones.
 
@@ -164,8 +172,8 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
                     best_frame = path.phasepoints[0]
                     target = ensemble['path_ensemble'].interfaces[1]
                     for phasepoint in path.phasepoints:
-                        if abs(best_frame.order[0] - target) > \
-                                abs(phasepoint.order[0] - target):
+                        if abs(_order_value(best_frame.order) - target) > \
+                                abs(_order_value(phasepoint.order) - target):
                             best_frame = phasepoint
 
                     ensemble['system'] = best_frame
@@ -198,8 +206,8 @@ def initiate_load(simulation, settings, cycle, plot_loads=False):
             left, center, right = path_ensemble.interfaces
             plt = importlib.import_module('matplotlib.pyplot')
             fig, ax = plt.subplots()
-            ax.plot([p.order[0] for p in path.phasepoints], lw=1, marker='o',
-                    ms=3)
+            ax.plot([_order_value(p.order) for p in path.phasepoints],
+                    lw=1, marker='o', ms=3)
             ax.axhline(y=left, ls='--', c='k')
             ax.axhline(y=center, ls='--', c='k')
             ax.axhline(y=right, ls='--', c='k')
@@ -309,28 +317,30 @@ def clean_path(path, path_ensemble, simtype='retis'):
 
     for i, phasepoint in enumerate(path.phasepoints):
         # From left, searching for closest point left of int_opt[0]
-        if phasepoint.order[0] < int_opt[0]:
-            if int_opt[0] - phasepoint.order[0] < dists['left']:
-                dists['left'] = int_opt[0] - phasepoint.order[0]
+        phase_order = _order_value(phasepoint.order)
+        if phase_order < int_opt[0]:
+            if int_opt[0] - phase_order < dists['left']:
+                dists['left'] = int_opt[0] - phase_order
                 ph_min = phasepoint.copy()
         elif simtype == 'retis':  # RETIS behavior
-            if phasepoint.order[0] - int_opt[1] < dists['right']:
-                dists['right'] = phasepoint.order[0] - int_opt[1]
+            if phase_order - int_opt[1] < dists['right']:
+                dists['right'] = phase_order - int_opt[1]
                 ph_max = phasepoint.copy()
         elif simtype in ['pptis', 'repptis']:
             if set(["L", "R"]) == set(path_ensemble.start_condition):
-                if phasepoint.order[0] > int_opt[1]:
-                    if phasepoint.order[0] - int_opt[1] < dists['right']:
-                        dists['right'] = phasepoint.order[0] - int_opt[1]
+                if phase_order > int_opt[1]:
+                    if phase_order - int_opt[1] < dists['right']:
+                        dists['right'] = phase_order - int_opt[1]
                         ph_max = phasepoint.copy()
             else:
-                if phasepoint.order[0] - int_opt[1] < dists['right']:
-                    dists['right'] = phasepoint.order[0] - int_opt[1]
+                if phase_order - int_opt[1] < dists['right']:
+                    dists['right'] = phase_order - int_opt[1]
                     ph_max = phasepoint.copy()
     # Prepare for deleting unnecessary frames.
     erase_list = []
     for i, phasepoint in enumerate(path.phasepoints):
-        if not int_a <= phasepoint.order[0] <= int_b:
+        phase_order = _order_value(phasepoint.order)
+        if not int_a <= phase_order <= int_b:
             erase_list.append(i)
 
     if not erase_list:
@@ -364,7 +374,7 @@ def clean_path(path, path_ensemble, simtype='retis'):
         path.phasepoints.append(ph_max.copy())
 
     if simtype in ['pptis', 'repptis']:
-        if ph_max.order[0] > right:
+        if _order_value(ph_max.order) > right:
             if set(["L", "R"]) == set(path_ensemble.start_condition):
                 path.sorting(key="order")
                 logger.info("The load path has been sorted")

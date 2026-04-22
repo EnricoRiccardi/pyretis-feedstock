@@ -46,7 +46,7 @@ periodic = False
 Initial-path
 ------------
 method = kick
-kick-from = previous
+kick-from = initial
 
 Output
 ------

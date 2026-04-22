@@ -187,6 +187,29 @@ class TestCP2KEngine:
             assert kin_new == pytest.approx(0.23911029289543265)
             assert dek == pytest.approx(float('inf'))
 
+    def test_step_redirects_output_to_engine_log(self, capfd):
+        """Test that CP2K stdout/stderr is kept out of the terminal."""
+        cmd = os.path.join(HERE, 'mockcp2k.py')
+        dir_name = os.path.join(HERE, 'cp2k_input')
+        extra_files = ['extra_file']
+        engine = CP2KEngine(cp2k=cmd,
+                            input_path=dir_name,
+                            timestep=0.002,
+                            subcycles=10,
+                            extra_files=extra_files)
+        with tempfile.TemporaryDirectory() as tempdir:
+            engine.exe_dir = tempdir
+            system = make_test_system((engine.input_files['conf'], 0))
+            engine.step(system, 'cp2k_step')
+            captured = capfd.readouterr()
+            assert captured.out == ''
+            assert captured.err == ''
+            with open(os.path.join(tempdir, 'engine.log'), 'r',
+                      encoding='utf-8') as infile:
+                data = infile.read()
+            assert 'This is the mock CP2K command' in data
+            assert not os.path.exists(os.path.join(tempdir, 'engine.err'))
+
     def test_path_ensemble_names(self):
         """Test the path naming in path ensemble simulations."""
         cmd = os.path.join(HERE, 'mockcp2k.py')

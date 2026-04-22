@@ -89,6 +89,14 @@ __all__ = ['extender',
            'web_throwing']
 
 
+def _order_value(order):
+    """Return the first order parameter component from scalar or vector data."""
+    try:
+        return order[0]
+    except (TypeError, IndexError):
+        return order
+
+
 def make_tis(ensembles, rgen, settings, cycle):
     """Perform a TIS step in a given path ensemble.
 
@@ -1058,7 +1066,7 @@ def check_kick(shooting_point, interfaces, trial_path, rgen, dek,
     left, _, right = interfaces
     if 'exp' in tis_settings.get('shooting_move', {}):
         return True
-    if not left <= shooting_point.order[0] < right:
+    if not left <= _order_value(shooting_point.order) < right:
         # Shooting point was velocity dependent and was kicked outside
         # of boundaries when modifying velocities.
         trial_path.append(shooting_point)
@@ -1202,7 +1210,7 @@ def shoot(ensemble, tis_settings, start_cond, shooting_point=None):
 
     # Store info about this point, just in case we have to return
     # before completing a full new path:
-    trial_path.generated = ('sh', shooting_point.order[0], idx, 0)
+    trial_path.generated = ('sh', _order_value(shooting_point.order), idx, 0)
     trial_path.time_origin = path.time_origin + idx
     # We now check if the kick was OK or not:
     if not kick:
@@ -1249,7 +1257,7 @@ def shoot(ensemble, tis_settings, start_cond, shooting_point=None):
                              maxlen=tis_settings['maxlength'])
 
     # Also update information about the shooting:
-    trial_path.generated = ('sh', shooting_point.order[0], idx,
+    trial_path.generated = ('sh', _order_value(shooting_point.order), idx,
                             path_back.length - 1)
     trial_path.weight = 1.
     if not success_forw:
@@ -1415,7 +1423,8 @@ def wire_fencing(ensemble, tis_settings, start_cond):
                                                   tis_settings,
                                                   start_cond)
 
-    trial_path.generated = ('wf', sh_pt.order[0], succ_seg, trial_path.length)
+    trial_path.generated = ('wf', _order_value(sh_pt.order), succ_seg,
+                            trial_path.length)
 
     logger.debug('WF move %s', trial_path.status)
     if not success:
@@ -1564,7 +1573,8 @@ def stone_skipping(ensemble, tis_settings, start_cond):
             # e.g. have a 50% chance to give random v for each particle
             # Modify the velocities:
             # todo modify_v could just use system directly
-            logger.debug("jump %s, try %s, start: %s", i, j, sh_pt.order[0])
+            logger.debug("jump %s, try %s, start: %s", i, j,
+                         _order_value(sh_pt.order))
             ensemble['system'] = sh_pt.copy()
             ensemble['engine'].modify_velocities(ensemble, tis_settings)
             # A path of two frames is going to be generated.
@@ -1616,7 +1626,8 @@ def stone_skipping(ensemble, tis_settings, start_cond):
                                                   tis_settings,
                                                   start_cond)
 
-    trial_path.generated = ('ss', sh_pt.order[0], osc_try, trial_path.length)
+    trial_path.generated = ('ss', _order_value(sh_pt.order), osc_try,
+                            trial_path.length)
 
     logger.debug('SS move: %s', trial_path.status)
     if not success:
@@ -1826,7 +1837,8 @@ def web_throwing(ensemble, tis_set, start_cond='L'):
 
     accept, trial_path, _ = extender(source_seg, ensemble, tis_set, start_cond)
 
-    trial_path.generated = ('wt', source_seg.phasepoints[1].order[0],
+    trial_path.generated = ('wt',
+                            _order_value(source_seg.phasepoints[1].order),
                             save_acc, trial_path.length)
     # Also Check that we did not get a B to A or a B to B path.
     if accept:
@@ -1893,7 +1905,8 @@ def extender(source_seg, ensemble, tis_set, start_cond=('R', 'L')):
     ensemble['system'] = source_seg.phasepoints[0].copy()
 
     # Extender
-    if interfaces[0] <= ensemble['system'].order[0] < interfaces[-1]:
+    if interfaces[0] <= _order_value(ensemble['system'].order) < \
+            interfaces[-1]:
         back_segment = source_seg.empty_path(maxlen=tis_set['maxlength'])
         logger.debug('Trying to extend backwards')
         source_seg_copy = source_seg.copy()
@@ -1909,7 +1922,8 @@ def extender(source_seg, ensemble, tis_set, start_cond=('R', 'L')):
         trial_path = source_seg.copy()
 
     ensemble['system'] = trial_path.phasepoints[-1].copy()
-    if interfaces[0] <= ensemble['system'].order[0] < interfaces[-1]:
+    if interfaces[0] <= _order_value(ensemble['system'].order) < \
+            interfaces[-1]:
         forth_segment = source_seg.empty_path(maxlen=tis_set['maxlength'])
         ensemble['engine'].propagate(forth_segment, ensemble)
 

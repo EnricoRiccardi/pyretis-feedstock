@@ -623,6 +623,44 @@ def test_web_throwing_real():
     assert accept
 
 
+def test_shoot_scalar_order():
+    """Test shoot with a scalar-valued shooting point order parameter."""
+    tis_settings = {
+        'maxlength': 1000,
+        'sigma_v': -1,
+        'aimless': True,
+        'zero_momentum': False,
+        'rescale_energy': False,
+        'allowmaxlength': True,
+    }
+    interfaces = [-3, -1.4, 2.3]
+    order_f = Position(index=0)
+    engine = VelocityVerlet(0.01)
+
+    trial_path = make_internal_path((-5, 2.1), (5, 2.2), (1, -1))
+    shooting_point = trial_path.phasepoints[4]
+    shooting_point.order = shooting_point.order[0]
+    shooting_point.idx = 4
+    shooting_point.dek = 0
+    ens = PathEnsemble(ensemble_number=1, interfaces=interfaces)
+    ens.last_path = trial_path
+    ensemble = {'interfaces': interfaces, 'engine': engine,
+                'rgen': RandomGenerator(seed=0),
+                'path_ensemble': ens, 'order_function': order_f}
+
+    accept, new_path, status = shoot(
+        ensemble,
+        tis_settings,
+        start_cond='L',
+        shooting_point=shooting_point,
+    )
+
+    assert status == 'ACC'
+    assert accept
+    assert new_path.generated[0] == 'sh'
+    assert new_path.generated[1] == pytest.approx(shooting_point.order)
+
+
 def test_web_throwing():
     """Test web_throwing shooting move with rnd dynamics."""
     tis_settings = {

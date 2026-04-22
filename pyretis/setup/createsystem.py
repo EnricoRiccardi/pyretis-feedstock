@@ -584,6 +584,10 @@ def create_system(settings):
                 required_file = {
                     'conf':
                         f"conf.{settings['engine'].get('gmx_format', 'gro')}"}
+            elif 'lammps' in settings['engine']['class'].lower():
+                required_file = {
+                    'conf': settings['engine'].get('conf', 'system.data')
+                }
 
             input_file = look_for_input_files(settings['engine']['input_path'],
                                               required_file)

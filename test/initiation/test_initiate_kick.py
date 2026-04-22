@@ -291,6 +291,46 @@ class TestInitiateKick:
         # Check that the path is accepted:
         assert new_path.status == 'ACC'
 
+    def test_fix_path_scalar_order(self, caplog):
+        """Test fix_path_by_tis with scalar order parameter values."""
+        simulation = create_test_tis_simulation()
+        results = self._help_with_initiation(
+            simulation,
+            initiate_kicki,
+            [-1.0],
+            caplog,
+        )
+        initial_path = results[0][1]
+        ensemble = simulation.ensembles[0]
+
+        ensemble['system'].order = ensemble['system'].order[0]
+        for phasepoint in initial_path.phasepoints:
+            phasepoint.order = phasepoint.order[0]
+
+        trial_path = initial_path.copy()
+        with patch(
+            'pyretis.initiation.initiate_kick._get_help',
+            return_value=(lambda *_: True, lambda *_: True),
+        ), patch(
+            'pyretis.initiation.initiate_kick.time_reversal',
+            return_value=(False, None, None),
+        ), patch(
+            'pyretis.initiation.initiate_kick.shoot',
+            return_value=(True, trial_path, None),
+        ) as mock_shoot, patch.object(
+            ensemble['path_ensemble'],
+            'move_path_to_generate',
+        ):
+            new_path = fix_path_by_tis(
+                initial_path,
+                ensemble,
+                simulation.settings['tis'],
+            )
+
+        assert new_path is trial_path
+        assert new_path.status == 'ACC'
+        mock_shoot.assert_called_once()
+
     def test_generate_initial_fail_forward(self):
         """Test forward failure of the generate_initial_path_kick method.
 

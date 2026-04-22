@@ -292,15 +292,7 @@ class ExternalMDEngine(EngineBase):
         if inputs is not None:
             logger.debug('With input: %s', inputs)
 
-        # Route engine stdout/stderr to a per-ensemble log file.
-        # Priority: cwd (step directory), then exe_dir (ensemble directory).
-        log_dir = cwd or self.exe_dir
-        if log_dir:
-            out_name = os.path.join(log_dir, 'engine.log')
-            err_name = os.path.join(log_dir, 'engine.err')
-        else:
-            out_name = 'engine.log'
-            err_name = 'engine.err'
+        out_name, err_name = self._engine_output_files(cwd or self.exe_dir)
 
         return_code = None
 
@@ -334,10 +326,25 @@ class ExternalMDEngine(EngineBase):
                        f'failed with command:\n {cmd2}.\n'
                        f'Return code: {return_code}')
                 raise RuntimeError(msg)
-        # Keep engine.log (per-ensemble record); remove err on success.
-        if return_code is not None and return_code == 0:
-            self._removefile(err_name)
+        self._finalize_engine_output(return_code, err_name)
         return return_code
+
+    @staticmethod
+    def _engine_output_files(log_dir):
+        """Return the engine stdout/stderr log paths for a run directory."""
+        if log_dir:
+            out_name = os.path.join(log_dir, 'engine.log')
+            err_name = os.path.join(log_dir, 'engine.err')
+        else:
+            out_name = 'engine.log'
+            err_name = 'engine.err'
+        return out_name, err_name
+
+    @staticmethod
+    def _finalize_engine_output(return_code, err_name):
+        """Keep stdout logs and discard stderr logs from successful runs."""
+        if return_code == 0:
+            ExternalMDEngine._removefile(err_name)
 
     @staticmethod
     def _movefile(source, dest):

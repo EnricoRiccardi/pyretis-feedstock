@@ -51,6 +51,14 @@ __all__ = [
 ]
 
 
+def _order_value(order):
+    """Return the first order parameter component from scalar or vector data."""
+    try:
+        return order[0]
+    except (TypeError, IndexError):
+        return order
+
+
 def initiate_kick(simulation, settings, cycle):
     """Run the initiation method for several ensembles.
 
@@ -110,7 +118,7 @@ def initiate_kick_max(simulation, settings, cycle):
             min_dist = float('inf')
             for last_path in last_paths:
                 for phase_point in last_path.phasepoints:
-                    dist = middle - phase_point.order[0]
+                    dist = middle - _order_value(phase_point.order)
                     if 0 <= dist <= min_dist:
                         min_dist = dist
                         current = phase_point.copy()
@@ -232,7 +240,7 @@ def generate_initial_path_kick(ensemble, tis_settings):
     middle = interfaces[1]
     kick_required = True
     if set(ensemble['path_ensemble'].start_condition) == set(['R', 'L']):
-        initial_op = initial_system.order[0]
+        initial_op = _order_value(initial_system.order)
         logger.info("Initial OP: %s", initial_op)
 
         # If we are allowed to end anywhere and the initial system is between
@@ -479,8 +487,8 @@ def fix_path_by_tis(initial_path, ensemble, tis_settings):
             best_frame = ensemble['system']
 
             for phasepoint in initial_path.phasepoints:
-                if abs(best_frame.order[0] - target) > \
-                        abs(phasepoint.order[0] - target):
+                if abs(_order_value(best_frame.order) - target) > \
+                        abs(_order_value(phasepoint.order) - target):
                     best_frame = phasepoint.copy()
 
             accept, trial, _ = shoot(ensemble,
