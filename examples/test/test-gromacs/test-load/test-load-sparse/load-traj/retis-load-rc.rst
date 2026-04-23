@@ -51,6 +51,7 @@ swapsimul = True
 Orderparameter
 --------------
 class = Distance
+module = orderp.py
 index = [0, 3]
 
 Output settings
