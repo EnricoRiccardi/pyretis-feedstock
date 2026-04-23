@@ -13,6 +13,6 @@ echo "$gmxversion"
 
 sed -e "$replace" retis-load-rc.rst > retis-load-rc-run.rst
 pyretisrun -i retis-load-rc-run.rst -p
-python compare.py
+python ../compare.py --settings retis-load-rc-run.rst
 rm retis-load-rc-run.rst
 make clean
