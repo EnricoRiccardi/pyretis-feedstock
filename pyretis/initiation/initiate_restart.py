@@ -44,11 +44,16 @@ def initiate_restart(simulation, settings, cycle):
             generate_ensemble_name(path_ensemble.ensemble_number),
             'ensemble.restart')
 
+        if not os.path.isfile(restart_file):
+            raise FileNotFoundError(
+                f'Restart file not found: {restart_file}')
         restart_info = read_restart_file(restart_file)
         ensemble['engine'].load_restart_info(restart_info['engine'])
         ensemble['engine'].exe_dir = path_ensemble.directory['generate']
         ensemble['system'].load_restart_info(restart_info['system'])
-        ensemble['rgen'] = create_random_generator(restart_info['rgen'])
+        if 'rgen' in restart_info:
+            ensemble['rgen'] = create_random_generator(restart_info['rgen'])
+            logger.info('Restored per-ensemble rgen from %s', restart_file)
         ensemble['order_function'].load_restart_info(
             restart_info.get('order_function', []))
 

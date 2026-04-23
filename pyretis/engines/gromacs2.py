@@ -201,12 +201,41 @@ class GromacsEngine2(GromacsEngine):
         energy = self.get_energies(out_files['edr'])
         path.update_energies(energy['kinetic en.'], energy['potential'])
         logger.debug('Removing GROMACS output after propagate.')
+        # GROMACS BENCHMARK
+        if 'log' in out_files:
+            self._save_gmx_performance(os.path.join(self.exe_dir,
+                                                    out_files['log']))
+        # END GROMACS BENCHMARK
         remove = [val for key, val in out_files.items()
                   if key not in ('trr', 'gro', 'g96')]
         self._remove_files(self.exe_dir, remove)
         self._remove_gromacs_backup_files(self.exe_dir)
         msg_file.flush()
         return success, status
+
+    def _save_gmx_performance(self, log_file):
+        """Save performance info from GROMACS log file.
+
+        Parameters
+        ----------
+        log_file : string
+            The path to the GROMACS log file to read from.
+
+        """
+        if not os.path.isfile(log_file):
+            return
+        perf_file = os.path.join(self.input_path, 'gromacs_performance.log')
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f_in:
+                lines = f_in.readlines()
+            # Take the last 100 lines, which usually contain performance stats.
+            with open(perf_file, 'a', encoding='utf-8') as f_out:
+                basename = os.path.basename(log_file)
+                f_out.write(f'# Performance for: {basename}\n')
+                f_out.writelines(lines[-100:])
+                f_out.write('\n' + '=' * 80 + '\n')
+        except Exception as err:
+            logger.warning('Could not save GROMACS performance info: %s', err)
 
     def integrate(self, ensemble, steps, thermo='full'):
         """

@@ -101,7 +101,8 @@ Data selection and manipulation criteria are:
   Also, y, z allows the selection of the kinetic, potential,
   and total energy (kinetic+potential).
 * Folder: choose an ensemble number or select all of them.
-* Paths: accepted (`ACC`), rejected (`REJ`), or both (`BOTH`).
+* Paths: accepted (``ACC``), rejected (``REJ``), or both (``BOTH``).
+  See :ref:`user-guide-path-status-codes` for all status codes.
 * Cycles: select the minimum and maximum cycle number, where a
   cycle is a Monte Carlo move, i.e. a trajectory for each ensemble.
 * Data shift: shift the x-y data. This can be useful in

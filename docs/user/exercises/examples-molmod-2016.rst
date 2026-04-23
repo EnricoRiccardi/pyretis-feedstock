@@ -381,6 +381,12 @@ three letter abbreviation as described in :numref:`tababbrev`.
    |                | coordinate.                                |
    +----------------+--------------------------------------------+
 
+.. note::
+
+   The tables above list the most common codes encountered in this
+   exercise. For a complete reference of all move types and path status
+   codes used by |pyretis|, see
+   :ref:`user-guide-path-types-rejections`.
 
 Now, hopefully, you are able to execute the two example scripts we will
 be using.

@@ -203,7 +203,10 @@ Keyword pathensemble-file
    ensembles. This file contains the basic information about the paths
    (length, maximum/minimum order parameter, what kind of move
    we perform, was the path accepted etc.) and is the **most important**
-   file for the analysis. Normally, the frequency of output should be
+   file for the analysis. The move type codes and path status (acceptance
+   or rejection reason) codes recorded in this file are explained in
+   :ref:`user-guide-path-types-rejections`.
+   Normally, the frequency of output should be
    set to ``1``, but setting ``pathensemble-file = N`` will
    make |pyretis| write to the order file every Nth step.
 
