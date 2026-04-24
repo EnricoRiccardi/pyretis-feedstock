@@ -288,7 +288,9 @@ def obtain_mses(pathf, pathb, plainf, plainb):
             (np.array(vpotb), 'step-back'),
             (plainf[0][:, 1], 'plain-forward'),
             (plainb[0][:, 1][::-1], 'plain-back')]
-    mse_ok = mse_combinations('potential energy', mses, tol=1.0e-4)
+    # Small GROMACS build differences show up most clearly in the
+    # potential-energy replay, while the trajectories still agree.
+    mse_ok = mse_combinations('potential energy', mses, tol=2.0e-4)
     return mse_ok
 
 

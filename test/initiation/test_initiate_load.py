@@ -2,6 +2,7 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test initiate load methods."""
+import importlib.util
 import logging
 import os
 import pathlib
@@ -203,6 +204,56 @@ def compare_trajs_int(path_load, path):
 
 class TestReadPathFilesExt:
     """Run the tests for the reading external trajectories."""
+
+    def test_sparse_load_example_orderp_uses_frame_index(self):
+        """The sparse-load example order parameter must recalc one frame."""
+        pytest.importorskip('mdtraj')
+        module_path = os.path.abspath(
+            os.path.join(
+                HERE,
+                '..',
+                '..',
+                'examples',
+                'test',
+                'test-gromacs',
+                'test-load',
+                'test-load-sparse',
+                'load-traj',
+                'orderp.py',
+            )
+        )
+        spec = importlib.util.spec_from_file_location(
+            'pyretis_sparse_load_orderp',
+            module_path,
+        )
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        expected_top = os.path.join(
+            os.path.dirname(module_path), 'gromacs_input', 'conf.gro'
+        )
+
+        system = System(box=None)
+        system.particles = ParticlesExt(dim=3)
+        system.particles.config = ('traj.trr', 7)
+        orderp = module.Distance(index=[0, 3])
+        traj = object()
+
+        with patch.object(module.md, 'load_frame', return_value=traj) as load:
+            with patch.object(
+                module.md,
+                'compute_distances',
+                return_value=np.array([[1.23]]),
+            ) as compute:
+                order = orderp.calculate(system)
+
+        load.assert_called_once_with(
+            'traj.trr',
+            7,
+            top=expected_top,
+        )
+        compute.assert_called_once_with(traj, [(0, 3)], periodic=True)
+        assert order == pytest.approx([1.23])
 
     def test_read_path_ext(self):
         """Test reading of external trajectories."""

@@ -391,3 +391,31 @@ def test_new_swarm(caplog):
     assert rgenA.rgen is not rgenB.rgen  # Test new swarm
     assert rgenA.rgen is rgenC.rgen  # Test that the old swarm still works
     assert rgenB.rgen is rgenD.rgen  # Test that the new swarm works
+
+
+@pytest.mark.parametrize(
+    ('settings', 'borg_class', 'expected'),
+    (
+        ({'rgen': 'rgen-borg', 'seed': 0}, RandomGeneratorBorg,
+         'rgen-borg'),
+        ({'rgen': 'mock-borg', 'seed': 0}, MockRandomGeneratorBorg,
+         'mock-borg'),
+    )
+)
+def test_borg_roundtrip_state(caplog, settings, borg_class, expected):
+    """Test that Borg generators keep their type through a state roundtrip."""
+    borg_class.reset_state()
+    rgen = create_random_generator(settings)
+    state = rgen.get_state()
+    numbers1 = rgen.rand(shape=5)
+
+    assert state['rgen'] == expected
+
+    borg_class.reset_state()
+    restored = create_random_generator(state)
+    numbers2 = restored.rand(shape=5)
+
+    assert isinstance(restored, borg_class)
+    assert restored.get_state()['rgen'] == expected
+    assert np.allclose(numbers1, numbers2)
+    borg_class.reset_state()

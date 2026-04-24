@@ -1015,11 +1015,12 @@ def test_visualapp_toggle_helpers(monkeypatch):
         app.processEvents()
 
 
-def test_customfigcanvas_setup_without_colorbar_margin():
+def test_customfigcanvas_setup_without_colorbar_margin(monkeypatch):
     """set_up(cbar=False) uses the wider subplot layout branch."""
-    from pyretis.pyvisa.visualize import CustomFigCanvas
+    from pyretis.pyvisa import visualize
 
-    canvas = CustomFigCanvas()
+    monkeypatch.setattr(visualize.FigureCanvas, "__init__", lambda *args: None)
+    canvas = visualize.CustomFigCanvas()
     canvas.set_up(cbar=False)
     right = round(canvas.fig.subplotpars.right, 2)
     assert right == 0.90

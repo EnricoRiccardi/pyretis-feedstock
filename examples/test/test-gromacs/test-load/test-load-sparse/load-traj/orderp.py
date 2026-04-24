@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""
-This file defines the order parameter used for the GROMACS example.
-
-NOTE: This file is NOT being used, it is kept as an example on how to use
-      mdtraj.
-      To test this file, add module = orderp.py in the Orderparameter section
-      of retis-load-rc.rst file.
-      Also add the import mdtraj import to the list above.
-
-"""
+"""This file defines the order parameter used for the GROMACS example."""
+import os
 import logging
 import mdtraj as md
-from itertools import combinations
+import numpy as np
+from pyretis.inout.formats.gromacs import read_gromos96_file
 from pyretis.orderparameter import OrderParameter
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -44,6 +37,10 @@ class Distance(OrderParameter):
         self.idx1 = index[0]
         self.idx2 = index[1]
         self.top = 'gromacs_input/conf.gro'
+        self.top_path = os.path.join(
+            os.path.dirname(__file__), self.top
+        )
+        self.topology = md.load(self.top_path).topology
 
     def calculate(self, system):
         """Calculate the order parameter.
@@ -59,12 +56,33 @@ class Distance(OrderParameter):
 
         Returns
         -------
-        out : float
-            The order parameter.
+        out : list of floats
+            The order parameter for the current frame only.
 
         """
-        file_gro = system.particles.config[0]
-        trj = md.load(file_gro, top=self.top)
-        atom_pair = combinations([self.idx1, self.idx2], 2)
+        filename, frame_index = system.particles.config
+        atom_pair = [(self.idx1, self.idx2)]
+        if frame_index is None:
+            frame_index = 0
+
+        extension = os.path.splitext(filename)[1]
+        if extension in ('.trr', '.xtc'):
+            trj = md.load_frame(filename, frame_index, top=self.top_path)
+        elif extension == '.g96':
+            _, xyz, _, box = read_gromos96_file(filename)
+            kwargs = {}
+            if box is not None:
+                kwargs['unitcell_lengths'] = np.asarray(
+                    box, dtype=float
+                )[None, :]
+                kwargs['unitcell_angles'] = np.array([[90.0, 90.0, 90.0]])
+            trj = md.Trajectory(
+                np.asarray(xyz, dtype=float)[None, :, :],
+                self.topology,
+                **kwargs,
+            )
+        else:
+            trj = md.load(filename, top=self.top_path)
+
         orderp = md.compute_distances(trj, atom_pair, periodic=True)
-        return orderp[0]
+        return orderp[0].tolist()

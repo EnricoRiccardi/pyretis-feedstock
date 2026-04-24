@@ -233,6 +233,23 @@ def test_get_min_max():
     assert 10 == pytest.approx(ordermax[1])
 
 
+def test_get_shooting_point_exp_clamps_upper_slab():
+    """Points on the right interface must not overflow the slab index."""
+    rgen = RandomGenerator(seed=0)
+    path = Path(rgen, maxlen=100)
+    for order in [0.0, 0.25, 0.5, 0.75, 1.0]:
+        path.append(
+            set_up_system([order], np.zeros(3), np.zeros(3), 0.0, 0.0)
+        )
+
+    phasepoint, idx = path.get_shooting_point(
+        criteria='exp', interfaces=[0.0, 0.5, 1.0]
+    )
+
+    assert phasepoint is path.phasepoints[idx]
+    assert 0 <= idx < path.length
+
+
 def test_check_interfaces():
     """Test the check interfaces method."""
     path = Path(None, maxlen=100)

@@ -68,6 +68,28 @@ logging.disable(logging.CRITICAL)
 LOCAL_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
+class _ScalarInternalOrderParameter(OrderParameter):
+    """Internal order parameter returning a scalar for one frame."""
+
+    def __init__(self):
+        super().__init__(description='Internal scalar order parameter')
+
+    def calculate(self, system):
+        """Return a scalar value for one frame."""
+        return 1.25
+
+
+class _MultiFrameInternalOrderParameter(OrderParameter):
+    """Internal order parameter incorrectly returning multiple frames."""
+
+    def __init__(self):
+        super().__init__(description='Bad internal multi-frame output')
+
+    def calculate(self, system):
+        """Return multiple frames instead of one frame."""
+        return [[1.25], [2.5]]
+
+
 def _read_raw_settings(filename):
     """Read raw settings from a local file.
 
@@ -398,6 +420,30 @@ class TestKeywordEngine:
 class TestKeywordOrderParameter:
     """Test creation of order parameters."""
 
+    @staticmethod
+    def _internal_orderparameter_settings():
+        """Return a minimal valid internal order-parameter section."""
+        data = (
+            'Orderparameter\n'
+            '--------------\n'
+            'class = Position\n'
+            'index = 0\n'
+            'dim = x\n'
+            'periodic = False'
+        )
+        return _test_correct_parsing(
+            None,
+            data,
+            {
+                'orderparameter': {
+                    'class': 'Position',
+                    'index': 0,
+                    'dim': 'x',
+                    'periodic': False,
+                }
+            },
+        )
+
     def test_load_orderparameter(self):
         """Test loading of external order parameter."""
         data = [
@@ -421,6 +467,95 @@ class TestKeywordOrderParameter:
         settings['simulation'] = {'exe_path': LOCAL_DIR}
         orderp = create_orderparameter(settings)
         assert correct['orderparameter']['class'] == orderp.__class__.__name__
+        assert orderp.calculate(None) == [0.0]
+
+    def test_external_orderparameter_scalar_is_normalized(self):
+        """External scalar output is wrapped into a single-frame list."""
+        data = (
+            'Orderparameter\n'
+            '--------------\n'
+            'class = ScalarOrderParameter\n'
+            'module = fooorderparameter.py'
+        )
+        settings = _test_correct_parsing(
+            self,
+            data,
+            {
+                'orderparameter': {
+                    'class': 'ScalarOrderParameter',
+                    'module': 'fooorderparameter.py',
+                }
+            },
+        )
+        settings['simulation'] = {'exe_path': LOCAL_DIR}
+        orderp = create_orderparameter(settings)
+        assert orderp.calculate(None) == [1.25]
+
+    def test_internal_orderparameter_scalar_is_normalized(self):
+        """Internal scalar output is wrapped into a single-frame list."""
+        settings = self._internal_orderparameter_settings()
+        with patch(
+            'pyretis.setup.common.order_factory',
+            return_value=_ScalarInternalOrderParameter(),
+        ):
+            orderp = create_orderparameter(settings)
+        assert orderp.calculate(None) == [1.25]
+
+    def test_external_orderparameter_array_is_normalized(self):
+        """External array output is converted into a plain list."""
+        data = (
+            'Orderparameter\n'
+            '--------------\n'
+            'class = ArrayOrderParameter\n'
+            'module = fooorderparameter.py'
+        )
+        settings = _test_correct_parsing(
+            self,
+            data,
+            {
+                'orderparameter': {
+                    'class': 'ArrayOrderParameter',
+                    'module': 'fooorderparameter.py',
+                }
+            },
+        )
+        settings['simulation'] = {'exe_path': LOCAL_DIR}
+        orderp = create_orderparameter(settings)
+        assert orderp.calculate(None) == [1.25, 2.5]
+
+    def test_external_orderparameter_rejects_multi_frame_output(self):
+        """External order parameters must return one frame at a time."""
+        data = (
+            'Orderparameter\n'
+            '--------------\n'
+            'class = MultiFrameOrderParameter\n'
+            'module = fooorderparameter.py'
+        )
+        settings = _test_correct_parsing(
+            self,
+            data,
+            {
+                'orderparameter': {
+                    'class': 'MultiFrameOrderParameter',
+                    'module': 'fooorderparameter.py',
+                }
+            },
+        )
+        settings['simulation'] = {'exe_path': LOCAL_DIR}
+        orderp = create_orderparameter(settings)
+        with pytest.raises(ValueError, match='single frame'):
+            orderp.calculate(None)
+
+    def test_internal_orderparameter_rejects_multi_frame_output(self):
+        """Internal order parameters must return one frame at a time."""
+        settings = self._internal_orderparameter_settings()
+        with patch(
+            'pyretis.setup.common.order_factory',
+            return_value=_MultiFrameInternalOrderParameter(),
+        ):
+            orderp = create_orderparameter(settings)
+        with pytest.raises(ValueError, match='single frame'):
+            orderp.calculate(None)
 
     def test_fail_orderparameter(self):
         """Test that loading external order parameters fails."""

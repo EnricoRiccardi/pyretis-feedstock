@@ -21,7 +21,13 @@ import logging
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-RESULTS = 'results'
+HERE = os.path.abspath(os.path.dirname(__file__))
+RESULTS = os.path.join(HERE, 'results')
+
+
+def _local_path(*parts):
+    """Build a path relative to this compare script."""
+    return os.path.join(HERE, *parts)
 
 
 def check_path_file(ens):
@@ -38,8 +44,9 @@ def check_path_file(ens):
         0 if successful, 1 otherwise.
     """
     logger.info(f'\nReading for {ens.ensemble_name}')
-    filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
-                            'pathensemble.txt')
+    filename = _local_path(
+        generate_ensemble_name(ens.ensemble_number), 'pathensemble.txt'
+    )
     logger.info(f'Reading: {filename}')
     start = ens.start_condition
     end = ('R') if ens.ensemble_number == 0 else ('R', 'L')
@@ -99,8 +106,9 @@ def run_check_path_file(settings):
 def read_path_file(ens):
     """Read information about paths from pathensemble.txt."""
     logger.info(f'\nReading for {ens.ensemble_name}')
-    filename = os.path.join(generate_ensemble_name(ens.ensemble_number),
-                            'pathensemble.txt')
+    filename = _local_path(
+        generate_ensemble_name(ens.ensemble_number), 'pathensemble.txt'
+    )
     logger.info(f'Reading: {filename}')
     paths = OrderedDict()
     path_acc = OrderedDict()
@@ -158,7 +166,7 @@ def get_index(traj):
 def check_swaps(paths, accepted, ens, kind):
     """Check accepted swaps."""
     ofile0 = OrderPathFile(
-        os.path.join(generate_ensemble_name(ens), 'order.txt'), 'r'
+        _local_path(generate_ensemble_name(ens), 'order.txt'), 'r'
     )
     traj0 = ofile0.load()
     if kind == 'left':
@@ -170,7 +178,7 @@ def check_swaps(paths, accepted, ens, kind):
         ens2 = ens + 1
         move = 's+'
     ofile1 = OrderPathFile(
-        os.path.join(generate_ensemble_name(ens2), 'order.txt'), 'r'
+        _local_path(generate_ensemble_name(ens2), 'order.txt'), 'r'
     )
     traj1 = ofile1.load()
     traj1i, idx1 = {}, None
@@ -247,7 +255,7 @@ def compare_path_files(settings):
     retval = 0
     for i in range(len(inter)):
         ens_dir = generate_ensemble_name(i)
-        fil1 = os.path.join(ens_dir, 'pathensemble.txt')
+        fil1 = _local_path(ens_dir, 'pathensemble.txt')
         fil2 = os.path.join(RESULTS, ens_dir, 'pathensemble.txt')
         equal, msg = compare_path_ensemble_data(fil1, fil2)
         if not equal:
@@ -260,7 +268,8 @@ def compare_path_files(settings):
 
 def main():
     """Run the full comparison."""
-    sets = parse_settings_file('retis.rst')
+    os.chdir(HERE)
+    sets = parse_settings_file(_local_path('retis.rst'))
     logger.info('\nComparing pathensemble.txt files')
     logger.info('================================')
     ret1 = compare_path_files(sets)

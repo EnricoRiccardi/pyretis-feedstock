@@ -29,8 +29,7 @@ echo 'Collective-variable' >> retis-load-rc-run.rst
 echo '-------------------' >> retis-load-rc-run.rst
 echo 'class = Distance' >> retis-load-rc-run.rst
 echo 'module = orderp.py' >> retis-load-rc-run.rst
-echo 'idx1 = 0' >> retis-load-rc-run.rst
-echo 'idx2 = 4' >> retis-load-rc-run.rst
+echo 'index = [0, 4]' >> retis-load-rc-run.rst
 
 pyvisa -i retis-load-rc-run.rst -recalculate -cmp
 find . -mindepth 1 -not -name 'run.sh' -not -name 'results' -not -path './results/pyvisa_compressed_data.hdf5.zip' -delete

@@ -803,10 +803,13 @@ class Path(PathBase):
         # The method is not done to be working on the 0^- ensemble.
         if criteria == 'exp' and interfaces[0] != float('-inf'):
             n_slabs = 42
+            slab_width = interfaces[-1] - interfaces[0]
             hyst = [0]*n_slabs
             for p_p in self.phasepoints:
-                idx = abs(int((p_p.order[0] - interfaces[0]) /
-                              (interfaces[-1] - interfaces[0])*n_slabs))
+                idx = abs(
+                    int((p_p.order[0] - interfaces[0]) / slab_width * n_slabs)
+                )
+                idx = min(idx, n_slabs - 1)
                 hyst[idx] += 1
 
             # Exclude the extremis, no much interesting and always low value
@@ -820,8 +823,10 @@ class Path(PathBase):
                 h_min = hyst.index(min(hyst))
 
             for idx, p_p in enumerate(self.phasepoints):
-                i_slab = abs(int((p_p.order[0] - interfaces[0]) /
-                                 (interfaces[-1] - interfaces[0])*n_slabs))
+                i_slab = abs(
+                    int((p_p.order[0] - interfaces[0]) / slab_width * n_slabs)
+                )
+                i_slab = min(i_slab, n_slabs - 1)
                 if i_slab == h_min:
                     keep_list.append(idx)
 

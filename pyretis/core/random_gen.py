@@ -804,9 +804,21 @@ class Borg:
 class RandomGeneratorBorg(Borg, RandomGenerator):
     """A class for sharing the state between RandomGenerator objects."""
 
+    def get_state(self):
+        """Return current state including the Borg generator type."""
+        state = RandomGenerator.get_state(self)
+        state['rgen'] = 'rgen-borg'
+        return state
+
 
 class MockRandomGeneratorBorg(Borg, MockRandomGenerator):
     """A class for sharing the state between MockRandomGenerator objects."""
+
+    def get_state(self):
+        """Return current state including the Borg generator type."""
+        state = MockRandomGenerator.get_state(self)
+        state['rgen'] = 'mock-borg'
+        return state
 
 
 def create_random_generator(settings=None):
