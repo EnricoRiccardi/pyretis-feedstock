@@ -11,6 +11,7 @@ clean:
 	@find -name \*.log -delete
 	@find -name mdout.mdp -delete
 	@find -name \*.tpr -delete
+	@rm -f pippo/order.txt pippo/traj.txt
 	@rm -rf 0*
 	@rm -rf *_0*
 	@rm -rf pippo/0*
