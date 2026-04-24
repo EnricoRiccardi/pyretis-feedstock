@@ -74,7 +74,11 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 class OrderBox(OrderParameter):
-    """This order parameter is just the box."""
+    """Order parameter returning the box cell as a numpy array.
+
+    Intentionally returns a raw numpy array to exercise the
+    ``wrap_orderparameter`` normalisation path.
+    """
 
     def __init__(self):
         super().__init__(description='Box order parameter')
@@ -84,7 +88,11 @@ class OrderBox(OrderParameter):
 
 
 class Xpos1partExt(OrderParameter):
-    """This gives out the X position of the first particle."""
+    """Order parameter returning the X position of particle 0 as a scalar.
+
+    Intentionally returns a raw scalar to exercise the
+    ``wrap_orderparameter`` normalisation path.
+    """
 
     def __init__(self):
         super().__init__(description='X pos particle 1')
@@ -94,7 +102,11 @@ class Xpos1partExt(OrderParameter):
 
 
 class Velocity(OrderParameter):
-    """This order parameter is the sum of components of the velocity."""
+    """Order parameter returning the per-axis velocity sum as a numpy array.
+
+    Intentionally returns a raw numpy array to exercise the
+    ``wrap_orderparameter`` normalisation path.
+    """
 
     def __init__(self):
         super().__init__(description='Box order parameter')
@@ -188,7 +200,8 @@ class TestRecalculateOrder:
                                            {'ext': '.gro', 'reverse': False})
             vel2, = recalculate_from_frame(Velocity(), grofile.name,
                                            {'ext': '.gro', 'reverse': True})
-            assert np.allclose(vel1, -vel2)
+            # vel1 and vel2 are normalised lists; use np.negative for negation
+            assert np.allclose(vel1, np.negative(vel2))
         with patch('sys.stdout', new=StringIO()):
             with pytest.raises(ValueError):
                 recalculate_from_frame(Velocity(), 'something.txt',
@@ -284,7 +297,7 @@ class TestRecalculateOrder:
                 options={'top': sim_file+'.gro'})]
 
         for orderi, orderj in zip(order, ordercheck):
-            assert orderi == pytest.approx(orderj, 3, 0.1)
+            assert orderi[0] == pytest.approx(orderj, 3, 0.1)
 
         with patch('sys.stdout', new=StringIO()):
             order = [i for i in recalculate_from_trj(
@@ -292,11 +305,11 @@ class TestRecalculateOrder:
                 {'top': sim_file + '.gro'})]
 
         for orderi, orderj in zip(order, ordercheck):
-            assert orderi == pytest.approx(orderj, 3, 0.1)
+            assert orderi[0] == pytest.approx(orderj, 3, 0.1)
 
         one_op = recalculate_from_trj(orderf, sim_file + '.trr',
                                       {'top': sim_file + '.gro',
                                        'idx': 3})
 
         with patch('sys.stdout', new=StringIO()):
-            assert next(one_op) == pytest.approx(ordercheck[3], 3, 0.1)
+            assert next(one_op)[0] == pytest.approx(ordercheck[3], 3, 0.1)

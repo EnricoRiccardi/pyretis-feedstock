@@ -18,7 +18,9 @@ from pyretis.orderparameter import (
     Angle,
     Dihedral,
     Permeability,
-    PermeabilityMinusOffset
+    PermeabilityMinusOffset,
+    normalize_order_output,
+    wrap_orderparameter,
 )
 from pyretis.core import System, create_box, Particles
 logging.disable(logging.CRITICAL)
@@ -728,3 +730,126 @@ class TestPermeability:
         orderp.load_restart_info(info)
         assert self.op.index == 42
         assert self.op._mirror == 'towel'
+
+
+# ---------------------------------------------------------------------------
+# Tests for normalize_order_output and wrap_orderparameter
+# ---------------------------------------------------------------------------
+
+class TestNormalizeOrderOutput:
+    """Test normalize_order_output for all supported input types."""
+
+    def test_python_int(self):
+        assert normalize_order_output(3) == [3]
+
+    def test_python_float(self):
+        assert normalize_order_output(1.5) == [1.5]
+
+    def test_python_list_single(self):
+        assert normalize_order_output([0.5]) == [0.5]
+
+    def test_python_list_multi(self):
+        assert normalize_order_output([0.1, 0.2]) == [0.1, 0.2]
+
+    def test_python_tuple(self):
+        assert normalize_order_output((0.1, 0.2)) == [0.1, 0.2]
+
+    def test_numpy_scalar(self):
+        val = np.float64(2.5)
+        result = normalize_order_output(val)
+        assert result == [2.5]
+        assert isinstance(result, list)
+
+    def test_numpy_0d_array(self):
+        arr = np.array(3.14)
+        result = normalize_order_output(arr)
+        assert result == pytest.approx([3.14])
+        assert isinstance(result, list)
+
+    def test_numpy_1d_array(self):
+        arr = np.array([0.1, 0.2, 0.3])
+        result = normalize_order_output(arr)
+        assert result == pytest.approx([0.1, 0.2, 0.3])
+        assert isinstance(result, list)
+
+    def test_numpy_2d_array_raises(self):
+        arr = np.array([[0.1, 0.2], [0.3, 0.4]])
+        with pytest.raises(ValueError):
+            normalize_order_output(arr)
+
+    def test_nested_list_raises(self):
+        with pytest.raises(ValueError):
+            normalize_order_output([[0.1, 0.2]])
+
+    def test_non_iterable_raises(self):
+        with pytest.raises((ValueError, TypeError)):
+            normalize_order_output(object())
+
+
+class _ScalarOP(OrderParameter):
+    """Helper: returns a bare float."""
+    def __init__(self):
+        super().__init__(description='scalar')
+
+    def calculate(self, system):
+        return system.temperature['set']
+
+
+class _ArrayOP(OrderParameter):
+    """Helper: returns a 1-D numpy array."""
+    def __init__(self):
+        super().__init__(description='array')
+
+    def calculate(self, system):
+        return np.array([system.temperature['set'], 0.0])
+
+
+class _AlreadyWrapped(OrderParameter):
+    """Helper: returns a proper list already."""
+    def __init__(self):
+        super().__init__(description='list')
+
+    def calculate(self, system):
+        return [system.temperature['set']]
+
+
+class TestWrapOrderparameter:
+    """Test wrap_orderparameter for all return-type variants."""
+
+    def setup_method(self):
+        self.system = System(temperature=42.0, units='lj', box=None)
+
+    def test_scalar_normalised_to_list(self):
+        op = wrap_orderparameter(_ScalarOP())
+        result = op.calculate(self.system)
+        assert isinstance(result, list)
+        assert result == [42.0]
+
+    def test_numpy_array_normalised_to_list(self):
+        op = wrap_orderparameter(_ArrayOP())
+        result = op.calculate(self.system)
+        assert isinstance(result, list)
+        assert result == pytest.approx([42.0, 0.0])
+
+    def test_list_return_unchanged(self):
+        op = wrap_orderparameter(_AlreadyWrapped())
+        result = op.calculate(self.system)
+        assert isinstance(result, list)
+        assert result == [42.0]
+
+    def test_idempotent(self):
+        """Wrapping twice must not double-wrap."""
+        op = _ScalarOP()
+        op1 = wrap_orderparameter(op)
+        op2 = wrap_orderparameter(op)
+        assert op1 is op2
+        result = op2.calculate(self.system)
+        assert result == [42.0]
+
+    def test_composite_with_scalar_subop(self):
+        """CompositeOrderParameter must work even if a sub-OP returns scalar."""
+        sub = wrap_orderparameter(_ScalarOP())
+        composite = CompositeOrderParameter(order_parameters=[sub, sub])
+        result = composite.calculate(self.system)
+        assert isinstance(result, list)
+        assert result == [42.0, 42.0]
