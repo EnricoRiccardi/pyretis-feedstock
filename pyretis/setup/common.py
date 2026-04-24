@@ -21,14 +21,16 @@ create_orderparameter (:py:func:`.create_orderparameter`)
 create_potential (:py:func:`.create_potential`)
     Method to create a potential from settings.
 """
-import functools
 import logging
 import os
-import numpy as np
 from pyretis.core.common import initiate_instance, import_from
 from pyretis.engines import engine_factory
 from pyretis.orderparameter import order_factory
-from pyretis.orderparameter.orderparameter import CompositeOrderParameter
+from pyretis.orderparameter.orderparameter import (
+    CompositeOrderParameter,
+    normalize_order_output,
+    wrap_orderparameter,
+)
 from pyretis.forcefield.factory import potential_factory
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -36,46 +38,6 @@ logger.addHandler(logging.NullHandler())
 
 __all__ = ['create_external', 'check_settings', 'create_orderparameter',
            'create_engine', 'create_potential']
-
-
-def _normalize_order_output(order, klass_name):
-    """Return order-parameter data as a flat list for one frame."""
-    msg = (
-        f'Order parameter "{klass_name}" must return a flat list of values '
-        'for a single frame. PyRETIS handles multiple frames as a list of '
-        'lists outside calculate().'
-    )
-    if isinstance(order, np.ndarray):
-        if order.ndim == 0:
-            return [order.item()]
-        if order.ndim == 1:
-            return order.tolist()
-        raise ValueError(msg)
-    if np.isscalar(order):
-        return [order.item() if hasattr(order, 'item') else order]
-    try:
-        values = list(order)
-    except TypeError as exc:
-        raise ValueError(msg) from exc
-    if any(isinstance(value, (list, tuple, np.ndarray)) for value in values):
-        raise ValueError(msg)
-    return values
-
-
-def _wrap_orderparameter(instance):
-    """Normalize output from order parameters and collective variables."""
-    if getattr(instance, '_pyretis_order_output_wrapped', False):
-        return instance
-    calculate = instance.calculate
-
-    @functools.wraps(calculate)
-    def wrapped(*args, **kwargs):
-        order = calculate(*args, **kwargs)
-        return _normalize_order_output(order, instance.__class__.__name__)
-
-    instance.calculate = wrapped
-    instance._pyretis_order_output_wrapped = True
-    return instance
 
 
 def check_settings(settings, required):
@@ -192,7 +154,7 @@ def create_external(settings, key, factory, required_methods,
             raise ValueError(msg)
     instance = initiate_instance(obj, key_settings)
     if key in ('orderparameter', 'collective-variable'):
-        return _wrap_orderparameter(instance)
+        return wrap_orderparameter(instance)
     return instance
 
 
@@ -219,7 +181,7 @@ def create_orderparameter(settings):
     if main_order is None:
         logger.info('No order parameter created')
         return None
-    main_order = _wrap_orderparameter(main_order)
+    main_order = wrap_orderparameter(main_order)
     logger.progress('Created main order parameter:\n%s', main_order)
 
     extra_cv = []
@@ -232,14 +194,14 @@ def create_orderparameter(settings):
             ['calculate'],
             key_settings=order_setting
         )
-        order = _wrap_orderparameter(order)
+        order = wrap_orderparameter(order)
         logger.progress('Created additional collective variable:\n%s', order)
         extra_cv.append(order)
     if not extra_cv:
         return main_order
     all_order = [main_order] + extra_cv
     order = CompositeOrderParameter(order_parameters=all_order)
-    order = _wrap_orderparameter(order)
+    order = wrap_orderparameter(order)
     logger.progress('Composite order parameter:\n%s', order)
     return order
 

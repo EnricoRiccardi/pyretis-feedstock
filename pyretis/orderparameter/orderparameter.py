@@ -43,6 +43,7 @@ DistanceVelocity (:py:class:`.DistanceVelocity`)
 
 """
 from abc import abstractmethod
+import functools
 import logging
 import numpy as np
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -59,8 +60,88 @@ __all__ = [
     'Distancevel',
     'DistanceVelocity',
     'PositionVelocity',
-    'CompositeOrderParameter'
+    'CompositeOrderParameter',
+    'normalize_order_output',
+    'wrap_orderparameter',
 ]
+
+
+def normalize_order_output(order, klass_name='unknown'):
+    """Normalise the return value of ``calculate()`` to a flat list.
+
+    This function accepts the raw return value from any ``calculate``
+    implementation — a scalar, a 0-D or 1-D :py:class:`numpy.ndarray`,
+    a list, or a tuple — and returns a plain Python list whose elements
+    are all plain Python scalars (no nested lists or arrays).
+
+    Parameters
+    ----------
+    order : scalar, list, tuple, or numpy.ndarray
+        The raw return value from a ``calculate`` method.
+    klass_name : str, optional
+        Name of the order-parameter class; used only in error messages.
+
+    Returns
+    -------
+    out : list of floats
+        A flat list of scalar values.
+
+    Raises
+    ------
+    ValueError
+        If *order* is a >1-D array or contains nested sequences.
+
+    """
+    msg = (
+        f'Order parameter "{klass_name}" must return a flat list of values '
+        'for a single frame. PyRETIS handles multiple frames as a list of '
+        'lists outside calculate().'
+    )
+    if isinstance(order, np.ndarray):
+        if order.ndim == 0:
+            return [order.item()]
+        if order.ndim == 1:
+            return order.tolist()
+        raise ValueError(msg)
+    if np.isscalar(order):
+        return [order.item() if hasattr(order, 'item') else order]
+    try:
+        values = list(order)
+    except TypeError as exc:
+        raise ValueError(msg) from exc
+    if any(isinstance(value, (list, tuple, np.ndarray)) for value in values):
+        raise ValueError(msg)
+    return values
+
+
+def wrap_orderparameter(instance):
+    """Wrap an order-parameter instance so ``calculate()`` always returns a list.
+
+    The wrapper is idempotent: calling this function twice on the same
+    instance is safe and has no additional effect.
+
+    Parameters
+    ----------
+    instance : object with a ``calculate`` method
+        Any order-parameter object (internal or external).
+
+    Returns
+    -------
+    instance : same object, mutated in place.
+
+    """
+    if getattr(instance, '_pyretis_order_output_wrapped', False):
+        return instance
+    calculate = instance.calculate
+
+    @functools.wraps(calculate)
+    def wrapped(*args, **kwargs):
+        order = calculate(*args, **kwargs)
+        return normalize_order_output(order, instance.__class__.__name__)
+
+    instance.calculate = wrapped
+    instance._pyretis_order_output_wrapped = True
+    return instance
 
 
 class OrderParameter:
@@ -103,8 +184,14 @@ class OrderParameter:
     def calculate(self, system):
         """Calculate the main order parameter and return it.
 
-        All order parameters should implement this method as
-        this ensures that the order parameter can be calculated.
+        All order parameters should implement this method.
+        Implementations may return a **single scalar**, a
+        :py:class:`numpy.ndarray`, a tuple, or a list.  When an order
+        parameter is loaded through
+        :py:func:`pyretis.setup.common.create_orderparameter` or used via
+        :py:func:`~pyretis.orderparameter.wrap_orderparameter`, the return
+        value is automatically normalised to a plain Python list of scalars
+        by :py:func:`~pyretis.orderparameter.normalize_order_output`.
 
         Parameters
         ----------
@@ -114,10 +201,10 @@ class OrderParameter:
 
         Returns
         -------
-        out : list of floats
-            The order parameter(s). The first order parameter returned
-            is used as the progress coordinate in path sampling
-            simulations!
+        out : scalar, list, tuple, or numpy.ndarray
+            The order parameter value(s). After normalisation the first
+            element is used as the progress coordinate in path sampling
+            simulations.
 
         """
         return

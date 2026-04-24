@@ -74,7 +74,7 @@ class RingDiffusion(OrderParameter):
 
         Returns
         -------
-        out : float
+        out : list of floats
             The order parameter.
 
         """

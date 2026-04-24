@@ -62,7 +62,7 @@ class OrderParameterWCAJCP1(OrderParameter):
 
         Returns
         -------
-        out : float
+        out : list of floats
             The order parameter.
 
         """
@@ -80,7 +80,7 @@ class OrderParameterWCAJCP1(OrderParameter):
         m = m1 * m2 / (m1 + m2)
         potential_func = system.forcefield.potential[0]
         if potential_func is None:
-            return r
+            return [float(r)]
         if r < 1.2:
             pot = potential_func.potential_well(system) + 0.5 * m * (dxdv)**2
             orderp = 1.19

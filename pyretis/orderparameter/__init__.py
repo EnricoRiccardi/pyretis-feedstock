@@ -40,7 +40,9 @@ from .orderparameter import (
     DistanceVelocity,
     Permeability,
     PermeabilityMinusOffset,
-    CompositeOrderParameter
+    CompositeOrderParameter,
+    normalize_order_output,
+    wrap_orderparameter,
 )
 from .orderangle import Angle
 from .orderdihedral import Dihedral

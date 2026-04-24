@@ -32,6 +32,7 @@ from pyretis.inout.formats.gromacs import (
 )
 from pyretis.inout.formats.xyz import read_xyz_file, convert_snapshot
 from pyretis.inout.formats.path import PathExtFile
+from pyretis.orderparameter.orderparameter import wrap_orderparameter
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
@@ -73,6 +74,7 @@ def recalculate_from_trj(order_parameter, trr_file, options):
         The order parameters, calculated per frame.
 
     """
+    order_parameter = wrap_orderparameter(order_parameter)
     system = System(box=None)  # Add dummy system.
     msg = 'Re-calculate from %s: Step %s, time %s'
     minidx, maxidx = options.get('minidx'), options.get('maxidx')
@@ -135,6 +137,7 @@ def recalculate_from_xyz(order_parameter, traj_file, options):
         The order parameters as a list.
 
     """
+    order_parameter = wrap_orderparameter(order_parameter)
     system = System(box=None)
     msg = 'Re-calculate from %s: Step %s'
     minidx, maxidx = options.get('minidx'), options.get('maxidx')
@@ -186,6 +189,7 @@ def recalculate_from_frame(order_parameter, frame_file, options):
         The order parameters for the current frame.
 
     """
+    order_parameter = wrap_orderparameter(order_parameter)
     system = System(box=None)
     msg = f'Re-calculate from {os.path.basename(frame_file)}:'
     logger.info(msg)
