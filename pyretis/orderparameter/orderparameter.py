@@ -42,31 +42,33 @@ DistanceVelocity (:py:class:`.DistanceVelocity`)
     :py:class:`.Distance` and :py:class:`.Distancevel`.
 
 """
+
 from abc import abstractmethod
 import functools
 import logging
 import numpy as np
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
 
 __all__ = [
-    'OrderParameter',
-    'Position',
-    'Permeability',
-    'PermeabilityMinusOffset',
-    'Velocity',
-    'Distance',
-    'Distancevel',
-    'DistanceVelocity',
-    'PositionVelocity',
-    'CompositeOrderParameter',
-    'normalize_order_output',
-    'wrap_orderparameter',
+    "OrderParameter",
+    "Position",
+    "Permeability",
+    "PermeabilityMinusOffset",
+    "Velocity",
+    "Distance",
+    "Distancevel",
+    "DistanceVelocity",
+    "PositionVelocity",
+    "CompositeOrderParameter",
+    "normalize_order_output",
+    "wrap_orderparameter",
 ]
 
 
-def normalize_order_output(order, klass_name='unknown'):
+def normalize_order_output(order, klass_name="unknown"):
     """Normalise the return value of ``calculate()`` to a flat list.
 
     This function accepts the raw return value from any ``calculate``
@@ -94,8 +96,8 @@ def normalize_order_output(order, klass_name='unknown'):
     """
     msg = (
         f'Order parameter "{klass_name}" must return a flat list of values '
-        'for a single frame. PyRETIS handles multiple frames as a list of '
-        'lists outside calculate().'
+        "for a single frame. PyRETIS handles multiple frames as a list of "
+        "lists outside calculate()."
     )
     if isinstance(order, np.ndarray):
         if order.ndim == 0:
@@ -104,7 +106,7 @@ def normalize_order_output(order, klass_name='unknown'):
             return order.tolist()
         raise ValueError(msg)
     if np.isscalar(order):
-        return [order.item() if hasattr(order, 'item') else order]
+        return [order.item() if hasattr(order, "item") else order]
     try:
         values = list(order)
     except TypeError as exc:
@@ -115,7 +117,7 @@ def normalize_order_output(order, klass_name='unknown'):
 
 
 def wrap_orderparameter(instance):
-    """Wrap an order-parameter instance so ``calculate()`` always returns a list.
+    """Wrap an OP instance so ``calculate()`` always returns a list.
 
     The wrapper is idempotent: calling this function twice on the same
     instance is safe and has no additional effect.
@@ -130,7 +132,7 @@ def wrap_orderparameter(instance):
     instance : same object, mutated in place.
 
     """
-    if getattr(instance, '_pyretis_order_output_wrapped', False):
+    if getattr(instance, "_pyretis_order_output_wrapped", False):
         return instance
     calculate = instance.calculate
 
@@ -163,7 +165,7 @@ class OrderParameter:
 
     """
 
-    def __init__(self, description='Generic order parameter', velocity=False):
+    def __init__(self, description="Generic order parameter", velocity=False):
         """Initialise the OrderParameter object.
 
         Parameters
@@ -177,7 +179,7 @@ class OrderParameter:
         if self.velocity_dependent:
             logger.debug(
                 'Order parameter "%s" was marked as velocity dependent.',
-                self.description
+                self.description,
             )
 
     @abstractmethod
@@ -211,13 +213,10 @@ class OrderParameter:
 
     def __str__(self):
         """Return a simple string representation of the order parameter."""
-        msg = [
-            f'Order parameter: "{self.__class__.__name__}"',
-            f'{self.description}'
-        ]
+        msg = [f'Order parameter: "{self.__class__.__name__}"', f"{self.description}"]
         if self.velocity_dependent:
-            msg.append('This order parameter is velocity dependent.')
-        return '\n'.join(msg)
+            msg.append("This order parameter is velocity dependent.")
+        return "\n".join(msg)
 
     def load_restart_info(self, info):
         """Load the order parameter restart info."""
@@ -246,7 +245,7 @@ class Position(OrderParameter):
 
     """
 
-    def __init__(self, index, dim='x', periodic=False, description=None):
+    def __init__(self, index, dim="x", periodic=False, description=None):
         """Initialise the order parameter.
 
         Parameters
@@ -262,13 +261,13 @@ class Position(OrderParameter):
 
         """
         if description is None:
-            description = f'Position of particle {index} (dim: {dim})'
+            description = f"Position of particle {index} (dim: {dim})"
         super().__init__(description=description, velocity=False)
         self.periodic = periodic
         self.index = index
-        self.dim = {'x': 0, 'y': 1, 'z': 2}.get(dim, None)
+        self.dim = {"x": 0, "y": 1, "z": 2}.get(dim, None)
         if self.dim is None:
-            msg = f'Unknown dimension {dim} requested'
+            msg = f"Unknown dimension {dim} requested"
             logger.critical(msg)
             raise ValueError(msg)
 
@@ -327,8 +326,7 @@ class Permeability(Position):
 
     """
 
-    def __init__(self, index, dim='z', offset=0., mirror_pos=0.,
-                 relative=True):
+    def __init__(self, index, dim="z", offset=0.0, mirror_pos=0.0, relative=True):
         """Initialise the order parameter.
 
         Parameters
@@ -349,22 +347,24 @@ class Permeability(Position):
             to the box size.
 
         """
-        description = (f"Permeability position of particle {index} "
-                       f"(dim: {dim})")
-        super().__init__(index=index, dim=dim, periodic=True,
-                         description=description)
+        description = f"Permeability position of particle {index} (dim: {dim})"
+        super().__init__(index=index, dim=dim, periodic=True, description=description)
 
         self.offset = offset
         self.mirror_pos = mirror_pos
         self.relative = relative
         self._mirror = False
         if relative and abs(offset) >= 1:
-            raise ValueError("Mapping to relative space, but offset is not "
-                             f"between -1 and 1, offset was : {offset}")
+            raise ValueError(
+                "Mapping to relative space, but offset is not "
+                f"between -1 and 1, offset was : {offset}"
+            )
         if relative and abs(mirror_pos) >= 1:
-            raise ValueError("Mapping to relative space, but mirror_pos is"
-                             "not between -1 and 1, mirror_pos was : "
-                             f"{mirror_pos}")
+            raise ValueError(
+                "Mapping to relative space, but mirror_pos is"
+                "not between -1 and 1, mirror_pos was : "
+                f"{mirror_pos}"
+            )
 
     def calculate_s(self, system):
         """Calculate a value that we the alter in the `calculate` function.
@@ -404,7 +404,7 @@ class Permeability(Position):
         if self.relative and system.box is not None:
             value /= system.box.length[self.dim]
             box = 1
-            l_box = system.box.low[self.dim]/system.box.length[self.dim]
+            l_box = system.box.low[self.dim] / system.box.length[self.dim]
         elif system.box is not None:
             box = system.box.length[self.dim]
             l_box = system.box.low[self.dim]
@@ -413,7 +413,7 @@ class Permeability(Position):
             l_box = 0
         # Map to mirrored space if required
         if self._mirror:
-            value = 2*self.mirror_pos-value
+            value = 2 * self.mirror_pos - value
         # Apply lowest_box
         value -= l_box
 
@@ -427,7 +427,7 @@ class Permeability(Position):
 
         if not self.relative:
             value += l_box
-        return [value, self.index, (-1)**self._mirror]+values
+        return [value, self.index, (-1) ** self._mirror] + values
 
     def mirror(self):
         """Swap this object around the mirror plane."""
@@ -436,15 +436,14 @@ class Permeability(Position):
 
     def restart_info(self):
         """Return the mutable attributes for the restart."""
-        info = {'index': self.index,
-                'mirror': self._mirror}
+        info = {"index": self.index, "mirror": self._mirror}
 
         return info
 
     def load_restart_info(self, info):
         """Load the mutable attributes from restart."""
-        self.index = info['index']
-        self._mirror = info['mirror']
+        self.index = info["index"]
+        self._mirror = info["mirror"]
 
 
 class PermeabilityMinusOffset(Permeability):
@@ -454,7 +453,7 @@ class PermeabilityMinusOffset(Permeability):
         """Calculate the permeability op and subtract the offset."""
         # Just get the permeability and unwrap it
         values = super().calculate(system)
-        return [values[0]-self.offset]+values[1:]
+        return [values[0] - self.offset] + values[1:]
 
 
 class Velocity(OrderParameter):
@@ -474,7 +473,7 @@ class Velocity(OrderParameter):
 
     """
 
-    def __init__(self, index, dim='x'):
+    def __init__(self, index, dim="x"):
         """Initialise the order parameter.
 
         Parameters
@@ -486,12 +485,12 @@ class Velocity(OrderParameter):
             it should equal 'x', 'y' or 'z'.
 
         """
-        txt = f'Velocity of particle {index} (dim: {dim})'
+        txt = f"Velocity of particle {index} (dim: {dim})"
         super().__init__(description=txt, velocity=True)
         self.index = index
-        self.dim = {'x': 0, 'y': 1, 'z': 2}.get(dim, None)
+        self.dim = {"x": 0, "y": 1, "z": 2}.get(dim, None)
         if self.dim is None:
-            logger.critical('Unknown dimension %s requested', dim)
+            logger.critical("Unknown dimension %s requested", dim)
             raise ValueError
 
     def calculate(self, system):
@@ -515,12 +514,14 @@ def _verify_pair(index):
     """Check that the given index contains a pair."""
     try:
         if len(index) != 2:
-            msg = ('Wrong number of atoms for pair definition. '
-                   f'Expected 2 got {len(index)}')
+            msg = (
+                "Wrong number of atoms for pair definition. "
+                f"Expected 2 got {len(index)}"
+            )
             logger.error(msg)
             raise ValueError(msg)
     except TypeError as err:
-        msg = 'Atom pair should be defined as a tuple/list of integers.'
+        msg = "Atom pair should be defined as a tuple/list of integers."
         logger.error(msg)
         raise TypeError(msg) from err
 
@@ -556,8 +557,8 @@ class Distance(OrderParameter):
 
         """
         _verify_pair(index)
-        pbc = 'Periodic' if periodic else 'Non-periodic'
-        txt = f'{pbc} distance, particles {index[0]} and {index[1]}'
+        pbc = "Periodic" if periodic else "Non-periodic"
+        txt = f"{pbc} distance, particles {index[0]} and {index[1]}"
         super().__init__(description=txt, velocity=False)
         self.periodic = periodic
         self.index = index
@@ -619,9 +620,8 @@ class Distancevel(OrderParameter):
 
         """
         _verify_pair(index)
-        pbc = 'Periodic' if periodic else 'Non-periodic'
-        txt = (f'{pbc} rate-of-change-distance, particles {index[0]} and '
-               f'{index[1]}')
+        pbc = "Periodic" if periodic else "Non-periodic"
+        txt = f"{pbc} rate-of-change-distance, particles {index[0]} and {index[1]}"
         super().__init__(description=txt, velocity=True)
         self.periodic = periodic
         self.index = index
@@ -681,8 +681,7 @@ class CompositeOrderParameter(OrderParameter):
             A list of order parameters we can add.
 
         """
-        super().__init__(description='Combined order parameter',
-                         velocity=False)
+        super().__init__(description="Combined order parameter", velocity=False)
         self.order_parameters = []
         if order_parameters is not None:
             for order_function in order_parameters:
@@ -716,7 +715,7 @@ class CompositeOrderParameter(OrderParameter):
     def mirror(self):
         """Mirrors all of the functions that allow it."""
         order_p = self.order_parameters[0]
-        op_mirror_func = getattr(order_p, 'mirror', None)
+        op_mirror_func = getattr(order_p, "mirror", None)
         if op_mirror_func is not None:
             op_mirror_func()
         else:
@@ -728,7 +727,7 @@ class CompositeOrderParameter(OrderParameter):
             logger.warning(msg)
         # This is safe as compound OPs should always have more than 1 OP.
         for order_function in self.order_parameters[1:]:
-            mirror_func = getattr(order_function, 'mirror', None)
+            mirror_func = getattr(order_function, "mirror", None)
             if mirror_func is not None:
                 mirror_func()
 
@@ -756,7 +755,7 @@ class CompositeOrderParameter(OrderParameter):
 
         """
         # We check that the ``calculate`` method is present and callable.
-        for func in ('calculate', ):
+        for func in ("calculate",):
             objfunc = getattr(order_function, func, None)
             name = order_function.__class__.__name__
             if not objfunc:
@@ -770,7 +769,7 @@ class CompositeOrderParameter(OrderParameter):
         if self.velocity_dependent:
             logger.debug(
                 'Order parameter "%s" was marked as velocity dependent.',
-                self.description
+                self.description,
             )
         self.order_parameters.append(order_function)
         return True
@@ -787,17 +786,17 @@ class CompositeOrderParameter(OrderParameter):
 
     def __str__(self):
         """Return a simple string representation of the order parameter."""
-        txt = ['Order parameter, combination of:']
+        txt = ["Order parameter, combination of:"]
         for i, order in enumerate(self.order_parameters):
-            txt.append(f'{i}: {str(order)}')
-        msg = '\n'.join(txt)
+            txt.append(f"{i}: {str(order)}")
+        msg = "\n".join(txt)
         return msg
 
 
 class PositionVelocity(CompositeOrderParameter):
     """An order parameter equal to the position & velocity of a given atom."""
 
-    def __init__(self, index, dim='x', periodic=False):
+    def __init__(self, index, dim="x", periodic=False):
         """Initialise the order parameter.
 
         Parameters

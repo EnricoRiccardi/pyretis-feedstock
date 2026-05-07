@@ -2,6 +2,7 @@
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """Test the order parameter classes from pyretis.orderparameter."""
+
 import logging
 import pytest
 import numpy as np
@@ -23,6 +24,7 @@ from pyretis.orderparameter import (
     wrap_orderparameter,
 )
 from pyretis.core import System, create_box, Particles
+
 logging.disable(logging.CRITICAL)
 
 
@@ -30,20 +32,20 @@ class SimpleOrder(OrderParameter):
     """An order parameter which equals the system temperature."""
 
     def __init__(self):
-        super().__init__(description='Simple order parameter')
+        super().__init__(description="Simple order parameter")
 
     def calculate(self, system):
-        return [system.temperature['set']]
+        return [system.temperature["set"]]
 
 
 class SimpleOrderTemp(OrderParameter):
     """An order parameter which equals the system temperature."""
 
     def __init__(self):
-        super().__init__(description='Simple order parameter', velocity=True)
+        super().__init__(description="Simple order parameter", velocity=True)
 
     def calculate(self, system):
-        return [system.temperature['set'] * -1]
+        return [system.temperature["set"] * -1]
 
 
 class SimpleOrderFaulty:  # pylint: disable=too-few-public-methods
@@ -51,7 +53,7 @@ class SimpleOrderFaulty:  # pylint: disable=too-few-public-methods
 
     def calculate_all(self, system):  # pylint: disable=no-self-use
         """Just return the set temperature."""
-        return [system.temperature['set']]
+        return [system.temperature["set"]]
 
 
 class SimpleOrderFaulty2:  # pylint: disable=too-few-public-methods
@@ -65,9 +67,9 @@ class TestOrderGeneric:
 
     def test_simple_order(self):
         """Test that we can create a very simple order parameter."""
-        system = System(temperature=123.0, units='lj', box=None)
+        system = System(temperature=123.0, units="lj", box=None)
         order = SimpleOrder()
-        correct = [123.0, 'lj']
+        correct = [123.0, "lj"]
         val = order.calculate(system)
         assert val[0] == pytest.approx(correct[0])
         assert len(val) == 1
@@ -80,15 +82,15 @@ class TestOrderGeneric:
 def create_system(ndim, npart, periodic=False):
     """Create a simple system for testing."""
     if periodic:
-        box = create_box(low=[0]*ndim, high=[1]*ndim)
+        box = create_box(low=[0] * ndim, high=[1] * ndim)
     else:
-        box = create_box(periodic=[False]*ndim)
+        box = create_box(periodic=[False] * ndim)
     system = System(box=box)
     system.particles = Particles(system.get_dim())
     for _ in range(npart):
         pos = np.random.random(box.dim)
         vel = np.random.random(box.dim)
-        system.add_particle(name='Ar', pos=pos, vel=vel)
+        system.add_particle(name="Ar", pos=pos, vel=vel)
     return system, box
 
 
@@ -118,8 +120,7 @@ class TestOrderPosition:
     def _get_correct(self, system, index, idim, periodic=False):
         """Return the correct order parameters."""
         correct = [
-            self._correct_order1(system, index, idim,
-                                 periodic=periodic),
+            self._correct_order1(system, index, idim, periodic=periodic),
             self._correct_order2(system, index, idim),
         ]
         correct.append(correct[0] + correct[1])
@@ -131,12 +132,10 @@ class TestOrderPosition:
         for npart, index in zip((1, 10), (0, 2)):
             for ndim in [1, 2, 3]:
                 system, _ = create_system(ndim, npart, periodic=periodic)
-                for idim, xdim in enumerate(('x', 'y', 'z')):
+                for idim, xdim in enumerate(("x", "y", "z")):
                     orderp = self._get_order(index, xdim, periodic=periodic)
-                    correct = self._get_correct(system, index, idim,
-                                                periodic=periodic)
-                    self._check_order_parameter(orderp, correct, system,
-                                                idim, ndim)
+                    correct = self._get_correct(system, index, idim, periodic=periodic)
+                    self._check_order_parameter(orderp, correct, system, idim, ndim)
 
     def test_with_pbc(self):
         """Test the order parameters with periodic boundaries."""
@@ -144,18 +143,15 @@ class TestOrderPosition:
         for npart, index in zip((1, 10), (0, -1)):
             for ndim in [1, 2, 3]:
                 # Just test for some displacements:
-                for disp in [0.0, 1.5, -1.5, 100., -100.]:
+                for disp in [0.0, 1.5, -1.5, 100.0, -100.0]:
                     system, _ = create_system(ndim, npart, periodic=periodic)
-                    system.particles.pos += (
-                        np.ones_like(system.particles.pos) * disp
-                    )
-                    for idim, xdim in enumerate(('x', 'y', 'z')):
-                        orderp = self._get_order(index, xdim,
-                                                 periodic=periodic)
-                        correct = self._get_correct(system, index, idim,
-                                                    periodic=periodic)
-                        self._check_order_parameter(orderp, correct, system,
-                                                    idim, ndim)
+                    system.particles.pos += np.ones_like(system.particles.pos) * disp
+                    for idim, xdim in enumerate(("x", "y", "z")):
+                        orderp = self._get_order(index, xdim, periodic=periodic)
+                        correct = self._get_correct(
+                            system, index, idim, periodic=periodic
+                        )
+                        self._check_order_parameter(orderp, correct, system, idim, ndim)
 
     @staticmethod
     def _correct_order1(system, index, idim, periodic=False):
@@ -180,11 +176,11 @@ class TestOrderPosition:
     def test_init_fail(self):
         """Check that the initiation fails if we supply strange input."""
         with pytest.raises(ValueError):
-            Position(0, dim='a')
+            Position(0, dim="a")
         with pytest.raises(ValueError):
-            Velocity(0, dim='pingu')
+            Velocity(0, dim="pingu")
         with pytest.raises(ValueError):
-            PositionVelocity(123, dim='chonky')
+            PositionVelocity(123, dim="chonky")
 
 
 class TestOrderDistance:
@@ -229,7 +225,7 @@ class TestOrderDistance:
         """Test the distance order parameter with pbc."""
         # Test for a one-particle system:
         index = (0, 1)
-        for disp in [0.0, 1.5, -1.5, 100., -100.]:
+        for disp in [0.0, 1.5, -1.5, 100.0, -100.0]:
             for ndim in [1, 2, 3]:
                 system, box = create_system(ndim, 2, periodic=True)
                 for i in index:
@@ -271,11 +267,7 @@ class TestOrderDistance:
         """Check that the initiation fails if we supply strange input."""
         inputs = [0, [0], (0,), (0, 1, 2)]
         errors = [TypeError, ValueError, ValueError, ValueError]
-        klasses = (
-            Distance,
-            Distancevel,
-            DistanceVelocity
-        )
+        klasses = (Distance, Distancevel, DistanceVelocity)
         for cls in klasses:
             for i, j in zip(inputs, errors):
                 with pytest.raises(j):
@@ -286,9 +278,9 @@ def water_molecule(box):
     """Return a simple system with a single water molecule."""
     system = System(box=box)
     system.particles = Particles(system.get_dim())
-    system.add_particle(name='O', pos=np.array([0.230, 0.628, 0.113]))
-    system.add_particle(name='H', pos=np.array([0.137, 0.626, 0.150]))
-    system.add_particle(name='H', pos=np.array([0.231, 0.589, 0.021]))
+    system.add_particle(name="O", pos=np.array([0.230, 0.628, 0.113]))
+    system.add_particle(name="H", pos=np.array([0.137, 0.626, 0.150]))
+    system.add_particle(name="H", pos=np.array([0.231, 0.589, 0.021]))
     return system
 
 
@@ -297,13 +289,13 @@ def triangle():
     box = create_box(periodic=[False, False])
     system = System(box=box)
     system.particles = Particles(system.get_dim())
-    system.add_particle(name='X', pos=np.array([0.0, 0.0]))
-    system.add_particle(name='X', pos=np.array([1.0, 0.0]))
-    system.add_particle(name='X', pos=np.array([0.0, 1.0]))
+    system.add_particle(name="X", pos=np.array([0.0, 0.0]))
+    system.add_particle(name="X", pos=np.array([1.0, 0.0]))
+    system.add_particle(name="X", pos=np.array([0.0, 1.0]))
     angles = [
-        ((1, 0, 2), 90.),
-        ((0, 1, 2), 45.),
-        ((0, 2, 1), 45.),
+        ((1, 0, 2), 90.0),
+        ((0, 1, 2), 45.0),
+        ((0, 2, 1), 45.0),
     ]
     return system, angles
 
@@ -314,7 +306,7 @@ class TestOrderAngle:
     def test_without_pbc(self):
         """Test the angle order parameter without pbc."""
         orderp = Angle((1, 0, 2), periodic=False)
-        box = create_box(periodic=[False]*3)
+        box = create_box(periodic=[False] * 3)
         # Test angle for the SPC water geometry.
         system = water_molecule(box)
         angle = orderp.calculate(system)[0]
@@ -324,7 +316,7 @@ class TestOrderAngle:
         """Test the angle order parameter with pbc."""
         orderp = Angle((1, 0, 2), periodic=True)
         # Test angle for the SPC water geometry.
-        box = create_box(periodic=[True, True, True], cell=[1., 1., 1.])
+        box = create_box(periodic=[True, True, True], cell=[1.0, 1.0, 1.0])
         system = water_molecule(box)
         angle = orderp.calculate(system)[0]
         assert np.degrees(angle) == pytest.approx(109.984398, abs=1e-3)
@@ -358,67 +350,120 @@ class TestOrderAngle:
         """
         orderp = Angle((0, 1, 2), periodic=False)
         test_cases = [
-            {'angle': 0.5 * np.pi, 'pos': np.array([[1.0, 0.0, 0.0],
-                                                    [0.0, 0.0, 0.0],
-                                                    [0.0, 1.0, 0.0]])},
-            {'angle': 0.0, 'pos': np.array([[1.0, 0.0, 0.0],
-                                            [0.0, 0.0, 0.0],
-                                            [1.0, 0.0, 0.0]])},
-            {'angle': np.pi, 'pos': np.array([[1.0, 0.0, 0.0],
-                                              [0.0, 0.0, 0.0],
-                                              [-1.0, 0.0, 0.0]])},
+            {
+                "angle": 0.5 * np.pi,
+                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+            },
+            {
+                "angle": 0.0,
+                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+            },
+            {
+                "angle": np.pi,
+                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]),
+            },
         ]
         system, _ = create_system(3, 3, periodic=False)
         for case in test_cases:
-            system.particles.pos = case['pos']
+            system.particles.pos = case["pos"]
             angle = orderp.calculate(system)[0]
-            assert angle == pytest.approx(case['angle'])
+            assert angle == pytest.approx(case["angle"])
 
 
 class TestOrderDihedral:
     """Run the tests for the Dihedral class."""
 
     test_cases = [
-        {'angle': 180.0, 'pos': np.array([[0.0, 1.0, 0.0],
-                                          [0.0, 0.0, 0.0],
-                                          [1.0, 0.0, 0.0],
-                                          [1.0, -1.0, 0.0]])},
-        {'angle': 0.0, 'pos': np.array([[0.0, 1.0, 0.0],
-                                        [0.0, 0.0, 0.0],
-                                        [1.0, 0.0, 0.0],
-                                        [1.0, 1.0, 0.0]])},
-        {'angle': -90.0, 'pos': np.array([[0.0, 0.0, 1.0],
-                                          [0.0, 0.0, 0.0],
-                                          [1.0, 0.0, 0.0],
-                                          [1.0, 1.0, 0.0]])},
-        {'angle': 90.0, 'pos': np.array([[0.0, 0.0, -1.0],
-                                         [0.0, 0.0, 0.0],
-                                         [1.0, 0.0, 0.0],
-                                         [1.0, 1.0, 0.0]])},
-        {'angle': -60.0127, 'pos': np.array([[0.354, -2.210, -7.248],
-                                             [-0.290, -2.221, -6.483],
-                                             [0.472, -2.265, -5.191],
-                                             [1.036, -3.090, -5.164]])},
-        {'angle': 60.0319, 'pos': np.array([[0.354, -2.210, -7.248],
-                                            [-0.290, -2.221, -6.483],
-                                            [0.472, -2.265, -5.191],
-                                            [1.058, -1.458, -5.122]])},
-        {'angle': 0.0, 'pos': np.array([[1.499, -0.043, 0.000],
-                                        [2.055, 1.361, 0.000],
-                                        [3.481, 1.470, 0.000],
-                                        [3.898, 0.528, 0.000]])},
-        {'angle': -59.365971, 'pos': np.array([[0.039, -0.028, 0.000],
-                                               [1.499, -0.043, 0.000],
-                                               [1.956, -0.866, -1.217],
-                                               [1.571, -1.903, -1.181]])},
-        {'angle': 60.833130, 'pos': np.array([[0.039, -0.028, 0.000],
-                                              [1.499, -0.043, 0.000],
-                                              [1.956, -0.866, -1.217],
-                                              [1.610, -0.425, -2.172]])},
-        {'angle': -62.290916, 'pos': np.array([[-0.543, -0.938, 0.000],
-                                               [0.039, -0.028, 0.000],
-                                               [1.499, -0.043, 0.000],
-                                               [1.847, -0.534, 0.928]])},
+        {
+            "angle": 180.0,
+            "pos": np.array(
+                [[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, -1.0, 0.0]]
+            ),
+        },
+        {
+            "angle": 0.0,
+            "pos": np.array(
+                [[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
+            ),
+        },
+        {
+            "angle": -90.0,
+            "pos": np.array(
+                [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
+            ),
+        },
+        {
+            "angle": 90.0,
+            "pos": np.array(
+                [[0.0, 0.0, -1.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
+            ),
+        },
+        {
+            "angle": -60.0127,
+            "pos": np.array(
+                [
+                    [0.354, -2.210, -7.248],
+                    [-0.290, -2.221, -6.483],
+                    [0.472, -2.265, -5.191],
+                    [1.036, -3.090, -5.164],
+                ]
+            ),
+        },
+        {
+            "angle": 60.0319,
+            "pos": np.array(
+                [
+                    [0.354, -2.210, -7.248],
+                    [-0.290, -2.221, -6.483],
+                    [0.472, -2.265, -5.191],
+                    [1.058, -1.458, -5.122],
+                ]
+            ),
+        },
+        {
+            "angle": 0.0,
+            "pos": np.array(
+                [
+                    [1.499, -0.043, 0.000],
+                    [2.055, 1.361, 0.000],
+                    [3.481, 1.470, 0.000],
+                    [3.898, 0.528, 0.000],
+                ]
+            ),
+        },
+        {
+            "angle": -59.365971,
+            "pos": np.array(
+                [
+                    [0.039, -0.028, 0.000],
+                    [1.499, -0.043, 0.000],
+                    [1.956, -0.866, -1.217],
+                    [1.571, -1.903, -1.181],
+                ]
+            ),
+        },
+        {
+            "angle": 60.833130,
+            "pos": np.array(
+                [
+                    [0.039, -0.028, 0.000],
+                    [1.499, -0.043, 0.000],
+                    [1.956, -0.866, -1.217],
+                    [1.610, -0.425, -2.172],
+                ]
+            ),
+        },
+        {
+            "angle": -62.290916,
+            "pos": np.array(
+                [
+                    [-0.543, -0.938, 0.000],
+                    [0.039, -0.028, 0.000],
+                    [1.499, -0.043, 0.000],
+                    [1.847, -0.534, 0.928],
+                ]
+            ),
+        },
     ]
 
     def test_without_pbc(self):
@@ -427,25 +472,25 @@ class TestOrderDihedral:
         system, _ = create_system(3, 4, periodic=False)
         # Test some pre-defined cases:
         for case in self.test_cases:
-            system.particles.pos = case['pos']
+            system.particles.pos = case["pos"]
             angle = orderp.calculate(system)[0]
             angle_deg = np.degrees(angle)  # pylint: disable=no-member
-            assert angle_deg == pytest.approx(case['angle'], abs=1e-4)
+            assert angle_deg == pytest.approx(case["angle"], abs=1e-4)
 
     def test_with_pbc(self):
         """Test the angle order parameter with pbc."""
         orderp = Dihedral((3, 2, 1, 0), periodic=True)
         system, _ = create_system(3, 4, periodic=True)
         # Define a new box for this test:
-        box = create_box(periodic=[True, True, True], cell=[8., 8., 8.])
+        box = create_box(periodic=[True, True, True], cell=[8.0, 8.0, 8.0])
         system.box = box
         # Test same cases, just displaced.
         for case in self.test_cases:
-            displace = np.ones_like(case['pos']) * 9
-            system.particles.pos = case['pos'] + displace
+            displace = np.ones_like(case["pos"]) * 9
+            system.particles.pos = case["pos"] + displace
             angle = orderp.calculate(system)[0]
             angle_deg = np.degrees(angle)  # pylint: disable=no-member
-            assert angle_deg == pytest.approx(case['angle'], abs=1e-4)
+            assert angle_deg == pytest.approx(case["angle"], abs=1e-4)
 
     def test_order(self):
         """Test if we get the same angle if we reverse indices."""
@@ -469,7 +514,7 @@ class TestOrderDihedral:
         with pytest.raises(ValueError):
             Dihedral((0, 1, 2), periodic=False)
         with pytest.raises(ValueError):
-            Dihedral((0, 1, 2, 'tre'), periodic=False)
+            Dihedral((0, 1, 2, "tre"), periodic=False)
 
 
 class TestOrderFactory:
@@ -479,49 +524,49 @@ class TestOrderFactory:
         """Test that we can create order parameters with the factory."""
         test_cases = [
             {
-                'setting': {'class': 'orderparameter'},
-                'class': OrderParameter,
+                "setting": {"class": "orderparameter"},
+                "class": OrderParameter,
             },
             {
-                'setting': {'class': 'OrderPARAMetEr'},
-                'class': OrderParameter,
+                "setting": {"class": "OrderPARAMetEr"},
+                "class": OrderParameter,
             },
             {
-                'setting': {'class': 'position', 'index': 0},
-                'class': Position,
+                "setting": {"class": "position", "index": 0},
+                "class": Position,
             },
             {
-                'setting': {'class': 'velocity', 'index': 0},
-                'class': Velocity,
+                "setting": {"class": "velocity", "index": 0},
+                "class": Velocity,
             },
             {
-                'setting': {'class': 'distance', 'index': (0, 1)},
-                'class': Distance,
+                "setting": {"class": "distance", "index": (0, 1)},
+                "class": Distance,
             },
             {
-                'setting': {'class': 'distancevel', 'index': (0, 1)},
-                'class': Distancevel,
+                "setting": {"class": "distancevel", "index": (0, 1)},
+                "class": Distancevel,
             },
             {
-                'setting': {'class': 'PositionVelocity', 'index': 0},
-                'class': PositionVelocity,
+                "setting": {"class": "PositionVelocity", "index": 0},
+                "class": PositionVelocity,
             },
             {
-                'setting': {'class': 'distancevelocity', 'index': (0, 1)},
-                'class': DistanceVelocity,
+                "setting": {"class": "distancevelocity", "index": (0, 1)},
+                "class": DistanceVelocity,
             },
             {
-                'setting': {'class': 'angle', 'index': (0, 1, 2)},
-                'class': Angle,
+                "setting": {"class": "angle", "index": (0, 1, 2)},
+                "class": Angle,
             },
             {
-                'setting': {'class': 'dihedral', 'index': (0, 1, 2, 3)},
-                'class': Dihedral,
+                "setting": {"class": "dihedral", "index": (0, 1, 2, 3)},
+                "class": Dihedral,
             },
         ]
         for case in test_cases:
-            orderp = order_factory(case['setting'])
-            assert isinstance(orderp, case['class'])
+            orderp = order_factory(case["setting"])
+            assert isinstance(orderp, case["class"])
 
 
 class TestCollection:
@@ -540,9 +585,9 @@ class TestCollection:
         for i, j in zip(orderp.order_parameters, orderp2.order_parameters):
             assert i is j
         system, _ = create_system(3, 3, periodic=False)
-        system.particles.pos = np.array([[0.0, 0.0, 0.0],
-                                         [0.0, 0.0, 0.1],
-                                         [0.0, 0.0, 0.3]])
+        system.particles.pos = np.array(
+            [[0.0, 0.0, 0.0], [0.0, 0.0, 0.1], [0.0, 0.0, 0.3]]
+        )
         order = orderp.calculate(system)
         correct = [0.1, 0.2, 0.3]
         assert len(order) == len(correct)
@@ -588,20 +633,20 @@ class TestCollection:
 class TestPermeability:
     def setup_method(self):
         self.system, self.box = create_system(2, 2, periodic=True)
-        self.op = Permeability(index=0, dim='x', relative=False)
+        self.op = Permeability(index=0, dim="x", relative=False)
         self.x = self.system.particles.pos[0, 0]
 
     def test_non_relative_offset(self):
         with pytest.raises(ValueError, match="offset"):
-            Permeability(index=0, dim='x', offset=-1.01)
+            Permeability(index=0, dim="x", offset=-1.01)
         # Test that we do pss if not relative
-        _ = Permeability(index=0, dim='x', offset=-1.01, relative=False)
+        _ = Permeability(index=0, dim="x", offset=-1.01, relative=False)
 
     def test_non_relative_mirror(self):
         with pytest.raises(ValueError, match="mirror_pos"):
-            Permeability(index=0, dim='x', mirror_pos=1.01)
+            Permeability(index=0, dim="x", mirror_pos=1.01)
         # Test that we do pss if not relative
-        _ = Permeability(index=0, dim='x', mirror_pos=1.01, relative=False)
+        _ = Permeability(index=0, dim="x", mirror_pos=1.01, relative=False)
 
     def test_x_calculation(self):
         # Test that this is just the position
@@ -609,8 +654,8 @@ class TestPermeability:
 
     def test_x_wrap(self):
         # set x to a value, that +ofsett will be wrapped
-        op1 = Permeability(index=0, dim='x')
-        op2 = Permeability(index=0, dim='x', offset=0.5)
+        op1 = Permeability(index=0, dim="x")
+        op2 = Permeability(index=0, dim="x", offset=0.5)
         x = 0.8
         self.system.particles.pos[0, 0] = x
         assert op1.calculate(self.system)[0] == x
@@ -621,21 +666,21 @@ class TestPermeability:
         self.system.box.length[0] = 2
         self.system.box.low[0] = -1
         assert self.op.calculate(self.system)[0] == pytest.approx(self.x)
-        op2 = Permeability(index=0, dim='x', relative=True)
+        op2 = Permeability(index=0, dim="x", relative=True)
         # x should be 0.5 + x/2 (adding a box lenght to the left)
-        assert op2.calculate(self.system)[0] == pytest.approx(0.5+self.x/2)
+        assert op2.calculate(self.system)[0] == pytest.approx(0.5 + self.x / 2)
 
     def test_broken_box(self):
         # Break box
         self.system.box = None
         # Make an OP that would normally break the box
 
-        op2 = Permeability(index=0, dim='x', relative=False, offset=-12)
+        op2 = Permeability(index=0, dim="x", relative=False, offset=-12)
         self.op.periodic = False
         op2.periodic = False
 
         assert self.op.calculate(self.system)[0] == pytest.approx(self.x)
-        assert op2.calculate(self.system)[0] == pytest.approx(self.x-12)
+        assert op2.calculate(self.system)[0] == pytest.approx(self.x - 12)
 
     def test_mirrored_function(self):
         assert not self.op._mirror
@@ -643,14 +688,14 @@ class TestPermeability:
         assert self.op.calculate(self.system)[2] == pytest.approx(1)
         self.op.mirror()
         assert self.op._mirror
-        assert self.op.calculate(self.system)[0] == pytest.approx(1-self.x)
+        assert self.op.calculate(self.system)[0] == pytest.approx(1 - self.x)
         assert self.op.calculate(self.system)[2] == pytest.approx(-1)
 
     def test_mirror_composite(self):
         orderp = CompositeOrderParameter()
         assert not self.op._mirror
         orderp.add_orderparameter(self.op)
-        op2 = Permeability(index=0, dim='x', relative=True)
+        op2 = Permeability(index=0, dim="x", relative=True)
         op2.mirror()
         assert op2._mirror
         orderp.add_orderparameter(op2)
@@ -664,11 +709,11 @@ class TestPermeability:
         orderp.add_orderparameter(op1)
         assert not self.op._mirror
         orderp.add_orderparameter(self.op)
-        op2 = Permeability(index=0, dim='x', relative=True)
+        op2 = Permeability(index=0, dim="x", relative=True)
         op2.mirror()
         assert op2._mirror
         orderp.add_orderparameter(op2)
-        ln = 'pyretis.orderparameter.orderparameter'
+        ln = "pyretis.orderparameter.orderparameter"
         logging.disable(logging.INFO)
 
         with caplog.at_level(logging.INFO, logger=ln):
@@ -691,13 +736,15 @@ class TestPermeability:
     def test_permeabilityminusoffset(self):
         # Tak e offset that is bigger than the box (normally be wrapped)
         offset = 10
-        opmin = PermeabilityMinusOffset(index=0, dim='x', relative=False)
+        opmin = PermeabilityMinusOffset(index=0, dim="x", relative=False)
         # Check that with an offset of 0, this is equal
         assert self.op.calculate(self.system) == opmin.calculate(self.system)
         self.op.offset = offset
         opmin.offset = offset
-        assert (self.op.calculate(self.system)[0] ==
-                opmin.calculate(self.system)[0] + offset)
+        assert (
+            self.op.calculate(self.system)[0]
+            == opmin.calculate(self.system)[0] + offset
+        )
 
     def test_restart_cycle(self):
         # See if all the info is there
@@ -710,7 +757,7 @@ class TestPermeability:
         # See if index is given properly
         self.op.index = "bla"
         info = self.op.restart_info()
-        assert info == {"index": 'bla', "mirror": True}
+        assert info == {"index": "bla", "mirror": True}
         # See if the restart is done properly
         info = {"index": "blub", "mirror": "Fish"}
         self.op.load_restart_info(info)
@@ -723,18 +770,19 @@ class TestPermeability:
         orderp.add_orderparameter(op1)
         orderp.add_orderparameter(self.op)
         info = orderp.restart_info()
-        ref_info = [None, {'index': 0, 'mirror': False}]
+        ref_info = [None, {"index": 0, "mirror": False}]
         assert info == ref_info
         # See if we can set properly as well
-        info = [None, {'index': 42, 'mirror': 'towel'}]
+        info = [None, {"index": 42, "mirror": "towel"}]
         orderp.load_restart_info(info)
         assert self.op.index == 42
-        assert self.op._mirror == 'towel'
+        assert self.op._mirror == "towel"
 
 
 # ---------------------------------------------------------------------------
 # Tests for normalize_order_output and wrap_orderparameter
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeOrderOutput:
     """Test normalize_order_output for all supported input types."""
@@ -788,36 +836,39 @@ class TestNormalizeOrderOutput:
 
 class _ScalarOP(OrderParameter):
     """Helper: returns a bare float."""
+
     def __init__(self):
-        super().__init__(description='scalar')
+        super().__init__(description="scalar")
 
     def calculate(self, system):
-        return system.temperature['set']
+        return system.temperature["set"]
 
 
 class _ArrayOP(OrderParameter):
     """Helper: returns a 1-D numpy array."""
+
     def __init__(self):
-        super().__init__(description='array')
+        super().__init__(description="array")
 
     def calculate(self, system):
-        return np.array([system.temperature['set'], 0.0])
+        return np.array([system.temperature["set"], 0.0])
 
 
 class _AlreadyWrapped(OrderParameter):
     """Helper: returns a proper list already."""
+
     def __init__(self):
-        super().__init__(description='list')
+        super().__init__(description="list")
 
     def calculate(self, system):
-        return [system.temperature['set']]
+        return [system.temperature["set"]]
 
 
 class TestWrapOrderparameter:
     """Test wrap_orderparameter for all return-type variants."""
 
     def setup_method(self):
-        self.system = System(temperature=42.0, units='lj', box=None)
+        self.system = System(temperature=42.0, units="lj", box=None)
 
     def test_scalar_normalised_to_list(self):
         op = wrap_orderparameter(_ScalarOP())
@@ -847,7 +898,7 @@ class TestWrapOrderparameter:
         assert result == [42.0]
 
     def test_composite_with_scalar_subop(self):
-        """CompositeOrderParameter must work even if a sub-OP returns scalar."""
+        """CompositeOrderParameter handles sub-OPs that return scalars."""
         sub = wrap_orderparameter(_ScalarOP())
         composite = CompositeOrderParameter(order_parameters=[sub, sub])
         result = composite.calculate(self.system)
