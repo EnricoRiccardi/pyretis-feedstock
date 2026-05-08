@@ -503,10 +503,11 @@ class ExternalMDEngine(EngineBase):
                             'momentum': False, 'rescale': None}
             self.modify_velocities(ensemble, vel_settings)
             # Update order parameter in case it's velocity dependent:
-            curr = self.calculate_order(ensemble)[0]
+            order = self.calculate_order(ensemble)
+            curr = order[0]
             msg_file.write(f'\tAfter kick: {curr}')
             previous = ensemble['system'].copy()
-            previous.order = [curr]
+            previous.order = order
             # Update system by integrating forward:
             msg_file.write('\tIntegrate forward...')
             conf = self.step(ensemble['system'], 'kicked')
@@ -539,7 +540,7 @@ class ExternalMDEngine(EngineBase):
                     '\tDid not get closer, fall back to previous point.'
                 )
                 ensemble['system'] = previous.copy()
-                curr = previous.order
+                curr = previous.order[0]
                 self._removefile(curr_file)
             msg_file.flush()
         msg_file.close()

@@ -2198,11 +2198,8 @@ class VisualObject(DataSlave):
             frames[idx] = order_p
 
         # Create data frames
-        cols = []
-        for i in range(1, len(frames[0]) + 1):
-            cols.append(f'op{i}')
-        op_labels = get_cv_names(input_settings)
-        labels = op_labels if len(op_labels) == len(cols) else cols
+        num_cols = len(frames[0])
+        labels = get_cv_names(input_settings, num_columns=num_cols)
         frames = pd.DataFrame.from_dict(frames,
                                         orient='index',
                                         columns=labels)

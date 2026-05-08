@@ -268,8 +268,9 @@ class OpenMMEngine(EngineBase):
                             'rescale': tis_settings['rescale_energy']}
             self.modify_velocities(ensemble, vel_settings)
             # Update order parameter in case it is velocity dependent:
-            curr = self.calculate_order(ensemble)[0]
-            previous.order = curr
+            order = self.calculate_order(ensemble)
+            previous.order = order
+            curr = order[0]
             # Store modified velocities:
             previous.particles.set_vel(system.particles.get_vel())
             # Integrate forward one step:
@@ -290,7 +291,7 @@ class OpenMMEngine(EngineBase):
             else:  # We did not get closer, fall back to previous point.
                 system.particles = previous.particles.copy()
                 system.box.update_size(box_matrix_to_list(prev_box))
-                curr = previous.order
+                curr = previous.order[0]
         return previous, system
 
     def modify_velocities(self, ensemble, vel_settings):

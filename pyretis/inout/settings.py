@@ -117,7 +117,7 @@ SECTIONS['potential'] = {
 SECTIONS['orderparameter'] = {
     'class': None,
     'module': None,
-    'name': 'Order Parameter'
+    'name': None,
 }
 
 SECTIONS['collective-variable'] = {

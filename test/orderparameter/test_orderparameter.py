@@ -20,6 +20,7 @@ from pyretis.orderparameter import (
     Dihedral,
     Permeability,
     PermeabilityMinusOffset,
+    expand_order_names,
     normalize_order_output,
     wrap_orderparameter,
 )
@@ -134,8 +135,12 @@ class TestOrderPosition:
                 system, _ = create_system(ndim, npart, periodic=periodic)
                 for idim, xdim in enumerate(("x", "y", "z")):
                     orderp = self._get_order(index, xdim, periodic=periodic)
-                    correct = self._get_correct(system, index, idim, periodic=periodic)
-                    self._check_order_parameter(orderp, correct, system, idim, ndim)
+                    correct = self._get_correct(
+                        system, index, idim, periodic=periodic
+                    )
+                    self._check_order_parameter(
+                        orderp, correct, system, idim, ndim
+                    )
 
     def test_with_pbc(self):
         """Test the order parameters with periodic boundaries."""
@@ -145,13 +150,19 @@ class TestOrderPosition:
                 # Just test for some displacements:
                 for disp in [0.0, 1.5, -1.5, 100.0, -100.0]:
                     system, _ = create_system(ndim, npart, periodic=periodic)
-                    system.particles.pos += np.ones_like(system.particles.pos) * disp
+                    system.particles.pos += (
+                        np.ones_like(system.particles.pos) * disp
+                    )
                     for idim, xdim in enumerate(("x", "y", "z")):
-                        orderp = self._get_order(index, xdim, periodic=periodic)
+                        orderp = self._get_order(
+                            index, xdim, periodic=periodic
+                        )
                         correct = self._get_correct(
                             system, index, idim, periodic=periodic
                         )
-                        self._check_order_parameter(orderp, correct, system, idim, ndim)
+                        self._check_order_parameter(
+                            orderp, correct, system, idim, ndim
+                        )
 
     @staticmethod
     def _correct_order1(system, index, idim, periodic=False):
@@ -352,15 +363,21 @@ class TestOrderAngle:
         test_cases = [
             {
                 "angle": 0.5 * np.pi,
-                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+                "pos": np.array([
+                    [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]
+                ]),
             },
             {
                 "angle": 0.0,
-                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
+                "pos": np.array([
+                    [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]
+                ]),
             },
             {
                 "angle": np.pi,
-                "pos": np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]]),
+                "pos": np.array([
+                    [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [-1.0, 0.0, 0.0]
+                ]),
             },
         ]
         system, _ = create_system(3, 3, periodic=False)
@@ -376,27 +393,31 @@ class TestOrderDihedral:
     test_cases = [
         {
             "angle": 180.0,
-            "pos": np.array(
-                [[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, -1.0, 0.0]]
-            ),
+            "pos": np.array([
+                [0.0, 1.0, 0.0], [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0], [1.0, -1.0, 0.0],
+            ]),
         },
         {
             "angle": 0.0,
-            "pos": np.array(
-                [[0.0, 1.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
-            ),
+            "pos": np.array([
+                [0.0, 1.0, 0.0], [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0], [1.0, 1.0, 0.0],
+            ]),
         },
         {
             "angle": -90.0,
-            "pos": np.array(
-                [[0.0, 0.0, 1.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
-            ),
+            "pos": np.array([
+                [0.0, 0.0, 1.0], [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0], [1.0, 1.0, 0.0],
+            ]),
         },
         {
             "angle": 90.0,
-            "pos": np.array(
-                [[0.0, 0.0, -1.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
-            ),
+            "pos": np.array([
+                [0.0, 0.0, -1.0], [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0], [1.0, 1.0, 0.0],
+            ]),
         },
         {
             "angle": -60.0127,
@@ -904,3 +925,67 @@ class TestWrapOrderparameter:
         result = composite.calculate(self.system)
         assert isinstance(result, list)
         assert result == [42.0, 42.0]
+
+
+class TestExpandOrderNames:
+    """Tests for the expand_order_names helper."""
+
+    def test_default_single(self):
+        """A single value with no name uses the indexed default."""
+        assert expand_order_names(None, 1) == ["op_1"]
+
+    def test_default_multi(self):
+        """Default labels for a multi-element OP."""
+        assert expand_order_names(None, 5) == [
+            "op_1", "op_2", "op_3", "op_4", "op_5",
+        ]
+
+    def test_default_cv_prefix(self):
+        """The default prefix can be customised (used for CVs)."""
+        assert expand_order_names(None, 3, default_prefix="cv") == [
+            "cv_1", "cv_2", "cv_3",
+        ]
+
+    def test_string_single(self):
+        """A single value with a string name uses the bare name."""
+        assert expand_order_names("pippo", 1) == ["pippo"]
+
+    def test_string_multi(self):
+        """A string name expands with index suffixes for multi values."""
+        assert expand_order_names("pippo", 3) == [
+            "pippo_1", "pippo_2", "pippo_3",
+        ]
+
+    def test_list_match(self):
+        """A list of names is used as-is when its length matches."""
+        labels = ["a", "b", "c"]
+        assert expand_order_names(labels, 3) == labels
+
+    def test_list_mismatch_raises(self):
+        """A list whose length differs from count raises ValueError."""
+        with pytest.raises(ValueError, match="does not match"):
+            expand_order_names(["a", "b"], 3)
+
+    def test_list_with_non_string_raises(self):
+        """A list containing non-strings raises ValueError."""
+        with pytest.raises(ValueError, match="strings"):
+            expand_order_names(["a", 2, "c"], 3)
+
+    def test_invalid_type_raises(self):
+        """An unsupported name type raises ValueError."""
+        with pytest.raises(ValueError, match="must be a string"):
+            expand_order_names(42, 1)
+
+    def test_invalid_count_raises(self):
+        """A non-positive count raises ValueError."""
+        with pytest.raises(ValueError, match="positive integer"):
+            expand_order_names(None, 0)
+
+    def test_start_index(self):
+        """start_index shifts the indexed labels."""
+        assert expand_order_names(None, 2, start_index=4) == [
+            "op_4", "op_5",
+        ]
+        assert expand_order_names("foo", 2, start_index=3) == [
+            "foo_3", "foo_4",
+        ]

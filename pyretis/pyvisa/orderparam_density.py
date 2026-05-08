@@ -320,9 +320,7 @@ class PathDensity:
             lasts = temp.readlines()[-10:]
             num_op = int(stats.mode([len(i.split()) for i in lasts])[0]) - 1
 
-        op_names = get_cv_names(settings)
-        op_labels = op_names if len(op_names) == num_op else \
-            [f'op{i}' for i in range(1, num_op + 1)]
+        op_labels = get_cv_names(settings, num_columns=num_op)
 
         self.traj_dict = {}
         self.order_parameter = op_labels[0]

@@ -61,7 +61,7 @@ class TestKick:
         order_curr1 = engine.calculate_order(ensemble)[0]
         order_curr2 = curr.particles.get_pos()[0][0]
         assert order_curr1 == order_curr2
-        order_prev1 = prev.order
+        order_prev1 = prev.order[0]
         order_prev2 = prev.particles.get_pos()[0][0]
         assert order_prev1 == order_prev2
         assert (order_prev1 <= interface < order_curr1 or
@@ -77,7 +77,7 @@ class TestKick:
         order_curr1 = engine.calculate_order(ensemble)[0]
         order_curr2 = curr.particles.get_pos()[0][0]
         assert order_curr1 == order_curr2
-        order_prev1 = prev.order
+        order_prev1 = prev.order[0]
         order_prev2 = prev.particles.get_pos()[0][0]
         assert order_prev1 == order_prev2
         assert (order_prev1 <= interface < order_curr1 or
@@ -92,5 +92,5 @@ class TestKick:
         prev, curr = engine.kick_across_middle(ensemble,
                                                interface,
                                                tis_settings)
-        assert prev.order == 2
-        assert curr.order == 4
+        assert prev.order == [2]
+        assert curr.order == [4]

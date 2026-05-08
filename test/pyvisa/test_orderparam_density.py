@@ -27,7 +27,7 @@ INPUTFILE = os.path.join(BASE, 'input.rst')
 
 CORRECT = {
     'path': ['000', '001', '002', '003', '004', '005'],
-    'op_labels': ['op1', 'op2'],
+    'op_labels': ['op_1', 'cv_1'],
     'energy_labels': ['time', 'cycle', 'potE', 'kinE', 'totE'],
     'interfaces': [-0.9, -0.8, -0.7, -0.5, -0.4, -0.3, 1.0],
     'num_op': 2
@@ -212,7 +212,7 @@ class TestMethods:
         re_w = init_pathvisualize('pyvisa_compressed_data.hdf5.zip')
         os.remove(BASE_ZIP)
 
-        criteria = {'x': 'op1', 'y': 'op2', 'z': 'time',
+        criteria = {'x': 'op_1', 'y': 'cv_1', 'z': 'time',
                     'cycles': re_d.infos['cycles'],
                     'weight': False}
 
@@ -260,13 +260,13 @@ class TestMethods:
             pe_d.hdf5_data()
         pe_w = init_pathvisualize('.', 'pyvisa_compressed_data.hdf5.zip')
         os.remove('pyvisa_compressed_data.hdf5.zip')
-        c_acc = {'status': 'ACC', 'x': 'op1', 'y': 'potE',
+        c_acc = {'status': 'ACC', 'x': 'op_1', 'y': 'potE',
                  'z': 'time', 'cycles': pe_d.infos['cycles'],
                  'ensemble_name': '005', 'weight': False}
-        c_rej = {'status': 'REJ', 'x': 'op2', 'y': 'totE',
+        c_rej = {'status': 'REJ', 'x': 'cv_1', 'y': 'totE',
                  'z': 'cycle', 'cycles': pe_d.infos['cycles'],
                  'ensemble_name': '005', 'weight': False}
-        c_both = {'status': 'BOTH', 'x': 'op1', 'y': 'kinE',
+        c_both = {'status': 'BOTH', 'x': 'op_1', 'y': 'kinE',
                   'z': 'None', 'cycles': pe_d.infos['cycles'],
                   'ensemble_name': '005', 'weight': False}
         x_a, y_a, z_a = [], [], []
@@ -275,16 +275,16 @@ class TestMethods:
         for cycle in pe_d.traj_dict['005'].keys():
             traj = pe_d.traj_dict['005'][cycle]
             if traj.info['status'] == 'ACC':
-                x_a.extend(traj.frames['op1'])
+                x_a.extend(traj.frames['op_1'])
                 y_a.extend(traj.frames['potE'])
                 z_a.extend(range(0, traj.info['length']))
             else:
-                x_r.extend(traj.frames['op2'])
+                x_r.extend(traj.frames['cv_1'])
                 y_r.extend(traj.frames['totE'])
                 z_r.extend([traj.info['cycle']] *
                            traj.info['length'])
 
-            x_b.extend(traj.frames['op1'])
+            x_b.extend(traj.frames['op_1'])
             y_b.extend(traj.frames['kinE'])
             z_b.extend([1] * traj.info['length'])
 
@@ -327,25 +327,25 @@ class TestMethods:
         Note that the remove_nan function alters the input in place.
 
         """
-        frames = {'0': {'op1': float('nan'), 'op2': 0},
-                  '1': {'op1': float('nan'), 'op2': float('nan')},
-                  '2': {'op1': float('nan'), 'op2': float('nan')},
-                  '3': {'op1': float('nan'), 'op2': float('nan')}}
+        frames = {'0': {'op_1': float('nan'), 'op_2': 0},
+                  '1': {'op_1': float('nan'), 'op_2': float('nan')},
+                  '2': {'op_1': float('nan'), 'op_2': float('nan')},
+                  '3': {'op_1': float('nan'), 'op_2': float('nan')}}
         data = pd.DataFrame.from_dict(frames, orient='index')
-        data['op3'] = [float('nan'), float('nan'), float('nan'), 4]
-        data['op4'] = [0, 2, float('nan'), 4]
+        data['op_3'] = [float('nan'), float('nan'), float('nan'), 4]
+        data['op_4'] = [0, 2, float('nan'), 4]
 
         remove_nan(data)
         # Nothing can be fixed here.
-        assert not data['op1'].iloc[0] * 0 == 0
+        assert not data['op_1'].iloc[0] * 0 == 0
         # Nothing can be fixed here and the start shall remain the same.
-        assert data['op2'].iloc[0] == 0
-        assert not data['op2'].iloc[3] * 0 == 0
+        assert data['op_2'].iloc[0] == 0
+        assert not data['op_2'].iloc[3] * 0 == 0
         # Test nan at the beginning, it should be fixed.
-        assert data['op3'].iloc[0] == 4
-        assert data['op3'].iloc[3] == 4
+        assert data['op_3'].iloc[0] == 4
+        assert data['op_3'].iloc[3] == 4
         # Test nan disappearing (most common case).
-        assert data['op4'].iloc[2] == 4
+        assert data['op_4'].iloc[2] == 4
 
         # Test that the function works with normal lists also.
         bad = [0, float('nan'), 1]
@@ -360,11 +360,11 @@ class TestMethods:
         plain dict, so each value is processed recursively.
         """
         data = {
-            'op1': [float('nan'), 1.0, 2.0],
-            'op2': [0.0, float('nan'), 1.0],
+            'op_1': [float('nan'), 1.0, 2.0],
+            'op_2': [0.0, float('nan'), 1.0],
         }
         remove_nan(data)
         # Leading NaN in op1 should be replaced by the next value.
-        assert data['op1'][0] == 1.0
+        assert data['op_1'][0] == 1.0
         # NaN in the middle of op2 should be replaced by the next value.
-        assert data['op2'][1] == 1.0
+        assert data['op_2'][1] == 1.0

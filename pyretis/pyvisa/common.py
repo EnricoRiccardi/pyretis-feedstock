@@ -52,6 +52,7 @@ from pyretis.initiation.initiate_load import write_order_parameters
 from pyretis.inout import settings
 from pyretis.inout.common import create_backup, TRJ_FORMATS
 from pyretis.inout.formats.path import PathExtFile
+from pyretis.orderparameter import expand_order_names
 from pyretis.setup.common import create_orderparameter
 from pyretis.tools.recalculate_order import recalculate_order
 
@@ -249,29 +250,86 @@ def where_from_to(trj, int_a, int_b=float('-inf')):
     return start, end
 
 
-def get_cv_names(input_settings):
-    """Return names of op and cv's.
+def get_cv_names(input_settings, num_columns=None):
+    """Return labels for the order parameter and collective variables.
+
+    The labels follow the same convention for the main order parameter
+    and any extra collective variable: each ``[orderparameter]`` /
+    ``[collective-variable]`` block may declare ``name`` either as a
+    single string or as a list of strings.
+
+    * A list of strings is used as-is for that block (one label per
+      value returned by the corresponding ``calculate()``).
+    * A single string is expanded with an index suffix
+      (``"<name>_1", "<name>_2", ...``) to match the number of values
+      the block produces. If the block produces a single value the
+      bare string is used.
+    * When ``name`` is missing the labels fall back to ``"op_<i>"`` for
+      the main order parameter and ``"cv_<i>"`` for each collective
+      variable (using the bare prefix if the block produces a single
+      value).
 
     Parameters
     ----------
-    input_settings: dict
+    input_settings : dict
         Dictionary with the settings from the simulations.
+    num_columns : int, optional
+        Total number of order-parameter columns observed (e.g. read
+        from ``order.txt``). When supplied, this is used to allocate
+        unspecified blocks: if there is exactly one section configured
+        and ``num_columns`` is greater than one, the single ``name`` is
+        expanded with indices to cover all columns. When ``num_columns``
+        is given and cannot be reconciled with the configured names,
+        a :py:class:`ValueError` is raised.
 
     Returns
     -------
-    names = list
-        List of the names.
+    names : list of str
+        Flat list of column labels, in the same order as the
+        concatenated ``calculate()`` outputs.
+
+    Raises
+    ------
+    ValueError
+        If a ``name`` list does not match the number of values
+        produced by its block, or if ``num_columns`` cannot be
+        reconciled with the configured names.
 
     """
-    op_names = []
-    # Collect names of op and cv's if available
-    if 'name' in input_settings['orderparameter'].keys():
-        op_names.append(input_settings['orderparameter']['name'])
-    if 'collective-variable' in input_settings.keys():
-        for c_v in input_settings['collective-variable']:
-            if 'name' in c_v.keys():
-                op_names.append(c_v['name'])
-    return op_names
+    blocks = []
+    main_block = input_settings.get('orderparameter')
+    if main_block is not None:
+        blocks.append(('op', main_block, main_block.get('name')))
+    cv_blocks = input_settings.get('collective-variable', [])
+    for idx, c_v in enumerate(cv_blocks, start=1):
+        prefix = 'cv' if len(cv_blocks) == 1 else f'cv{idx}'
+        blocks.append((prefix, c_v, c_v.get('name')))
+
+    if not blocks:
+        return []
+
+    # When the only information available is the column count from a
+    # file (e.g. order.txt) and a single section is configured, that
+    # section claims all columns.
+    if num_columns is not None and len(blocks) == 1:
+        prefix, _, name = blocks[0]
+        return expand_order_names(name, num_columns, default_prefix=prefix)
+
+    labels = []
+    for prefix, _, name in blocks:
+        if isinstance(name, (list, tuple)):
+            labels.extend(expand_order_names(name, len(name), prefix))
+        else:
+            labels.extend(expand_order_names(name, 1, prefix))
+
+    if num_columns is not None and len(labels) != num_columns:
+        raise ValueError(
+            "Configured order-parameter names produce "
+            f"{len(labels)} labels, but the data has {num_columns} "
+            "columns. Provide a list ``name`` for any multi-valued "
+            "order parameter or collective variable."
+        )
+    return labels
 
 
 def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):

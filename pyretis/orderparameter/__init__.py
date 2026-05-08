@@ -41,6 +41,7 @@ from .orderparameter import (
     Permeability,
     PermeabilityMinusOffset,
     CompositeOrderParameter,
+    expand_order_names,
     normalize_order_output,
     wrap_orderparameter,
 )

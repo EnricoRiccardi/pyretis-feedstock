@@ -19,7 +19,8 @@ from pyretis.pyvisa.common import (
     find_rst_file,
     _get_trjs,
     find_data,
-    recalculate_all
+    get_cv_names,
+    recalculate_all,
 )
 logging.disable(logging.CRITICAL)
 
@@ -156,3 +157,93 @@ class TestMethods:
                 assert recalculate_all(tmp_dir, 'input.rst')
                 assert not recalculate_all(tmp_dir, 'input.rst',
                                            ensemble_names=[])
+
+
+class TestGetCvNames:
+    """Test the get_cv_names label-generation helper."""
+
+    @staticmethod
+    def _settings(op_name=None, cv_specs=()):
+        """Build a minimal settings dict for the given names."""
+        settings = {'orderparameter': {}}
+        if op_name is not None:
+            settings['orderparameter']['name'] = op_name
+        if cv_specs:
+            settings['collective-variable'] = []
+            for cv_name in cv_specs:
+                block = {}
+                if cv_name is not None:
+                    block['name'] = cv_name
+                settings['collective-variable'].append(block)
+        return settings
+
+    def test_single_op_default(self):
+        """Single OP with no name and no column count uses indexed default."""
+        labels = get_cv_names(self._settings())
+        assert labels == ['op_1']
+
+    def test_single_op_default_multi_columns(self):
+        """A single block expands to fill the column count."""
+        labels = get_cv_names(self._settings(), num_columns=4)
+        assert labels == ['op_1', 'op_2', 'op_3', 'op_4']
+
+    def test_single_op_string_name_expanded(self):
+        """A string name on a single multi-element OP gets indexed."""
+        labels = get_cv_names(self._settings(op_name='pippo'),
+                              num_columns=3)
+        assert labels == ['pippo_1', 'pippo_2', 'pippo_3']
+
+    def test_single_op_string_name_single_column(self):
+        """A string name on a single single-element OP keeps the bare name."""
+        labels = get_cv_names(self._settings(op_name='pippo'),
+                              num_columns=1)
+        assert labels == ['pippo']
+
+    def test_single_op_list_name(self):
+        """A list name on a single OP must match the column count."""
+        labels = get_cv_names(self._settings(op_name=['a', 'b', 'c']),
+                              num_columns=3)
+        assert labels == ['a', 'b', 'c']
+
+    def test_single_op_list_name_mismatch(self):
+        """A list name with the wrong length raises a ValueError."""
+        with pytest.raises(ValueError):
+            get_cv_names(self._settings(op_name=['a', 'b']),
+                         num_columns=3)
+
+    def test_op_and_cv_default(self):
+        """Defaults distinguish the main OP from the collective variables."""
+        labels = get_cv_names(
+            self._settings(cv_specs=[None, None]),
+            num_columns=3,
+        )
+        assert labels == ['op_1', 'cv1_1', 'cv2_1']
+
+    def test_op_and_cv_named(self):
+        """Named OP + CVs combine cleanly when sizes match."""
+        labels = get_cv_names(
+            self._settings(op_name='main', cv_specs=['extra']),
+            num_columns=2,
+        )
+        assert labels == ['main', 'extra']
+
+    def test_op_and_cv_with_list_name(self):
+        """A list ``name`` lets a multi-valued CV take several columns."""
+        labels = get_cv_names(
+            self._settings(op_name='main',
+                           cv_specs=[['x', 'y', 'z']]),
+            num_columns=4,
+        )
+        assert labels == ['main', 'x', 'y', 'z']
+
+    def test_block_count_mismatch_raises(self):
+        """A column count that cannot be reconciled with the blocks errors."""
+        with pytest.raises(ValueError):
+            get_cv_names(
+                self._settings(op_name='main', cv_specs=['extra']),
+                num_columns=5,
+            )
+
+    def test_no_blocks(self):
+        """Empty settings yield an empty list."""
+        assert get_cv_names({}) == []

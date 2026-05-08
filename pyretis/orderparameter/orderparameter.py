@@ -63,6 +63,7 @@ __all__ = [
     "DistanceVelocity",
     "PositionVelocity",
     "CompositeOrderParameter",
+    "expand_order_names",
     "normalize_order_output",
     "wrap_orderparameter",
 ]
@@ -114,6 +115,80 @@ def normalize_order_output(order, klass_name="unknown"):
     if any(isinstance(value, (list, tuple, np.ndarray)) for value in values):
         raise ValueError(msg)
     return values
+
+
+def expand_order_names(name, count, default_prefix="op", start_index=1):
+    """Expand an order-parameter ``name`` into ``count`` per-element labels.
+
+    The naming convention is shared by the main order parameter and any
+    collective variable: each ``calculate()`` returns a list with
+    ``count`` entries and this function produces one label per entry.
+
+    Parameters
+    ----------
+    name : str, list/tuple of str, or None
+        The user-provided name. When ``None`` the labels are always
+        ``"<default_prefix>_<i>"``. When ``name`` is a string and
+        ``count > 1`` the labels are ``"<name>_1", "<name>_2", ...``;
+        when ``count == 1`` the bare ``name`` is used. When ``name`` is
+        a list or tuple its length must equal ``count``.
+    count : int
+        Number of labels to produce (the number of values returned by
+        ``calculate()`` for this order parameter or collective variable).
+    default_prefix : str, optional
+        Prefix used to build labels when ``name`` is ``None``. Use
+        ``"op"`` for the main order parameter and ``"cv"`` for any
+        collective variable.
+    start_index : int, optional
+        Starting index used when generating ``"<prefix>_<i>"`` labels.
+        Useful for combining several blocks into one continuous index
+        space.
+
+    Returns
+    -------
+    out : list of str
+        A list of length ``count``.
+
+    Raises
+    ------
+    ValueError
+        If ``count`` is not a positive integer, if ``name`` is a
+        sequence whose length differs from ``count``, or if ``name`` is
+        of an unsupported type.
+
+    """
+    if not isinstance(count, int) or count < 1:
+        raise ValueError(
+            f"count must be a positive integer (got {count!r})."
+        )
+    if name is None:
+        return [
+            f"{default_prefix}_{i}"
+            for i in range(start_index, start_index + count)
+        ]
+    if isinstance(name, str):
+        if count == 1:
+            return [name]
+        return [
+            f"{name}_{i}"
+            for i in range(start_index, start_index + count)
+        ]
+    if isinstance(name, (list, tuple)):
+        if len(name) != count:
+            raise ValueError(
+                "Length of name list "
+                f"({len(name)}) does not match the number of values "
+                f"returned by the order parameter ({count})."
+            )
+        if not all(isinstance(item, str) for item in name):
+            raise ValueError(
+                "All entries in a name list must be strings."
+            )
+        return list(name)
+    raise ValueError(
+        "Order-parameter name must be a string, a list/tuple of "
+        f"strings, or None (got {type(name).__name__})."
+    )
 
 
 def wrap_orderparameter(instance):
@@ -184,16 +259,20 @@ class OrderParameter:
 
     @abstractmethod
     def calculate(self, system):
-        """Calculate the main order parameter and return it.
+        """Calculate the order parameter (or collective variable).
 
-        All order parameters should implement this method.
-        Implementations may return a **single scalar**, a
-        :py:class:`numpy.ndarray`, a tuple, or a list.  When an order
-        parameter is loaded through
-        :py:func:`pyretis.setup.common.create_orderparameter` or used via
-        :py:func:`~pyretis.orderparameter.wrap_orderparameter`, the return
-        value is automatically normalised to a plain Python list of scalars
-        by :py:func:`~pyretis.orderparameter.normalize_order_output`.
+        The same interface is used both for the main order parameter
+        and for additional collective variables: each call returns
+        the per-frame value(s) of the quantity. Implementations may
+        return a **single scalar**, a :py:class:`numpy.ndarray`, a
+        tuple, or a list. When loaded through
+        :py:func:`pyretis.setup.common.create_orderparameter` or
+        wrapped via :py:func:`.wrap_orderparameter`, the return value
+        is normalised to a plain Python list of scalars by
+        :py:func:`.normalize_order_output`. Downstream code therefore
+        always sees ``system.order`` and ``phasepoint.order`` as a
+        list whose first element is the progress coordinate used by
+        path-sampling moves.
 
         Parameters
         ----------
@@ -204,16 +283,20 @@ class OrderParameter:
         Returns
         -------
         out : scalar, list, tuple, or numpy.ndarray
-            The order parameter value(s). After normalisation the first
-            element is used as the progress coordinate in path sampling
-            simulations.
+            The order-parameter (or collective-variable) value(s).
+            After normalisation the first element is used as the
+            progress coordinate in path-sampling simulations and any
+            additional elements are stored alongside it.
 
         """
         return
 
     def __str__(self):
         """Return a simple string representation of the order parameter."""
-        msg = [f'Order parameter: "{self.__class__.__name__}"', f"{self.description}"]
+        msg = [
+            f'Order parameter: "{self.__class__.__name__}"',
+            f"{self.description}",
+        ]
         if self.velocity_dependent:
             msg.append("This order parameter is velocity dependent.")
         return "\n".join(msg)
@@ -326,7 +409,9 @@ class Permeability(Position):
 
     """
 
-    def __init__(self, index, dim="z", offset=0.0, mirror_pos=0.0, relative=True):
+    def __init__(
+        self, index, dim="z", offset=0.0, mirror_pos=0.0, relative=True
+    ):
         """Initialise the order parameter.
 
         Parameters
@@ -348,7 +433,9 @@ class Permeability(Position):
 
         """
         description = f"Permeability position of particle {index} (dim: {dim})"
-        super().__init__(index=index, dim=dim, periodic=True, description=description)
+        super().__init__(
+            index=index, dim=dim, periodic=True, description=description
+        )
 
         self.offset = offset
         self.mirror_pos = mirror_pos
@@ -621,7 +708,10 @@ class Distancevel(OrderParameter):
         """
         _verify_pair(index)
         pbc = "Periodic" if periodic else "Non-periodic"
-        txt = f"{pbc} rate-of-change-distance, particles {index[0]} and {index[1]}"
+        txt = (
+            f"{pbc} rate-of-change-distance, "
+            f"particles {index[0]} and {index[1]}"
+        )
         super().__init__(description=txt, velocity=True)
         self.periodic = periodic
         self.index = index
@@ -681,7 +771,9 @@ class CompositeOrderParameter(OrderParameter):
             A list of order parameters we can add.
 
         """
-        super().__init__(description="Combined order parameter", velocity=False)
+        super().__init__(
+            description="Combined order parameter", velocity=False
+        )
         self.order_parameters = []
         if order_parameters is not None:
             for order_function in order_parameters:

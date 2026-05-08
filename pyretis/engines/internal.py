@@ -446,22 +446,25 @@ class MDEngine(EngineBase):
                            'momentum': tis_settings['zero_momentum'],
                            'rescale': tis_settings['rescale_energy']})
             # Update order parameter in case it is velocity dependent:
-            curr = self.calculate_order(ensemble)[0]
-            previous.order = curr
+            order = self.calculate_order(ensemble)
+            previous.order = order
+            curr = order[0]
             # Store modified velocities:
             previous.particles.set_vel(system.particles.get_vel())
             # Integrate forward one step:
             self.integration_step(system)
             # Compare previous order parameter and the new one:
             prev = curr
-            curr = self.calculate_order(ensemble)[0]
+            order = self.calculate_order(ensemble)
+            curr = order[0]
             if curr == middle:
                 # By construction we want two points, one left and one
                 # right of the interface, and these two points should
                 # be connected by a MD step. If we hit exactly on the
                 # interface we just fall back:
                 system.particles = previous.particles.copy()
-                curr = previous.order
+                order = previous.order
+                curr = order[0]
             else:
                 if (prev <= middle < curr) or (curr < middle <= prev):
                     # Middle interface was crossed, just stop the loop.
@@ -472,8 +475,9 @@ class MDEngine(EngineBase):
                     pass
                 else:  # We did not get closer, fall back to previous point.
                     system.particles = previous.particles.copy()
-                    curr = previous.order
-        system.order = curr
+                    order = previous.order
+                    curr = order[0]
+        system.order = order
         return previous, system
 
     def dump_phasepoint(self, phasepoint, deffnm=None):
