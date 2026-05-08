@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # noqa
 # pylint: skip-file
 # Resource object code

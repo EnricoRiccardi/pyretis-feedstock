@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test the calculation of the order parameter.
 
 This test is checking that the order parameter is calculated

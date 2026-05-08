@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # pyretis documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun 19 11:01:24 2015.

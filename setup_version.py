@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """
@@ -32,8 +31,7 @@ VERSION_DEV_FMT = '{major:d}.{minor:d}.{micro:d}.dev{dev:d}'
 VERSION_FMT = '{major:d}.{minor:d}.{micro:d}'
 
 # Define the text for creating .py files for PyRETIS:
-HEADER_TXT = """# -*- coding: utf-8 -*-
-# Copyright (c) 2026, PyRETIS Development Team.
+HEADER_TXT = """# Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info."""
 
 VERSION_TXT = '''{header:s}

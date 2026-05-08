@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash run.sh)",
+      "Bash(bash test-easy.sh)",
+      "Bash(bash test-heavy.sh)",
+      "Bash(pycodestyle *)",
+      "Bash(pylint *)",
+      "Bash(pydocstyle *)",
+      "Bash(pytest *)",
+      "Bash(python -m pytest)",
+      "Bash(python -m pytest *)",
+      "Bash(python3 -m pytest)",
+      "Bash(python3 -m pytest *)"
+    ]
+  }
+}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import unittest
 from importlib import reload
 import pyretis.version

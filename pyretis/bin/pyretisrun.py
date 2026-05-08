@@ -1,5 +1,4 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
 """pyretisrun - An application for running PyRETIS simulations.
@@ -311,7 +310,25 @@ def make_tis_files(_, settings, progress=False):
         logtxt = f'Create file: "{infile}"'
         logger.progress(logtxt)
         exe_dir_file = os.path.join(ens_settings['engine']['exe_path'], infile)
-        write_settings_file(ens_settings, exe_dir_file, backup=False)
+        # Ensure generated TIS input files include a human-friendly
+        # orderparameter name without mutating the caller's settings.
+        op_section = ens_settings.get('orderparameter', {})
+        need_restore = False
+        had_name_key = 'name' in op_section
+        original_name = op_section.get('name') if had_name_key else None
+        if not had_name_key or op_section.get('name') is None:
+            ens_settings.setdefault('orderparameter', {})
+            ens_settings['orderparameter']['name'] = 'Order Parameter'
+            need_restore = True
+        try:
+            write_settings_file(ens_settings, exe_dir_file, backup=False)
+        finally:
+            if need_restore:
+                if had_name_key:
+                    ens_settings['orderparameter']['name'] = original_name
+                else:
+                    # remove the temporary key we added
+                    ens_settings['orderparameter'].pop('name', None)
         logtxt = 'Command for executing:'
         logger.progress(logtxt)
         logtxt = f'pyretisrun -i {infile} -p -f {ensf}.log'

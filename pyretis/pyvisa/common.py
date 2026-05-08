@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2026, PyRETIS Development Team.
 # Distributed under the LGPLv2.1+ License. See LICENSE for more info.
-"""This file contains common functions for the path density.
+"""
+Common functions for the path density.
 
-It contains some functions that is used to compare and process data,
-like matching similar lists or attempt periodic shifts of values.
+Functions used to compare and process data, such as matching similar
+lists or attempting periodic shifts of values.
 
 Important methods defined here
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -16,30 +16,32 @@ read_traj_txt_file (:py:func: `.read_traj_txt_file`)
     Read the sequence of files in a trajectory from a traj.txt file.
 
 recalculate_all (:py:func:`.recalculate_all`)
-    Recalculate order parameter and new collective variables
-    by finding all trajectory files from a simulation.
+    Recalculate order parameter and new collective variables by finding
+    all trajectory files from a simulation.
 
 shift_data (:py:func: `.shift_data`)
     Finds the median value of a given list of floats, and shifts the
     lower half of the data by the median.
 
-try_data_shift (:py:func: `.try_data_shift`
-    Takes in two lists of values, x and y, and calculates a linear
-    regression and R**2-correlation of the data set. Attempts a shift of
-    each data set by their respective median to increase the correlation.
+try_data_shift (:py:func: `.try_data_shift`)
+    Takes in two lists of values, ``x`` and ``y``, and calculates a
+    linear regression and R**2-correlation of the data set. Attempts a
+    shift of each data set by their respective median to increase the
+    correlation.
 
 where_from_to (:py:func: `.where_from_to`)
-    Check the initial and final steps of a trj in respect to the interfaces.
+    Check the initial and final steps of a trajectory with respect to
+    the provided interfaces.
 
 get_cv_names (:py:func: `.get_cv_names`)
     Outputs a list of the names of the descriptors in the simulation.
 
 recalculate_all (:py:func: `.recalculate_all`)
-    Recompute all the order parameters according to the PyRETIS storage scheme
-    or for individual files/folders
+    Recompute all the order parameters according to the PyRETIS storage
+    scheme or for individual files/folders.
 
 find_data  (:py:func: `.find_data`)
-    Find suitable frames/trajectories to recompute the orderp parameter on.
+    Find suitable frames/trajectories to recompute the order parameter on.
 
 """
 import logging
@@ -332,12 +334,63 @@ def get_cv_names(input_settings, num_columns=None):
     return labels
 
 
+def _write_cycle(functions, cycles, main_order):
+    """Write order parameters for a single trajectory cycle.
+
+    Parameters
+    ----------
+    functions : list
+        Order-parameter functions returned by ``create_orderparameter``.
+    cycles : dict
+        Cycle entry from the trajectory dict (contains ``'traj'`` key).
+    main_order : str or None
+        Path to the ensemble-level ``order.txt`` to append to, or
+        ``None`` if no aggregation file is needed.
+
+    """
+    here = os.path.dirname(os.path.abspath(cycles['traj'][0]))
+    local_order = cycles.get('o_txt', os.path.join(here, 'order.txt'))
+    results_dict = []
+    for trj in cycles['traj']:
+        try:
+            for order_p in recalculate_order(functions, trj, {}):
+                results_dict.append(order_p)  # pragma: no cover
+        except (KeyError, AttributeError):
+            logger.warning('File %s not valid', trj)
+    create_backup(local_order)
+    write_order_parameters(local_order, results_dict,
+                           cycles.get('header', 'Recalculated data'))
+    if main_order is not None:
+        with open(local_order, 'rb') as src, open(main_order, 'ab') as dst:
+            dst.write(src.read())
+
+
+def _process_ensemble(functions, ens, runfolder):
+    """Process one ensemble: recompute order parameters for every cycle.
+
+    Parameters
+    ----------
+    functions : list
+        Order-parameter functions returned by ``create_orderparameter``.
+    ens : dict
+        Ensemble entry from the trajectory dict.
+    runfolder : str
+        Root path of the simulation run.
+
+    """
+    main_order = None
+    if ens.get('main_o') is not None:
+        main_order = os.path.join(runfolder, ens['main_o'])
+        create_backup(main_order)
+    for _, cycles in sorted(ens['traj'].items()):
+        _write_cycle(functions, cycles, main_order)
+
+
 def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
     """Recalculate order parameter and collective variables.
 
-    This function performs post-processing by analyzing trajectories
-    of old simulations in order to extract data and do new calculations
-    and write to a new order.txt file.
+    Performs post-processing by analyzing trajectories of old simulations
+    to extract data, do new calculations, and write to a new order.txt file.
 
     Parameters
     ----------
@@ -357,11 +410,11 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
         True if the recomputation was successful, False otherwise.
 
     """
-    # Gather collective variables and corresponding option from .rst
-    io_file = os.path.join(runfolder, iofile)
     if iofile is None:
         raise ValueError('Input file not given')
-    input_settings = settings.parse_settings_file(io_file)
+    input_settings = settings.parse_settings_file(
+        os.path.join(runfolder, iofile)
+    )
     trj_dict = find_data(runfolder, ensemble_names, data=data)
 
     logger.progress('Re-computing the collective variables.')
@@ -373,35 +426,11 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
     try:
         functions = create_orderparameter(input_settings)
     except (ImportError, ValueError):
-        msg = 'Invalid Order Parameter'
-        logger.warning(msg)  # pragma: no cover
+        logger.warning('Invalid Order Parameter')  # pragma: no cover
         return False  # pragma: no cover
 
-    # Create the composite order parameter (Avoid circular reference)
     for _, ens in trj_dict.items():
-        if ens.get('main_o') is not None:
-            main_order = os.path.join(runfolder, ens['main_o'])
-            create_backup(main_order)
-        for _, cycles in sorted(ens['traj'].items()):
-            here = os.path.dirname(os.path.abspath(cycles['traj'][0]))
-            new_o = os.path.join(here, 'order.txt')
-            results_dict = []
-            for trj in cycles['traj']:
-                try:
-                    for order_p in recalculate_order(functions, trj, {}):
-                        results_dict.append(order_p)  # pragma: no cover
-                except (KeyError, AttributeError):
-                    logger.warning('File %s not valid', trj)
-
-            local_order = cycles.get('o_txt', new_o)
-            create_backup(local_order)
-            write_order_parameters(local_order, results_dict,
-                                   cycles.get('header', 'Recalculated data'))
-
-            if ens.get('main_o') is not None:
-                with open(local_order, 'rb') as src, \
-                        open(main_order, 'ab') as dst:
-                    dst.write(src.read())
+        _process_ensemble(functions, ens, runfolder)
 
     logger.progress('# Data successfully recomputed!')
     logger.progress('# Time spent: %.2fs', timeit.default_timer() - tic)

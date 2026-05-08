@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Run pycodestyle on the PyRETIS codebase and summarise violations.
 
 Usage

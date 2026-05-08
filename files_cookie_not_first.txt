@@ -1,0 +1,15 @@
+./test/initiation/gromacs/mockgmx.py
+./test/initiation/gromacs/mockmdrun.py
+./test/initiation/cp2k/mockcp2k.py
+./test/engines/mockgmx.py
+./test/engines/mocklammps.py
+./test/engines/aprogram.py
+./test/engines/mockmdrun2.py
+./test/engines/mockmdrun.py
+./test/engines/mockcp2k.py
+./pyretis/inout/analysisio/analysisio.py
+./pyretis/bin/pyretisanalyse.py
+./pyretis/bin/pyvisa.py
+./pyretis/bin/pyretisrun.py
+./pyretis/pyvisa/statistical_methods.py
+./pyretis/pyvisa/visualize.py

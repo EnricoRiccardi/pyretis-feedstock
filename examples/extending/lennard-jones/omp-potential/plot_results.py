@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plot results from time tests of the Lennard-Jones potential.
 
 Here we assume that the results are available in files named

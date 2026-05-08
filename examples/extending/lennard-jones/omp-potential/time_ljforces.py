@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Time the FORTRAN implementation of the Lennard-Jones potential.
 
 This timing is simply done by evaluating the Lennard-Jones forces
