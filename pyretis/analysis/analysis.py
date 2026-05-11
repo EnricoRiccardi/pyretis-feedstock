@@ -137,8 +137,11 @@ def block_error(data, maxblock=None, blockskip=1, weights=None):
     nsamp = tot_w * tot_w / tot_w_s
     block_var *= nsamp / (nsamp - 1) / tot_w
     block_err = np.sqrt(block_var / nsamp)  # estimate of error
-    block_err_avg = np.average(
-        block_err[np.where(blocklen > maxblock // 2)[0]])
+    idx = np.where(blocklen > maxblock // 2)[0]
+    if idx.size == 0:
+        block_err_avg = np.nan
+    else:
+        block_err_avg = np.average(block_err[idx])
     return blocklen, block_avg, block_err, block_err_avg
 
 

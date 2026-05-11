@@ -80,7 +80,7 @@ def analyse_flux(fluxdata, settings):
             results['errflux'].append([[], np.nan, np.nan, [], np.nan,
                                        np.nan, np.nan])
             results['pMD'].append(0.0)
-            results['1-p'].append(np.inf)
+            results['1-p'].append(np.nan)
             results['teffMD'].append(np.nan)
             results['corrMD'].append(np.nan)
         return results
@@ -104,19 +104,38 @@ def analyse_flux(fluxdata, settings):
         results['errflux'].append(block_error)
 
     # do some additional statistics:
-    results['cross_time'] = [divide(float(end_step), float(neff))
-                             for neff in results['neffcross']]
+    # compute steps per effective crossing, avoid division by zero
+    results['cross_time'] = []
+    for neff in results['neffcross']:
+        if neff == 0:
+            results['cross_time'].append(np.nan)
+        else:
+            results['cross_time'].append(float(end_step) / float(neff))
 
-    results['neffc/nc'] = [divide(float(neff), float(ncr)) for neff, ncr
-                           in zip(results['neffcross'], results['ncross'])]
+    # effective crossings per crossing (safe division)
+    results['neffc/nc'] = []
+    for neff, ncr in zip(results['neffcross'], results['ncross']):
+        if ncr == 0:
+            results['neffc/nc'].append(np.nan)
+        else:
+            results['neffc/nc'].append(float(neff) / float(ncr))
+
+    # compute p_MD, (1-p)/p and correlation in a numerically safe way
     for flux, error in zip(results['runflux'], results['errflux']):
-        results['pMD'].append(flux[-1] * time_step)
-        results['1-p'].append(divide(float(1.0 - results['pMD'][-1]),
-                                     results['pMD'][-1]))
-        results['teffMD'].append(end_step * error[4]**2)
-        results['corrMD'].append(
-            divide(results['teffMD'][-1], results['1-p'][-1])
-        )
+        pmd = float(flux[-1] * time_step)
+        results['pMD'].append(pmd)
+        if pmd == 0.0 or not np.isfinite(pmd):
+            ratio = np.nan
+        else:
+            ratio = float((1.0 - pmd) / pmd)
+        results['1-p'].append(ratio)
+        teff = float(end_step) * (error[4]**2 if len(error) > 4 else np.nan)
+        results['teffMD'].append(teff)
+        if ratio == 0.0 or not np.isfinite(ratio):
+            corr = np.nan
+        else:
+            corr = teff / ratio
+        results['corrMD'].append(corr)
     return results
 
 

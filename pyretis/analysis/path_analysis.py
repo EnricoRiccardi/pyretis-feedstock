@@ -218,8 +218,12 @@ def _create_shoot_histograms(shoot_stats, bins):
             maxd = shoot_stats[key].max()
         histograms[key] = histogram(shoot_stats[key], bins=bins,
                                     limits=(mind, maxd), density=True)
-        scale[key] = (float(len(shoot_stats[key])) /
-                      float(len(shoot_stats['ALL'])))
+        # Guard against division by zero when there are no 'ALL' samples
+        all_len = float(len(shoot_stats.get('ALL', [])))
+        if all_len == 0.0:
+            scale[key] = 0.0
+        else:
+            scale[key] = float(len(shoot_stats[key])) / all_len
     return histograms, scale
 
 
@@ -1174,10 +1178,13 @@ def cross_dist_distr(pp_dic):
 
     # LM*:
     paths = select_with_or_masks(ordermax, [lmrs == "LML", lmrs == "LMR"])
-
-    repeat = np.repeat(paths,
-                       select_with_or_masks(weights,
-                                            [lmrs == "LML", lmrs == "LMR"]))
+    repeats = select_with_or_masks(weights, [lmrs == "LML", lmrs == "LMR"])
+    # Ensure repeats are integer counts and guard empty cases
+    repeats = np.array(repeats, dtype=int) if repeats.size != 0 else np.array([], dtype=int)
+    if paths.size == 0 or repeats.size == 0:
+        repeat = np.array([])
+    else:
+        repeat = np.repeat(paths, repeats)
     left, middle, right = interfaces[0], interfaces[1], interfaces[2]
     percents = []
 
@@ -1186,20 +1193,37 @@ def cross_dist_distr(pp_dic):
     for i in lambs:
         percents.append(np.sum(repeat >= i))
 
-    percents = percents / percents[0] if percents else percents
+    # Convert to numpy array and guard against division by zero
+    percents = np.array(percents, dtype=float)
+    if percents.size == 0:
+        percents = np.array([])
+    elif np.allclose(percents[0], 0):
+        percents = np.zeros_like(percents)
+    else:
+        percents = percents / percents[0]
 
     # RM*:
     paths2 = select_with_or_masks(ordermin, [lmrs == "RMR",
                                              lmrs == "RML"])
-    repeat2 = np.repeat(paths2,
-                        select_with_or_masks(weights, [lmrs == "RMR",
-                                             lmrs == "RML"]))
+    repeats2 = select_with_or_masks(weights, [lmrs == "RMR",
+                                             lmrs == "RML"])
+    repeats2 = np.array(repeats2, dtype=int) if repeats2.size != 0 else np.array([], dtype=int)
+    if paths2.size == 0 or repeats2.size == 0:
+        repeat2 = np.array([])
+    else:
+        repeat2 = np.repeat(paths2, repeats2)
     percents2 = []
     lambs2 = np.linspace(np.min(paths2), middle, 100) if paths2.size != 0 \
         else np.linspace(left, middle, 100)
     for i in lambs2:
         percents2.append(np.sum(repeat2 <= i))
-    percents2 = percents2 / percents2[-1] if percents2 else percents2
+    percents2 = np.array(percents2, dtype=float)
+    if percents2.size == 0:
+        percents2 = np.array([])
+    elif np.allclose(percents2[-1], 0):
+        percents2 = np.zeros_like(percents2)
+    else:
+        percents2 = percents2 / percents2[-1]
     return left, middle, right, percents, lambs, percents2, lambs2
 
 

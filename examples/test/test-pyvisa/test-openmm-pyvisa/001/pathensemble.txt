@@ -1,0 +1,2 @@
+#     Step    No.-acc  No.-shoot l m r  Length Acc Mc            Min-O            Max-O Idx-Min Idx-Max          O-shoot  Idx-sh Idx-shN  Weight
+         0          1          0 L M R       7 ACC ki  2.974730853e-01  4.041428048e-01       0       6  0.000000000e+00       0       0  1.000000000e+00

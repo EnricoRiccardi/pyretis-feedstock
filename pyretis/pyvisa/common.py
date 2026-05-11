@@ -420,7 +420,11 @@ def recalculate_all(runfolder, iofile, ensemble_names=None, data=None):
     logger.progress('Re-computing the collective variables.')
     tic = timeit.default_timer()
     if not trj_dict:
-        logger.warning('No data to re-compute from')
+        logger.warning(
+            'No data to re-compute from in %s — no trajectory data found. '
+            'Ensure the run folder contains numeric ensemble subdirectories '
+            '(e.g. 000, 001) or pass the `data` argument pointing to a '
+            'file or directory to re-process.', runfolder)
         return False
 
     try:

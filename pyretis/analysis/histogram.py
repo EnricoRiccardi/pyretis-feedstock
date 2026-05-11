@@ -90,15 +90,28 @@ def histogram_and_avg(data, bins, density=True, weights=None):
         `out[2][1]` is the standard deviation.
 
     """
-    local_data = data if len(data.shape) == 1 else data[:, 0]
-    local_weights = weights if len(data.shape) == 1 else data[:, 1]
+    data = np.asarray(data)
+    # Handle empty input gracefully
+    if data.size == 0:
+        hist = np.zeros(bins)
+        bin_edges = np.linspace(0.0, 1.0, bins + 1)
+        bin_mid = 0.5 * (bin_edges[1:] + bin_edges[:-1])
+        return hist, bin_mid, (float('nan'), float('nan'))
+
+    # Determine data and weights columns for 1D or 2D input
+    if data.ndim == 1:
+        local_data = data
+        local_weights = weights
+    else:
+        local_data = data[:, 0]
+        local_weights = weights if weights is not None else data[:, 1]
 
     hist, _, bin_mid = histogram(data, bins=bins,
                                  limits=(data.min(), data.max()),
                                  density=density,
                                  weights=weights)
     average = np.average(local_data, weights=local_weights)
-    st_dev = np.sqrt(np.average((local_data-average)**2,
+    st_dev = np.sqrt(np.average((local_data - average) ** 2,
                                 weights=local_weights))
 
     return hist, bin_mid, (average, st_dev)

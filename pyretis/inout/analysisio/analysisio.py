@@ -230,9 +230,27 @@ def get_path_simulation_files(sim_settings):
 
 def print_value_error(heading, value, rel_error, level=None):
     """Print out the matched probabilities."""
+    log_fn = logger.progress if level == 'success' else logger.info
+    # Handle non-finite values gracefully and provide clearer message
+    try:
+        finite_value = np.isfinite(value)
+    except Exception:
+        finite_value = False
+    if value is None or not finite_value:
+        msgtxt = f'{heading}: insufficient data to compute'
+        log_fn(msgtxt)
+        try:
+            finite_rel = np.isfinite(rel_error)
+        except Exception:
+            finite_rel = False
+        if not finite_rel:
+            log_fn('(Relative error: nan %)')
+        else:
+            fmt_scale = format_number(rel_error * 100, 0.1, 100)
+            log_fn(f'(Relative error: {fmt_scale.rstrip()} %)')
+        return
     val = format_number(value, 0.1, 100)
     msgtxt = f'{heading}: {val}'
-    log_fn = logger.progress if level == 'success' else logger.info
     log_fn(msgtxt.strip())
     fmt_scale = format_number(rel_error * 100, 0.1, 100)
     msgtxt = f'(Relative error: {fmt_scale.rstrip()} %)'
@@ -1002,9 +1020,23 @@ def recursive_block_analysis(flist, minblocks=5):
         rerr = aerr/bestavg
         rel_errors.append(rerr)
 
+    # If no relative errors were produced, return NaNs to avoid warnings
+    if len(rel_errors) == 0:
+        return [np.nan], np.nan, np.nan
+
     # We will now take the mean of the second half of the relative errors
-    half_av_err = np.mean(rel_errors[int(len(rel_errors)/2):])
-    nstatineff = (half_av_err/rel_errors[0])**2
+    second_half = rel_errors[int(len(rel_errors)/2):]
+    if len(second_half) == 0:
+        half_av_err = np.nan
+    else:
+        half_av_err = float(np.mean(second_half))
+
+    # guard division by zero or NaN when computing statistical inefficiency
+    if rel_errors[0] == 0 or not np.isfinite(rel_errors[0]) or np.isnan(half_av_err):
+        nstatineff = np.nan
+    else:
+        nstatineff = (half_av_err/rel_errors[0])**2
+
     # Now we have to add the NaN's back in, as 0's
     return rel_errors, nstatineff, half_av_err
 

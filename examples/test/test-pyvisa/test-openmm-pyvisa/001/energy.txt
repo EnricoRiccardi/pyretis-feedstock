@@ -1,0 +1,9 @@
+# Cycle: 0, status: ACC, move: ('ki', 0, 0, 0)
+#     Time      Potential        Kinetic
+         0            nan      17.079208
+         1            nan      20.152706
+         2            nan      25.373390
+         3            nan      27.814412
+         4            nan      25.968304
+         5            nan      24.372135
+         6            nan      19.176828
