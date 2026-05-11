@@ -30,6 +30,15 @@ tools:
   - name: shellcheck
     enabled: true
 
+  # pydocstyle: Python docstring style checker.
+  # D213 (summary on second line) conflicts with the D212 convention used
+  # throughout the codebase; silence it globally.
+  - name: pydocstyle
+    enabled: true
+    patterns:
+      - patternId: D213
+        enabled: false
+
 exclude_paths:
   - ".git/**"
   - "docs/**"
