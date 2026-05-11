@@ -1,0 +1,8 @@
+#include "amber03.ff/forcefield.itp"
+#include "amber03.ff/tip3p.itp"
+
+[ system ]
+tip3p sI hydrate with methane
+
+[ molecules ]
+SOL 2
