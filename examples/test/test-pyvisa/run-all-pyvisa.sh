@@ -20,6 +20,9 @@ echo "  Started:     $(date '+%Y-%m-%d %H:%M:%S')"
 echo "============================================================"
 echo ""
 
+# Source of the gromacs load-traj fixture that the pyvisa tests reuse.
+LOADTRAJ="$basedir/../test-gromacs/test-load/test-load-sparse/load-traj"
+
 for i in "${tests[@]}"
 do
     echo "------------------------------------------------------------"
@@ -28,6 +31,18 @@ do
     echo "------------------------------------------------------------"
     start=$(date +%s)
     cd "$i"
+    # test-gromacs-pyvisa runs the upstream load-traj run.sh verbatim,
+    # so its prerequisites (Makefile, retis-load-rc.rst, gromacs_input/,
+    # orderp.py, pippo/, …) need to be staged in the test directory and
+    # ../compare.py needs to point at the shared sparse-load wrapper.
+    # test-gromacs-retis-pyvisa stages everything itself inside its
+    # own run.sh.
+    if [ "$i" = "test-gromacs-pyvisa" ]; then
+        find . -mindepth 1 -not -name 'run.sh' -delete
+        cp -r "$LOADTRAJ"/Makefile "$LOADTRAJ"/retis-load-rc.rst \
+            "$LOADTRAJ"/orderp.py "$LOADTRAJ"/gromacs_input \
+            "$LOADTRAJ"/pippo .
+    fi
     ./run.sh
     cd "$basedir"
     end=$(date +%s)
