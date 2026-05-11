@@ -207,8 +207,9 @@ def _create_shoot_histograms(shoot_stats, bins):
     scale = {}
     for key in shoot_stats:
         if not shoot_stats[key]:
-            logger.warning('No shoots data found for %s (empty histogram)',
-                           key)
+            # Empty bins are a normal outcome of short runs (e.g. when no
+            # rejected shoots have accumulated yet) — keep this informational.
+            logger.info('No shoots data found for %s (empty histogram)', key)
             shoot_stats[key] = np.array([])
             mind = 0.0
             maxd = 0.1

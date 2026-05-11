@@ -13,6 +13,10 @@ units = lj
 dimensions = 1
 temperature = 0.07
 
+Box
+---
+periodic = [False]
+
 Engine settings
 ---------------
 class = Langevin

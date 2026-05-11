@@ -19,6 +19,10 @@ System settings
 temperature = 2.0
 units = lj
 
+Box
+---
+periodic = [True, True, True]
+
 Particles
 ---------
 position = {'generate': 'fcc',

@@ -46,7 +46,6 @@ class = Position
 
 Output settings
 ---------------
-directory = '001'
 trajectory-file = 1
 screen = 1
 backup = append

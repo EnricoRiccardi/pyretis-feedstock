@@ -6,7 +6,13 @@ export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 export MPLBACKEND=Agg
 cp -r --update=none ../../test-gromacs/test-load/test-load-sparse/load-traj/* .
 
-pyvisa -i retis-load-rc.rst -recalculate -data ../test-gromacs-pyvisa 
-pyvisa -i retis-load-rc.rst -recalculate -data pippo 
+# Generate trajectory data first so pyvisa -recalculate has something to
+# work on (matches the pattern used in test-gromacs-retis-pyvisa).
+gmx=${1:-gmx_d}
+sed -e "s/GMXCOMMAND/$gmx/g" retis-load-rc.rst > retis-load-rc-run.rst
+pyretisrun -i retis-load-rc-run.rst
+
+# Recalculate collective variables on the freshly produced ensemble data.
+pyvisa -i retis-load-rc-run.rst -recalculate
 
 find . -mindepth 1 -not -name 'run.sh' -delete

@@ -456,26 +456,36 @@ def set_up_box(settings, boxs, dim=3):
     """
     msg = 'Box created {}:\n{}'
     box = None
-    if settings.get('box', None) is not None:
-        box = create_box(**settings['box'])
+    user_box = settings.get('box', None)
+    if user_box is not None and boxs is not None:
+        # Merge user-provided box settings with auto-generated ones
+        # (e.g. cell from fcc particle generation). User settings win.
+        merged = {**boxs, **user_box}
+        box = create_box(**merged)
+        msgtxt = msg.format('from settings + initial positions', box)
+        logger.info(msgtxt)
+    elif user_box is not None:
+        box = create_box(**user_box)
         msgtxt = msg.format('from settings', box)
         logger.info(msgtxt)
-        debugtxt = f"Settings used:\n{settings['box']}"
+        debugtxt = f"Settings used:\n{user_box}"
         logger.debug(debugtxt)
-    else:
-        if boxs is not None:
-            box = create_box(**boxs)
-            msgtxt = msg.format('from initial positions', box)
-            logger.info(msgtxt)
-            msgwarn = 'The box was assumed periodic in all directions.'
-            logger.warning(msgwarn)
-        else:
-            if dim > 0:
-                box = create_box(periodic=[False]*dim)
-                msgtxt = msg.format('without specifications', box)
-                logger.info(msgtxt)
-                msgwarn = 'The box was assumed nonperiodic in all directions.'
-                logger.warning(msgwarn)
+    elif boxs is not None:
+        box = create_box(**boxs)
+        msgtxt = msg.format('from initial positions', box)
+        logger.info(msgtxt)
+        msgwarn = ('Box periodicity was not specified; assumed periodic in '
+                   'all directions. Add a "Box" section with explicit '
+                   '"periodic = [...]" to silence this warning.')
+        logger.warning(msgwarn)
+    elif dim > 0:
+        box = create_box(periodic=[False]*dim)
+        msgtxt = msg.format('without specifications', box)
+        logger.info(msgtxt)
+        msgwarn = ('Box periodicity was not specified; assumed nonperiodic '
+                   'in all directions. Add a "Box" section with explicit '
+                   '"periodic = [...]" to silence this warning.')
+        logger.warning(msgwarn)
     return box
 
 
