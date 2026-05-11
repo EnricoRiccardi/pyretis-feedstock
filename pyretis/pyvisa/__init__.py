@@ -105,10 +105,9 @@ try_data_shift(:py:func:`pyretis.pyvisa.common.try_data_shift`)
 # Check if PyVisA requirements are installed
 try:  # pragma: no cover
     import PyQt5
-    import mdtraj
     import sklearn
     import pandas
-    # The following imports depend on pandas/mdtraj/sklearn:
+    # The following imports depend on pandas/sklearn:
     from .common import (try_data_shift, shift_data)
     from .orderparam_density import (PathDensity, PathVisualize)
     from .plotting import (plot_regline,

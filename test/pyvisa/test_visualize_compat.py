@@ -463,18 +463,11 @@ def test_visualobject_init_with_paths():
 
 def test_visualapp_rev_trj():
     """rev_trj returns trajectory frames in reverse order (excluding first)."""
-    import mdtraj as md
-
-    top = md.Topology()
-    chain = top.add_chain()
-    res = top.add_residue('ALA', chain)
-    top.add_atom('CA', md.element.carbon, res)
-    xyz = np.zeros((3, 1, 3))
-    xyz[:, 0, 0] = [1.0, 2.0, 3.0]
-    traj = md.Trajectory(xyz, top)
-
-    r = VisualApp.rev_trj(traj)
-    assert list(r.xyz[:, 0, 0]) == [3.0, 2.0]
+    frames = [np.array([[float(i), 0.0, 0.0]]) for i in range(3)]
+    r = VisualApp.rev_trj(frames)
+    assert len(r) == 2
+    assert r[0][0, 0] == 2.0
+    assert r[1][0, 0] == 1.0
 
 
 # ---------------------------------------------------------------------------

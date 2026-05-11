@@ -46,7 +46,6 @@ from matplotlib.backends.backend_qt5agg import (
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-import mdtraj as md
 import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui
@@ -54,6 +53,8 @@ from PyQt5 import QtWidgets, uic
 from scipy.spatial import distance  # pylint: disable=import-error
 from pyretis.inout import settings
 from pyretis.inout.common import TRJ_FORMATS
+from pyretis.inout.formats.gromacs import (read_gromacs_gro_file,
+                                           read_trr_file)
 from pyretis.setup.common import create_orderparameter
 from pyretis.tools.recalculate_order import recalculate_order
 from pyretis.pyvisa.common import (read_traj_txt_file,
@@ -82,6 +83,39 @@ warnings.filterwarnings('ignore', category=pd.errors.PerformanceWarning)
 
 # Hard-coded labels for energies and time/cycle steps
 ENERGYLABELS = ['time', 'cycle', 'potE', 'kinE', 'totE']
+
+
+def _write_pdb(filename, frames, topology):
+    """Write trajectory frames to a PDB file.
+
+    Parameters
+    ----------
+    filename : str
+        Output PDB path.
+    frames : list of numpy.ndarray, shape (N, 3)
+        Positions in nm for each frame.
+    topology : dict
+        Snapshot dict from :func:`read_gromacs_gro_file` supplying
+        atom/residue names and numbers.
+
+    """
+    atom_names = topology.get('atomname', [])
+    res_names = topology.get('residuname', [])
+    res_nrs = topology.get('residunr', [])
+    with open(filename, 'w', encoding='utf8') as pdb:
+        for model_nr, pos in enumerate(frames, start=1):
+            pdb.write(f'MODEL{model_nr:9d}\n')
+            for i, xyz in enumerate(pos):
+                x, y, z = xyz * 10.0  # nm → Ångström
+                aname = atom_names[i] if i < len(atom_names) else 'CA'
+                rname = res_names[i] if i < len(res_names) else 'UNK'
+                rnr = res_nrs[i] if i < len(res_nrs) else i + 1
+                pdb.write(
+                    f'ATOM  {i+1:5d}  {aname:<4s}{rname:3s} A{rnr:4d}    '
+                    f'{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00\n'
+                )
+            pdb.write('ENDMDL\n')
+        pdb.write('END\n')
 
 
 def _set_tick_fontsize(axis, fontsize):
@@ -1476,33 +1510,24 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
         files = read_traj_txt_file(path_to_cycle + '/traj.txt')
 
         # Find the topology file from rst_file
-        trj_list = []
         input_settings = \
             settings.parse_settings_file(rst_file)['engine']['input_files']
-        if input_settings['conf'].endswith('.g96'):
-            self.display_message_box('Cannot load file..',
-                                     'Configuration format not supported.')
-            return input_settings['conf']
+        topology, _, _, _ = read_gromacs_gro_file(input_settings['conf'])
 
-        # Create the correct order of traj-files
+        # Build ordered list of position frames
+        all_frames = []
         for _, value in files.items():
             if not value[0].endswith(tuple(TRJ_FORMATS)):
                 continue
+            trr_path = path_to_traj + f'/{value[0]}'
+            frames = [data['x'] for _, data in read_trr_file(trr_path)
+                      if data is not None]
             if int(value[1]) == -1:
-                trj_list.append(self.rev_trj(md.load(
-                    path_to_traj + f'/{value[0]}', top=input_settings['conf']
-                )))
-            else:
-                trj_list.append(md.load(
-                    path_to_traj + f'/{value[0]}', top=input_settings['conf']
-                ))
-
-        trj = trj_list[0]
-        for _ in trj_list[1:]:
-            trj += _
+                frames = self.rev_trj(frames)
+            all_frames.extend(frames)
 
         trj_name = f'trajectory_{ensemble_name}_{cycle}.pdb'
-        trj.save_pdb(trj_name)
+        _write_pdb(trj_name, all_frames, topology)
         return trj_name
 
     def play_cycle(self):  # pragma: no cover
@@ -1541,23 +1566,21 @@ class VisualApp(QtWidgets.QMainWindow, UI_VW):
                 return
 
     @staticmethod
-    def rev_trj(trj):
-        """Reverse a trj via MD traj.
+    def rev_trj(frames):
+        """Reverse a list of trajectory frames, excluding the first.
 
         Parameters
         ----------
-        trj : mdtraj object
-            Mdtraj MD trajectory.
+        frames : list of numpy.ndarray
+            Ordered list of coordinate frames.
 
         Returns
         -------
-        r_trj : mdtraj object
-            The reversed MD trajectory.
+        list of numpy.ndarray
+            Frames in reverse order, with the original first frame dropped.
 
         """
-        f_n = np.arange(len(trj) - 1, 0, -1)
-        r_trj = trj.slice(f_n)
-        return r_trj
+        return frames[-1:0:-1]
 
     def display_message_box(self, line1, line2):
         """Display a message box with chosen text.

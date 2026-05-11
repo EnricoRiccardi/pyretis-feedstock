@@ -102,7 +102,6 @@ test_gromacs:
   before_script:
   - apt-get update -qy
   - apt-get install -y python3 python3-pip gcc git gromacs
-  - pip3 install --upgrade pip --break-system-packages
   - pip3 install -r requirements.txt --break-system-packages
   - pip3 install -e . --break-system-packages
   - python3 -V
@@ -130,7 +129,7 @@ test_openmm:
   when: manual
   stage: heavy_test
   before_script:
-  - conda install python=3.9
+  - conda install python=3.11
   - apt-get update -qy
   - apt-get install zip gcc -y
   - conda install cmake -y
