@@ -53,6 +53,7 @@ Orderparameter
 class = Distance
 module = orderp.py
 index = [0, 3]
+name = Order Parameter
 
 Output settings
 ---------------

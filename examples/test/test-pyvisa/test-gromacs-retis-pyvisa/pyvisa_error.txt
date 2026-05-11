@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/home/enrico/Research/pyretis/pyretis/bin/pyvisa.py", line 162, in main
-    raise FileNotFoundError(f'Input file "{input_file}" NOT found!')
-FileNotFoundError: Input file "examples/test/test-pyvisa/test-gromacs-retis-pyvisa/retis-load-rc.rst" NOT found!

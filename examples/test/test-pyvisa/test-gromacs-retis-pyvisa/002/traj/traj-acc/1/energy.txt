@@ -1,7 +1,0 @@
-# Cycle: 1, status: ACC, move: ('ld', 0, 0, 0)
-#     Time      Potential        Kinetic
-         0            nan            nan
-         1            nan            nan
-         2            nan            nan
-         3            nan            nan
-         4            nan            nan
