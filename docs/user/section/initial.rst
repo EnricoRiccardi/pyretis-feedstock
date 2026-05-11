@@ -366,22 +366,33 @@ Keyword load_folder
 The restart method
 ------------------
 
-The ``restart`` method is used to continue simulations.
+The ``restart`` method is used to *continue* an existing simulation. It is
+**not** a vehicle for changing the simulation itself — for that, use
+:ref:`load <user-section-initial-path-load>`.
 
 By default, a restart is a strict continuation: all settings are taken from
 the restart file, so the simulation proceeds exactly as if it had never been
-interrupted.  Two mechanisms allow controlled deviations from this behaviour:
+interrupted.  Three categories of new-input keywords matter on restart:
 
-* **Implicit overrides** — a fixed set of parameters (step count, random seed,
-  output settings, move frequencies, etc.) can always be changed in the new
-  input file without any extra flag.  PyRETIS detects the change, emits a
-  ``WARNING`` for each modified value, and applies it.  Everything else in the
-  new input is silently ignored.  See :ref:`user-section-initial-restart-overrides`
-  for the full list.
+* **Implicit overrides** — a curated set of *runtime* parameters (step count,
+  random seed, output settings, move frequencies, etc.) can be changed in the
+  new input file without any extra flag.  PyRETIS detects the change, emits a
+  ``WARNING`` for each modified value, and applies it.  See
+  :ref:`user-section-initial-restart-overrides` for the full list.
+
+* **Forbidden keywords** — *topology-defining* parameters (interface list,
+  task, zero-ensemble layout, …) cannot be changed by a restart at all.  If
+  the new input disagrees with the value stored in the restart file, PyRETIS
+  aborts with a ``ValueError``.  See
+  :ref:`user-section-initial-restart-forbidden`. To make such a change, use
+  :ref:`load <user-section-initial-path-load>` or — when keeping the same
+  saved paths but updating their topology context — set
+  ``flexible_restart = True``.
 
 * **Flexible restart** — set ``flexible_restart = True`` to take the entire new
-  input file as the settings.  This is needed for structural changes such as
-  adding or removing interfaces or ensembles.  The user is then responsible for
+  input file as the settings, bypassing both the forbidden-keyword check and
+  the override warnings.  This is needed for structural changes such as adding
+  or removing interfaces or ensembles.  The user is then responsible for
   ensuring that the modified setup remains consistent with detailed balance.
   See :ref:`user-section-initial-flexible-restart`.
 
@@ -439,9 +450,10 @@ in the new input file.  Whenever a value differs from the one stored in the
 restart file, PyRETIS logs a ``WARNING`` and applies the new value; all other
 settings from the restart file are preserved unchanged.
 
-The parameters that can be overridden in this way are:
+The parameters that can be overridden in this way are (also exposed in code
+as ``pyretis.inout.settings.RESTART_OVERRIDE_KEYWORDS``):
 
-* **simulation**: ``steps``, ``interfaces``, ``seed``, ``priority_shooting``
+* **simulation**: ``steps``, ``seed``, ``priority_shooting``
 * **output**: ``screen``, ``backup``, ``trajectory-file``, ``energy-file``,
   ``order-file``, ``cross-file``, ``restart-file``, ``pathensemble-file``
 * **tis**: ``freq``, ``sigma_v``, ``aimless``, ``allowmaxlength``,
@@ -452,14 +464,50 @@ The parameters that can be overridden in this way are:
 
 These cover parameter tuning (step count, random seed, move frequencies, output
 paths) that does not alter the statistical validity of the accumulated data.
-For anything beyond this list — in particular adding or removing ensembles or
-changing the number of interfaces — use ``flexible_restart = True``.
+For anything beyond this list — including changing interface positions or the
+number of interfaces — see
+:ref:`user-section-initial-restart-forbidden` and
+:ref:`user-section-initial-flexible-restart`.
 
-.. note::
+.. _user-section-initial-restart-forbidden:
 
-   Changing ``interfaces`` via an implicit override adjusts interface *positions*
-   for the existing set of ensembles.  To change the *number* of interfaces (and
-   therefore the number of ensembles) you must use ``flexible_restart = True``.
+Forbidden keywords (topology lock)
+...................................
+
+The following keywords describe the *topology* of the simulation — what is
+being sampled and how — and changing them would silently reinterpret the
+already-saved paths against a different state space.  A restart that finds
+any disagreement on one of these keys between the new input and the restart
+file aborts with a ``ValueError``:
+
+* **simulation**: ``interfaces``, ``task``, ``zero_left``, ``zero_ensemble``,
+  ``flux``, ``permeability``
+
+The full list is exposed in code as
+``pyretis.inout.settings.RESTART_FORBIDDEN_KEYWORDS``.
+
+To change any of these you have two correct options:
+
+1. **Start a new simulation from saved trajectories** —
+   use :ref:`load <user-section-initial-path-load>`.  This is the safest
+   route whenever the new topology means the saved paths must be
+   re-validated against fresh ensemble definitions.
+
+2. **Reuse the saved paths but rewrite the topology** —
+   set ``flexible_restart = True``.  This bypasses the topology lock and
+   takes the entire new input file as the settings; the user is then
+   responsible for keeping detailed balance.  See
+   :ref:`user-section-initial-flexible-restart`.
+
+Practical examples that *require* one of these two routes (a plain restart
+will refuse):
+
+* changing one or more interface positions,
+* adding or removing interfaces (and the corresponding ensembles),
+* turning the ``[0^-]`` ensemble on or off (``zero_ensemble``,
+  ``zero_left``, ``flux``),
+* switching ``task`` between ``tis`` / ``retis`` / ``repptis`` / ``explore``,
+* enabling or disabling ``permeability``.
 
 .. _user-section-initial-flexible-restart:
 

@@ -137,6 +137,14 @@ Keyword interfaces
    Default
      Not any, this keyword must be specified.
 
+   .. note::
+      ``interfaces`` is topology-defining: it is locked once the
+      simulation is started.  A restart that supplies a different list
+      aborts with a ``ValueError`` — use
+      :ref:`load <user-section-initial-path-load>` or
+      :ref:`flexible_restart <user-section-initial-flexible-restart>`
+      to change the interface set.
+
 .. _user-section-task-retis-priority:
 
 Keyword priority_shooting
@@ -251,6 +259,14 @@ Keyword interfaces
 
    Default
      Not any, this keyword must be specified.
+
+   .. note::
+      ``interfaces`` is topology-defining: it is locked once the
+      simulation is started.  A restart that supplies a different list
+      aborts with a ``ValueError`` — use
+      :ref:`load <user-section-initial-path-load>` or
+      :ref:`flexible_restart <user-section-initial-flexible-restart>`
+      to change the interface set.
 
 .. _user-section-task-tis-priority:
 
