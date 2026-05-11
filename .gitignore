@@ -138,5 +138,5 @@ examples/path_sampling/gromacs-hydrate/0*
 *topol.tpr
 *mdout.mdp
 # Test artifacts sometimes left in repo by CI/tests
-test/engines/lammps_input/pyretis_md.log
+!test/engines/lammps_input/pyretis_md.log
 
