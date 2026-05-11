@@ -1180,7 +1180,10 @@ def cross_dist_distr(pp_dic):
     paths = select_with_or_masks(ordermax, [lmrs == "LML", lmrs == "LMR"])
     repeats = select_with_or_masks(weights, [lmrs == "LML", lmrs == "LMR"])
     # Ensure repeats are integer counts and guard empty cases
-    repeats = np.array(repeats, dtype=int) if repeats.size != 0 else np.array([], dtype=int)
+    if repeats.size != 0:
+        repeats = np.array(repeats, dtype=int)
+    else:
+        repeats = np.array([], dtype=int)
     if paths.size == 0 or repeats.size == 0:
         repeat = np.array([])
     else:
@@ -1188,8 +1191,10 @@ def cross_dist_distr(pp_dic):
     left, middle, right = interfaces[0], interfaces[1], interfaces[2]
     percents = []
 
-    lambs = np.linspace(middle, np.max(paths), 100) if paths.size != 0 else \
-        np.linspace(middle, right, 100)
+    if paths.size != 0:
+        lambs = np.linspace(middle, np.max(paths), 100)
+    else:
+        lambs = np.linspace(middle, right, 100)
     for i in lambs:
         percents.append(np.sum(repeat >= i))
 
@@ -1203,18 +1208,27 @@ def cross_dist_distr(pp_dic):
         percents = percents / percents[0]
 
     # RM*:
-    paths2 = select_with_or_masks(ordermin, [lmrs == "RMR",
-                                             lmrs == "RML"])
-    repeats2 = select_with_or_masks(weights, [lmrs == "RMR",
-                                             lmrs == "RML"])
-    repeats2 = np.array(repeats2, dtype=int) if repeats2.size != 0 else np.array([], dtype=int)
+    paths2 = select_with_or_masks(
+        ordermin,
+        [lmrs == "RMR", lmrs == "RML"],
+    )
+    repeats2 = select_with_or_masks(
+        weights,
+        [lmrs == "RMR", lmrs == "RML"],
+    )
+    if repeats2.size != 0:
+        repeats2 = np.array(repeats2, dtype=int)
+    else:
+        repeats2 = np.array([], dtype=int)
     if paths2.size == 0 or repeats2.size == 0:
         repeat2 = np.array([])
     else:
         repeat2 = np.repeat(paths2, repeats2)
     percents2 = []
-    lambs2 = np.linspace(np.min(paths2), middle, 100) if paths2.size != 0 \
-        else np.linspace(left, middle, 100)
+    if paths2.size != 0:
+        lambs2 = np.linspace(np.min(paths2), middle, 100)
+    else:
+        lambs2 = np.linspace(left, middle, 100)
     for i in lambs2:
         percents2.append(np.sum(repeat2 <= i))
     percents2 = np.array(percents2, dtype=float)

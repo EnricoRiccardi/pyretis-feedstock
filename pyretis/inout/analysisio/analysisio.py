@@ -1032,10 +1032,14 @@ def recursive_block_analysis(flist, minblocks=5):
         half_av_err = float(np.mean(second_half))
 
     # guard division by zero or NaN when computing statistical inefficiency
-    if rel_errors[0] == 0 or not np.isfinite(rel_errors[0]) or np.isnan(half_av_err):
+    if (
+        rel_errors[0] == 0
+        or not np.isfinite(rel_errors[0])
+        or np.isnan(half_av_err)
+    ):
         nstatineff = np.nan
     else:
-        nstatineff = (half_av_err/rel_errors[0])**2
+        nstatineff = (half_av_err / rel_errors[0]) ** 2
 
     # Now we have to add the NaN's back in, as 0's
     return rel_errors, nstatineff, half_av_err
