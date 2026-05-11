@@ -37,6 +37,7 @@ from pyretis.inout.settings import (
     _parse_all_raw_sections,
     _parse_sections,
     RESTART_OVERRIDE_KEYWORDS,
+    RESTART_FORBIDDEN_KEYWORDS,
     SECTIONS
 )
 from pyretis.orderparameter import (
@@ -1292,6 +1293,39 @@ class TestRestartOverride:
         assert new_set['simulation']['steps'] == 20
         # interfaces is not in the new input, so the restart value is kept
         assert new_set['simulation']['interfaces'] == [0.1, 0.5]
+
+    def test_forbidden_keywords_structure(self):
+        """RESTART_FORBIDDEN_KEYWORDS contains topology-defining keys."""
+        assert isinstance(RESTART_FORBIDDEN_KEYWORDS, dict)
+        sim_forbidden = RESTART_FORBIDDEN_KEYWORDS.get('simulation', [])
+        assert 'interfaces' in sim_forbidden
+        # Make sure forbidden and override sets don't overlap — a key
+        # cannot be both rigid and overridable.
+        for section, keys in RESTART_FORBIDDEN_KEYWORDS.items():
+            override = RESTART_OVERRIDE_KEYWORDS.get(section, [])
+            assert not (set(keys) & set(override)), (
+                f'Section {section!r} has key(s) in both forbidden and '
+                f'override lists')
+
+    def test_apply_raises_on_forbidden_interface_change(self):
+        """Changing interfaces in a restart input must raise ValueError."""
+        new_set = {'simulation': {'steps': 50,
+                                  'interfaces': [-0.9, -0.6, -0.3]}}
+        settings = {'simulation': {'steps': 50,
+                                   'interfaces': [-0.9, -0.6, -0.3, 1.0]}}
+        with pytest.raises(ValueError, match='interfaces'):
+            _apply_restart_overrides(new_set, settings)
+
+    def test_apply_silent_on_matching_interfaces(self, caplog):
+        """Identical interfaces in restart + new input must not warn."""
+        intf = [-0.9, -0.6, -0.3, 1.0]
+        new_set = {'simulation': {'steps': 50, 'interfaces': intf}}
+        settings = {'simulation': {'steps': 50, 'interfaces': intf}}
+        with turn_on_logging():
+            with caplog.at_level(logging.WARNING):
+                _apply_restart_overrides(new_set, settings)
+        assert 'Restart override' not in caplog.text
+        assert 'interfaces' not in caplog.text
 
     def test_apply_ensemble_override_warning(self, caplog):
         """Ensemble-level overrides emit a warning when values differ."""

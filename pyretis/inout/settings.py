@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 logger.addHandler(logging.NullHandler())
 
 __all__ = ['parse_settings_file', 'write_settings_file', 'SECTIONS',
-           'RESTART_OVERRIDE_KEYWORDS',
+           'RESTART_OVERRIDE_KEYWORDS', 'RESTART_FORBIDDEN_KEYWORDS',
            'fill_up_tis_and_retis_settings', 'add_default_settings',
            'add_specific_default_settings']
 
@@ -238,14 +238,17 @@ SPECIAL_MULTIPLE = {
     'potential',
 }
 
-# Keywords that may be overridden from the new input file when restarting.
-# When a value in the new input differs from the one stored in the restart
-# file, a WARNING is emitted and the new value replaces the restarted one.
-# Keys are section names; values are lists of allowed keyword names.
+# Keywords that the new input file is allowed to change on a restart.
+# When a value in the new input differs from the value stored in the
+# restart, a WARNING is emitted and the new value replaces the restarted
+# one. A restart is meant to *extend* an existing simulation, so the keys
+# here are limited to those that do not invalidate previously saved state
+# (cycle counts, RNG seeds, log verbosity, … but not the interface set or
+# any other topology-defining quantity — for those see
+# RESTART_FORBIDDEN_KEYWORDS).
 RESTART_OVERRIDE_KEYWORDS = {
     'simulation': [
         'steps',
-        'interfaces',
         'seed',
         'priority_shooting',
     ],
@@ -280,6 +283,23 @@ RESTART_OVERRIDE_KEYWORDS = {
         'swapfreq',
         'swapsimul',
         'nullmoves',
+    ],
+}
+
+
+# Keywords that define the topology of the simulation (state space,
+# ensemble layout, …). Changing any of these in a restart would
+# invalidate the previously saved path data, so the restart must abort
+# with a clear error if the new input disagrees with the stored value.
+# Keys are section names; values are lists of keyword names.
+RESTART_FORBIDDEN_KEYWORDS = {
+    'simulation': [
+        'interfaces',
+        'task',
+        'zero_left',
+        'zero_ensemble',
+        'flux',
+        'permeability',
     ],
 }
 
@@ -757,9 +777,52 @@ def add_specific_default_settings(settings):
         settings['engine']['type'] = settings['engine'].get('type', 'internal')
 
 
+def _check_restart_forbidden(new_set, settings):
+    """Raise if topology-defining keywords disagree between input and restart.
+
+    Keywords listed in :data:`RESTART_FORBIDDEN_KEYWORDS` describe the
+    state space of the simulation (interfaces, task, …). They must match
+    the value stored in the restart, otherwise the already-saved paths
+    would be reinterpreted against a different topology and the
+    continuation would be silently wrong.
+
+    Parameters
+    ----------
+    new_set : dict
+        Settings loaded from the restart file.
+    settings : dict
+        Settings parsed from the new input file.
+
+    Raises
+    ------
+    ValueError
+        When the new input changes a forbidden keyword.
+
+    """
+    for section, keys in RESTART_FORBIDDEN_KEYWORDS.items():
+        if section not in settings or section not in new_set:
+            continue
+        for key in keys:
+            if key not in settings[section]:
+                continue
+            new_val = settings[section][key]
+            old_val = new_set[section].get(key)
+            if new_val != old_val:
+                raise ValueError(
+                    f'Restart refused: "{section}.{key}" differs between '
+                    f'the new input ({new_val!r}) and the restart file '
+                    f'({old_val!r}). This keyword is part of the '
+                    f'simulation topology and cannot be changed by a '
+                    f'restart — use "load" instead to start a new '
+                    f'simulation with different settings.'
+                )
+
+
 def _apply_restart_overrides(new_set, settings):
     """Apply allowed keyword overrides from a new input onto restart settings.
 
+    Topology-defining keywords (see :data:`RESTART_FORBIDDEN_KEYWORDS`)
+    are first checked for equality; any disagreement aborts the restart.
     For every section and key listed in :data:`RESTART_OVERRIDE_KEYWORDS`,
     if the value supplied in the new input file differs from the one stored
     in the restart, a WARNING is logged and the new value replaces the old
@@ -773,6 +836,8 @@ def _apply_restart_overrides(new_set, settings):
         Settings parsed from the new input file.
 
     """
+    _check_restart_forbidden(new_set, settings)
+
     for section, keys in RESTART_OVERRIDE_KEYWORDS.items():
         if section not in settings or section not in new_set:
             continue
