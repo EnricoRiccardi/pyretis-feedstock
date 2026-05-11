@@ -15,6 +15,7 @@ System
 units = reduced
 dimensions = 1
 temperature = 0.7
+rgen = 'rgen-borg'
 
 Box
 ---

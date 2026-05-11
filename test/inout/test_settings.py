@@ -147,7 +147,8 @@ class TestKeywordParsing:
                                  'the input statements are correct')},
             'system': {'units': 'lj',
                        'dimensions': 3,  # Added by default.
-                       'temperature': 2.0},
+                       'temperature': 2.0,
+                       'rgen': 'rgen'},  # Added by default.
             'simulation': {'task': 'md-nve',
                            'steps': 100,
                            'rgen': 'rgen',

@@ -70,6 +70,11 @@ SECTIONS['system'] = {
     'input_file': None,
     'temperature': 1.0,
     'units': 'lj',
+    # The random generator used for path-ensemble sampling is taken from
+    # this section by pyretis.setup.createsimulation.create_ensemble. The
+    # key is intentionally accepted here so that "rgen" in a [System]
+    # block is honoured rather than silently dropped.
+    'rgen': 'rgen',
 }
 
 SECTIONS['unit-system'] = {
