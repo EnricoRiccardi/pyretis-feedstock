@@ -4,7 +4,10 @@ set -e
 # when X11 display sockets are in a broken state (e.g. full accept queue).
 export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 export MPLBACKEND=Agg
-cp -r --update=none ../../test-gromacs/test-load/test-load-sparse/load-traj/* .
+# Clean any stale files left over from a previous failed run so the source
+# rst is guaranteed fresh.
+find . -mindepth 1 -not -name 'run.sh' -delete
+cp -r ../../test-gromacs/test-load/test-load-sparse/load-traj/* .
 
 # Generate trajectory data first so pyvisa -recalculate has something to
 # work on (matches the pattern used in test-gromacs-retis-pyvisa).

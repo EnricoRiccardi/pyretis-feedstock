@@ -4,7 +4,13 @@ set -e
 # when X11 display sockets are in a broken state (e.g. full accept queue).
 export HWLOC_COMPONENTS=-gl,x11,opencl,cuda
 export MPLBACKEND=Agg
-cp -r --update=none ../../test-gromacs/test-load/test-load-sparse/load-traj/* .
+# Clean any stale files left over from a previous failed run so that the
+# source rst (and friends) are guaranteed to come from the upstream copy
+# below. --update=none preserves local files, which is undesirable when a
+# previous run died before cleanup and left an obsolete retis-load-rc.rst.
+find . -mindepth 1 -not -name 'run.sh' -not -name 'results' \
+    -not -path './results/pyvisa_compressed_data.hdf5.zip' -delete
+cp -r ../../test-gromacs/test-load/test-load-sparse/load-traj/* .
 cp ../../test-gromacs/test-load/test-load-sparse/load-traj/run.sh run_g.sh
 
 
