@@ -10,7 +10,6 @@ analyse_flux (:py:func:`.analyse_flux`)
     the initial flux for a simulation.
 """
 import numpy as np
-from numpy import divide  # pylint: disable=no-name-in-module
 from pyretis.analysis.analysis import running_average, block_error_corr
 from pyretis.core.path import check_crossing
 
@@ -80,7 +79,7 @@ def analyse_flux(fluxdata, settings):
             results['errflux'].append([[], np.nan, np.nan, [], np.nan,
                                        np.nan, np.nan])
             results['pMD'].append(0.0)
-            results['1-p'].append(np.nan)
+            results['1-p'].append(np.inf)
             results['teffMD'].append(np.nan)
             results['corrMD'].append(np.nan)
         return results
@@ -103,35 +102,37 @@ def analyse_flux(fluxdata, settings):
                                        blockskip=analysis['blockskip'])
         results['errflux'].append(block_error)
 
-    # do some additional statistics:
-    # compute steps per effective crossing, avoid division by zero
-    results['cross_time'] = []
-    for neff in results['neffcross']:
-        if neff == 0:
-            results['cross_time'].append(np.nan)
-        else:
-            results['cross_time'].append(float(end_step) / float(neff))
-
-    # effective crossings per crossing (safe division)
-    results['neffc/nc'] = []
-    for neff, ncr in zip(results['neffcross'], results['ncross']):
-        if ncr == 0:
-            results['neffc/nc'].append(np.nan)
-        else:
-            results['neffc/nc'].append(float(neff) / float(ncr))
-
-    # compute p_MD, (1-p)/p and correlation in a numerically safe way
+    # Compute steps per effective crossing. The limit end_step / 0 is +inf
+    # (no crossing observed in a finite run); we handle it explicitly rather
+    # than relying on numpy.divide which emits a RuntimeWarning.
+    results['cross_time'] = [
+        float(end_step) / float(neff) if neff else np.inf
+        for neff in results['neffcross']
+    ]
+    # Effective crossings per crossing. With zero crossings the count is
+    # mathematically undefined (0/0); report it as NaN.
+    results['neffc/nc'] = [
+        float(neff) / float(ncr) if ncr else np.nan
+        for neff, ncr in zip(results['neffcross'], results['ncross'])
+    ]
     for flux, error in zip(results['runflux'], results['errflux']):
         pmd = float(flux[-1] * time_step)
         results['pMD'].append(pmd)
-        if pmd == 0.0 or not np.isfinite(pmd):
+        # (1 - p) / p; well-defined as +inf when p == 0 (no observed cross).
+        if not np.isfinite(pmd):
             ratio = np.nan
+        elif pmd == 0.0:
+            ratio = np.inf
         else:
-            ratio = float((1.0 - pmd) / pmd)
+            ratio = (1.0 - pmd) / pmd
         results['1-p'].append(ratio)
-        teff = float(end_step) * (error[4]**2 if len(error) > 4 else np.nan)
+        teff = float(end_step) * error[4] ** 2
         results['teffMD'].append(teff)
-        if ratio == 0.0 or not np.isfinite(ratio):
+        # Correlation: teff / ratio. With ratio == inf this limits to 0;
+        # with ratio == 0 or non-finite the correlation is undefined.
+        if not np.isfinite(ratio):
+            corr = 0.0 if np.isinf(ratio) else np.nan
+        elif ratio == 0.0:
             corr = np.nan
         else:
             corr = teff / ratio
